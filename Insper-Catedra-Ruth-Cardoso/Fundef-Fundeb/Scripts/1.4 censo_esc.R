@@ -632,7 +632,7 @@ path_list <- c("Z:/Arquivos IFB/Censo Escolar/MicrodCenso Escolar2005/DADOS/DADO
                "Z:/Arquivos IFB/Censo Escolar/MicrodCenso Escolar2021/2021/dados/microdados_ed_basica_2021.csv"
                )
 
-for (i in c(2005:2018)) {
+for (i in c(2007:2018)) {
   
   
   gc()
@@ -717,10 +717,10 @@ for (i in c(2005:2018)) {
         eja = ifelse(SUPL_AVA == "s" |
                        SUPL_SAVA == "s", 1, 0),
 
-        eg_in = rowSums(across(c(DEF11C:NE9F11G)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
+        reg_in = rowSums(across(c(DEF11C:NE9F11G)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
         reg_fin = rowSums(across(c(DEF11G:NE9F11N)), na.rm = TRUE),
 
-        ef_tot = reg_in + ref_fin,
+        ef_tot = reg_in + reg_fin,
         esp_tot = rowSums(across(c(VEE1431:VEE1437)), na.rm = TRUE),
         em_tot = rowSums(across(c(DEM118:NEM11C)), na.rm = TRUE),
         ed_inf_tot = rowSums(across(c(DPE119:NPE11D)), na.rm = TRUE),
@@ -734,26 +734,82 @@ for (i in c(2005:2018)) {
         school = MASCARA,
         codmun = CODMUNIC
       ) %>%
-      select(-c(UF, SIGLA, DEP, LOC, CODFUNC, MUNIC, teacher)) %>%
-      mutate( uf = codmun %/% 100000)
+      select(ano, school, codmun, ef_tot:eja_tot) %>%
+      mutate( uf = codmun %/% 100000) 
     
     
   } else {
     ##3.2 2007 - 2018 ----  
     
-    temp <- readRDS(path_list[j]) %>% 
+    
+    
+    if(i == 2018){
+     
+      temp <- readRDS(path_list[j]) %>%
+        rename_all(tolower) %>% 
+        select(co_uf,
+               co_municipio,
+               nu_ano_censo,
+               tp_etapa_ensino,
+               tp_dependencia,
+               co_entidade,
+               in_necessidade_especial
+        ) %>% 
+        filter(tp_dependencia == 3) %>% 
+        rename(in_especial_exclusiva = in_necessidade_especial) #This is a abandoned variable
+      
+      gc()
+      
+      message("Openned data base for: ", i)
+      
+    } else {
+    
+    
+    temp <- readRDS(path_list[j]) %>%
+      rename_all(tolower) %>% 
       select(co_uf,
              co_municipio,
              nu_ano_censo,
              tp_etapa_ensino,
              tp_dependencia,
-             co_entidade
+             co_entidade,
+             in_especial_exclusiva
       ) %>% 
-      filter(tp_dependencia %in% c(2,3),
-             tp_etapa_ensino %in% c(41, 18, 11, 7))
+      filter(tp_dependencia == 3)
+        
+    message("Openned data base for: ", i)
     
-    message("Base aberta para o ano: ", i)
-    
+    }
+      
+      #Summarise for each school year...
+      
+      temp <- temp %>% 
+        mutate(
+          tp_etapa_ensino = as.numeric(tp_etapa_ensino),
+          
+          inf = ifelse(tp_etapa_ensino %in% c(1,2), 1, 0),    #Preschool
+          ef = ifelse(tp_etapa_ensino %in% c(4:21,41), 1 ,0), #Elementary
+          em = ifelse(tp_etapa_ensino %in% c(25:38), 1, 0),   #HighSchooç
+          eja = ifelse(tp_etapa_ensino %in% c(65:74), 1, 0)   #EJA
+          
+        ) %>% 
+        group_by(co_uf, co_municipio, co_entidade, nu_ano_censo) %>% 
+        summarise(
+          ef_tot = sum(ef, na.rm = T),
+          esp_tot = sum(as.numeric(in_especial_exclusiva), 1, 0),
+          em_tot = sum(em, na.rm = T),
+          ed_inf_tot = sum(inf, na.rm = T),
+          eja_tot = sum(eja, na.rm = T),
+        
+          .groups = "drop"
+          ) %>% 
+        rename(
+          ano = nu_ano_censo,
+          school = co_entidade, 
+          codmun = co_municipio,
+          uf = co_uf
+        ) %>% 
+        mutate(codmun = as.numeric(codmun))
     }
   
 
@@ -785,10 +841,25 @@ for (i in c(2005:2018)) {
   
   rm(temp, delta, ini, fim, temp, mins, secs, i, j)
   
-  
+  gc()
   
   }
 
+saveRDS(data,"Z:/Tuffy/Paper - Educ/Dados/matriculas_por_escola.rds")
 
 
+#4. Merging the two datasets ----
 
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base.rds")
+
+df_combined <- df_school %>% 
+  left_join(data,
+            by = c("uf" = "uf", "ano" = "ano", "codmun" = "codmun", "school" = "school")) %>% 
+  group_by(school, ano) %>% 
+  mutate(
+    enroll = ef_tot + em_tot + ed_inf_tot + eja_tot #We dont coun the discarded variable of esp
+  ) %>% 
+  ungroup()
+
+saveRDS(df_combined, "Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds")
+rm(df_school, data)
