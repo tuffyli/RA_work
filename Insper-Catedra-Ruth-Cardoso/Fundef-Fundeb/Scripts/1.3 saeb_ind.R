@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # SAEB data in the individual level
 # Last edited by: Tuffy Licciardi Issa
-# Date: 23/10/2025
+# Date: 04/11/2025
 # ---------------------------------------------------------------------------- #
 
 #' Objective:
@@ -360,8 +360,8 @@ for (idx in seq(1, length(paths_list), by = 2)) {
         
         sexo = ifelse(sexo == "A", 1 ,0), #Male = 1
         raca = ifelse(raca %in% c("A","D"), 1, 0), #White or Asian = 1
-        mae_educ = ifelse(mae_educ %in% c("D", "E"), 1, 0) #Completed HighSchool = 1
-        
+        mae_educ = ifelse(mae_educ %in% c("D", "E"), 1, 0) , #Completed HighSchool = 1
+        id_uf = as.numeric(codmun) %/% 100000
       )
     
     df_bind <- df_bind %>% 
@@ -677,4 +677,5 @@ for (idx in seq(1, length(paths_list), by = 2)) {
 
 #Saving final dataset
 saveRDS(df_final, "Z:/Tuffy/Paper - Educ/Dados/saeb_nvl_aluno.rds")
+
 
