@@ -409,7 +409,6 @@ event_style_plot <- function(est_obj, title = NULL, ylim = NULL) {
         )
     )
   
-  # if you have event-time variable called k and confidence bounds conf.low/conf.high:
   ggplot(event_df, aes(x = k + 2007, y = estimate)) +
     # shaded standard error area
     geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
@@ -436,7 +435,6 @@ event_style_plot <- function(est_obj, title = NULL, ylim = NULL) {
 
 
 # 3) Apply helper to each ggiplot object
-#    (you already created est_class, est_troom, ..., est_employ)
 p_class <- event_style_plot(est_class, "Salas de aula")   #Classroom
 p_troom <- event_style_plot(est_troom, "Sala dos Prof.")  #Teacher's Room
 p_labs  <- event_style_plot(est_labs,  "Laboratórios")    #Laboratory
@@ -524,7 +522,6 @@ grid_plot <- (p_class + p_troom + p_labs) /
 
 
  # 3) Apply helper to each ggiplot object
- #    (you already created est_class, est_troom, ..., est_employ)
  p_class <- event_style_plot(est_class, "Salas de aula")   #Classroom
  p_troom <- event_style_plot(est_troom, "Sala dos Prof.")  #Teacher's Room
  p_labs  <- event_style_plot(est_labs,  "Laboratórios")    #Laboratory
@@ -697,24 +694,457 @@ rm(list = ls())
 #' Here I will aggregate the schools per municipality, and calculate the percen-
 #' tage of exposure to a school facility per municipality
 
-#School data
-df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base.rds") %>% 
-  mutate(codmun = as.character(codmun %/% 10),
-         k = as.numeric(ano) - 2007) 
+# ------------------- #
+## 3.1 Data ----
+# ------------------- #
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
+  mutate(codmun = as.character(codmun %/% 10))
+
+#We will calculate the municipal exposure, weighted by the enrollment numbers
+df_school <- df_school %>% 
+  group_by(codmun, ano) %>% 
+  summarise(
+    total_enroll = sum(enroll, na.rm = T),
+    
+    #numeral variables
+    class     = total_enroll / sum(classroom, na.rm = T),
+    employee  = total_enroll / sum(employee, na.rm = T),
+    
+    
+    #School characteristics
+    exp_troom = sum(enroll*teach_room, na.rm = T)/total_enroll,
+    exp_lab   = sum(enroll*lab_dummy, na.rm = T) /total_enroll,
+    exp_lib   = sum(enroll*lib_dummy, na.rm = T) /total_enroll,
+    exp_play  = sum(enroll*play_area, na.rm = T) /total_enroll,
+    exp_lunch = sum(enroll*lunch, na.rm = T)     /total_enroll,
+    
+    #Courses
+    exp_psch  = sum(enroll*kinder, na.rm = T)    /total_enroll,
+    exp_elem  = sum(enroll*elementary, na.rm = T)/total_enroll,
+    exp_high  = sum(enroll*high, na.rm = T)      /total_enroll,
+    exp_inc   = sum(enroll*inclusion, na.rm = T) /total_enroll,
+    .groups = "drop"
+  ) %>% 
+  mutate(k = ano - 2007)
 
 
-#Main regression dataframe
-df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds")
+#Main database
+df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>% 
+  select(codigo_ibge, ano, uf, nome, dif_coef_pp, dosage, aluno_dosage, PIBpc) %>% 
+  mutate(across(c(codigo_ibge, uf), as.character))
+
+
+#Combining both databases
+df_comb <- df_school %>% 
+  left_join(df_reg %>%
+              filter(ano %in% c(2005:2017)) %>%
+              mutate(codigo_ibge = as.character(codigo_ibge)),
+            by = c("codmun" = "codigo_ibge", "ano" = "ano"))  
+
+
+rm(df_reg, df_school)
+# -------------------- #
+## 3.2 Structural REG ----
+# -------------------- #
+
+
+# ------------------ #
+### 3.2.1 Dosage -----
+
+#Classroom
+est_class <- feols( class ~ dosage * i(k, ref = -1) +
+                      PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb,
+                    vcov = "hetero")
+#Teacher room
+est_troom <- feols( exp_troom ~ dosage * i(k, ref = -1) +
+                      PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb,
+                    vcov = "hetero")
+#Laboratory
+est_labs <- feols(exp_lab ~ dosage * i(k, ref = -1)
+                  + PIBpc |
+                    codmun + ano + uf^ano,
+                  data = df_comb,
+                  vcov = "hetero")
+
+#Library
+est_libra <- feols(exp_lib ~ dosage * i(k, ref = -1)
+                   + PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb,
+                   vcov = "hetero")
+
+#Play Area
+est_play <- feols(exp_play ~ dosage * i(k, ref = -1)
+                  + PIBpc |
+                    codmun + ano + uf^ano,
+                  data = df_comb,
+                  vcov = "hetero")
+
+#Lunch
+est_lunch <- feols(exp_lunch ~ dosage * i(k, ref = -1)
+                   + PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb,
+                   vcov = "hetero")
+
+#Employee 
+est_employ <- feols(employee ~ dosage * i(k, ref = -1)
+                    + PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb,
+                    vcov = "hetero")
+
+etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_employ)
+
+
+#### 3.2.1.1 Graph ----
+event_style_plot <- function(est_obj, title = NULL, ylim = NULL) {
+  # extract tidy data from fixest::etable or broom::tidy
+  event_df <- broom::tidy(est_obj, conf.int = TRUE) %>% 
+    mutate(
+      k = str_extract(term, "(?<=k::)-?\\d+"),
+      k = as.numeric(k))
+  
+  
+  event_df <- event_df %>% 
+    bind_rows(
+      event_df %>%
+        mutate(
+          term = "k:-1",     # or another label that fits your pattern
+          estimate = 0,
+          std.error = 0,
+          statistic = 0,
+          p.value = 1,
+          conf.low = 0,
+          conf.high = 0,
+          k = -1
+        )
+    )
+  
+  # if you have event-time variable called k and confidence bounds conf.low/conf.high:
+  ggplot(event_df, aes(x = k + 2007, y = estimate)) +
+    # shaded standard error area
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+                fill = "grey60", alpha = 0.3) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+    geom_vline(xintercept = 2006, color = "black") +
+    geom_point(shape = 15, size = 2, color = "black") +
+    geom_line(color = "black") +
+    labs(
+      title = title,
+      x = "Ano"
+    ) +
+    coord_cartesian(ylim = ylim) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11)
+    ) + 
+    scale_x_continuous(breaks = seq(2005, 2018, 2))
+  
+}
+
+
+
+# 3) Apply helper to each ggiplot object
+p_class <- event_style_plot(est_class, "Alunos/Salas de Aula")   #Classroom
+p_troom <- event_style_plot(est_troom, "Sala dos Prof.")  #Teacher's Room
+p_labs  <- event_style_plot(est_labs,  "Laboratórios")    #Laboratory
+p_libra <- event_style_plot(est_libra, "Biblioteca")      #Library
+p_play  <- event_style_plot(est_play,  "Quadras/Parque")  #Play Area
+p_lunch <- event_style_plot(est_lunch, "Merenda")         #Lunch
+p_employ <- event_style_plot(est_employ,"Alunos/Funcionários")   #Employee
+
+blank <- ggplot() + theme_void()
+
+grid_plot <- (p_troom + p_labs + p_lunch) /
+  (p_libra + p_play + blank) /
+  (p_class + p_employ + blank)
+
+final <- grid_plot + plot_annotation(
+  #title = "Event-study: infrastructure / staff outcomes",
+  caption = "Estimates from feols(...) with i(k, ref = -1)"
+)
+
+final
+
+ggsave( #Saving image
+  filename = paste0("mun_school_structure_dosage.png"),
+  plot = final,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
+  width = 800/96, height = 620/96, dpi = 300
+)
+
+rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libra,
+   final)
+
+# ----------------- #
+### 3.2.2 Aluno Dosage ----
+#Classroom
+est_class <- feols( class ~ aluno_dosage * i(k, ref = -1) +
+                      PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb,
+                    vcov = "hetero")
+#Teacher room
+est_troom <- feols( exp_troom ~ aluno_dosage * i(k, ref = -1) +
+                      PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb,
+                    vcov = "hetero")
+#Laboratory
+est_labs <- feols(exp_lab ~ aluno_dosage * i(k, ref = -1)
+                  + PIBpc |
+                    codmun + ano + uf^ano,
+                  data = df_comb,
+                  vcov = "hetero")
+
+#Library
+est_libra <- feols(exp_lib ~ aluno_dosage * i(k, ref = -1)
+                   + PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb,
+                   vcov = "hetero")
+
+#Play Area
+est_play <- feols(exp_play ~ aluno_dosage * i(k, ref = -1)
+                  + PIBpc |
+                    codmun + ano + uf^ano,
+                  data = df_comb,
+                  vcov = "hetero")
+
+#Lunch
+est_lunch <- feols(exp_lunch ~ aluno_dosage * i(k, ref = -1)
+                   + PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb,
+                   vcov = "hetero")
+
+#Employee 
+est_employ <- feols(employee ~ aluno_dosage * i(k, ref = -1)
+                    + PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb,
+                    vcov = "hetero")
+
+etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_employ)
+
+
+#### 3.2.2.1 Graph ----
+
+
+# 3) Apply helper to each ggiplot object
+p_class <- event_style_plot(est_class, "Alunos/Salas de Aula")   #Classroom
+p_troom <- event_style_plot(est_troom, "Sala dos Prof.")  #Teacher's Room
+p_labs  <- event_style_plot(est_labs,  "Laboratórios")    #Laboratory
+p_libra <- event_style_plot(est_libra, "Biblioteca")      #Library
+p_play  <- event_style_plot(est_play,  "Quadras/Parque")  #Play Area
+p_lunch <- event_style_plot(est_lunch, "Merenda")         #Lunch
+p_employ <- event_style_plot(est_employ,"Alunos/Funcionários")   #Employee
+
+blank <- ggplot() + theme_void()
+
+grid_plot <- (p_troom + p_labs + p_lunch) /
+  (p_libra + p_play + blank) /
+  (p_class + p_employ + blank)
+
+
+final <- grid_plot + plot_annotation(
+  #title = "Event-study: infrastructure / staff outcomes",
+  caption = "Estimates from feols(...) with i(k, ref = -1)"
+)
+
+final
+
+ggsave( #Saving image
+  filename = paste0("mun_school_structure_aluno_dosage.png"),
+  plot = final,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
+  width = 800/96, height = 620/96, dpi = 300
+)
+
+rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libra,
+   final, est_class, est_employ, est_labs, est_libra, est_lunch, est_play,
+   est_troom)
+
+
+# ------------------- #
+## 3.3 Abv vs. Blw ----
+# ------------------- #
+
+df_comb <- df_comb %>% 
+  mutate(grupo = case_when(
+    dosage > 0 ~ "Above",
+    dosage < 0 ~ "Below",
+    TRUE ~ NA
+  ),
+  grupo = factor(grupo))
+
+
+#Library
+est_libra <- feols(exp_lib ~ dosage : i(k, grupo, ref = -1)
+                   + PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb,
+                   vcov = "hetero")
+
+#Lunch
+est_lunch <- feols(exp_lunch ~ dosage : i(k, grupo, ref = -1)
+                   + PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb,
+                   vcov = "hetero")
+
+
+etable(est_libra, est_lunch)
+
+#'As suspected the observed negative jump in lunch and library are associated with
+#'the increase in the municipalities with negative dosage. Thus, it should be ta-
+#'ken as reference the oposite movement.
+
+rm(est_libra, est_lunch)
+
+# ---------------------- #
+## 3.4 Courses ----
+# ---------------------- #
+
+
+### 3.4.1 Dosage -----
+
+#Kindergarden
+est_kinder <- feols( exp_psch ~ dosage * i(k, ref = -1) +
+                       PIBpc |
+                       codmun + ano + uf^ano,
+                     data = df_comb,
+                     vcov = "hetero")
+#Elementary
+est_elem <- feols( exp_elem ~ dosage * i(k, ref = -1) +
+                     PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb,
+                   vcov = "hetero")
+#Highschool
+est_high <- feols(exp_high ~ dosage * i(k, ref = -1)
+                  + PIBpc |
+                    codmun + ano + uf^ano,
+                  data = df_comb,
+                  vcov = "hetero")
+
+# #Inclusion
+# est_inclu <- feols(inclusion ~ dosage * i(k, ref = -1)
+#                    + PIBpc |
+#                      codmun + ano + uf.x^ano,
+#                    data = df_comb,
+#                    vcov = "hetero")
+
+
+
+#### 3.4.1.1 Graph ----
+p_kinder <- event_style_plot(est_kinder, "E. Infantil")  #Preschool
+p_elem <- event_style_plot(est_elem, "E. Fundamental")   #Elementary
+p_high  <- event_style_plot(est_high,  "E. Médio")       #HighSchool
+#p_inclu <- event_style_plot(est_inclu, "E. Especial")    #Speical Education
+
+blank <- ggplot() + theme_void()
+
+grid_plot <- (p_kinder + p_elem) /
+  (p_high + blank) 
+
+final <- grid_plot + plot_annotation(
+  #title = "Event-study: infrastructure / staff outcomes",
+  caption = "Estimates from feols(...) with i(k, ref = -1)"
+)
+
+final
+
+ggsave( #Saving image
+  filename = paste0("mun_school_course_dosage.png"),
+  plot = final,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
+  width = 800/96, height = 620/96, dpi = 300
+)
+
+rm(p_kinder, p_elem, p_high, final)
+
+# ----------------- #
+### 3.4.2 Aluno Dosage ----
+
+#Kindergarden
+est_kinder <- feols( exp_psch ~ aluno_dosage * i(k, ref = -1) +
+                       PIBpc |
+                       codmun + ano + uf^ano,
+                     data = df_comb,
+                     vcov = "hetero")
+#Elementary
+est_elem <- feols( exp_elem ~ aluno_dosage * i(k, ref = -1) +
+                     PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb,
+                   vcov = "hetero")
+#Highschool
+est_high <- feols(exp_high ~ aluno_dosage * i(k, ref = -1)
+                  + PIBpc |
+                    codmun + ano + uf^ano,
+                  data = df_comb,
+                  vcov = "hetero")
+
+# #Inclusion
+# est_inclu <- feols(inclusion ~ aluno_dosage * i(k, ref = -1)
+#                    + PIBpc |
+#                      codmun + ano + uf.x^ano,
+#                    data = df_comb,
+#                    vcov = "hetero")
+
+
+
+#### 3.4.2.1 Graph ----
+p_kinder <- event_style_plot(est_kinder, "E. Infantil")  #Preschool
+p_elem <- event_style_plot(est_elem, "E. Fundamental")   #Elementary
+p_high  <- event_style_plot(est_high,  "E. Médio")       #HighSchool
+#p_inclu <- event_style_plot(est_inclu, "E. Especial")    #Speical Education
+
+blank <- ggplot() + theme_void()
+
+grid_plot <- (p_kinder + p_elem) /
+  (p_high + blank) 
+
+final <- grid_plot + plot_annotation(
+  #title = "Event-study: infrastructure / staff outcomes",
+  caption = "Estimates from feols(...) with i(k, ref = -1)"
+)
+
+final
+
+ggsave( #Saving image
+  filename = paste0("mun_school_course_aluno_dosage.png"),
+  plot = final,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
+  width = 800/96, height = 620/96, dpi = 300
+)
+
+rm(p_kinder, p_elem, p_high, p_inclu, final, est_elem, est_high, est_kinder,
+   blank, grid_project, grid_plot)
 
 
 rm(list = ls())
+
+
+
+
+
 # ---------------------------------------------------------------------------- #
 # 4. SAEB breakdown ----
 # ---------------------------------------------------------------------------- #
 
 
+
 # ---------------------- #
-## 3.1 Data ----
+## 4.1 Data ----
 # --------------------- #
  
 df_saeb <- readRDS( "Z:/Tuffy/Paper - Educ/Dados/saeb_nvl_aluno.rds") %>%
@@ -756,4 +1186,44 @@ df <- df_saeb %>%
           post_treat = ifelse(ano > 2007, 1, 0)
          ) 
   
+#' I will group by municipality the number of observations in the SAEB individual
+#' level data base. This will allow for comparisions between the sample through 
+#' the years.
  
+# ----------------- #
+### 4.1.1 Group ----
+
+
+df_mun <- df %>% 
+  mutate(uf = as.numeric(codmun) %/% 10000) %>% 
+  group_by(codmun, ano, id_uf) %>% 
+  summarise(students = n(),
+            .groups = "drop") %>% 
+  arrange(codmun, ano, id_uf)
+
+
+#### 4.1.1.1 Mun per year ----
+#Municipalities by year
+mun_tab <- df_mun %>% 
+  group_by(ano) %>% 
+  summarise(
+    n_mun = n_distinct(codmun), #captures different municipalities
+    total_students = sum(students, na.rm = T)
+  ) %>% 
+  arrange(ano)
+
+table(mun_tab$ano)  
+
+#### 4.1.1.2 UF - year -----
+
+uf_tab <- df_mun %>% 
+  group_by(uf) %>% 
+  summarise(
+    "2005" = n_distinct(codmun[ano == 2005]),
+    "2007" = n_distinct(codmun[ano == 2007]),
+    "2009" = n_distinct(codmun[ano == 2009]),
+    "2011" = n_distinct(codmun[ano == 2011]),
+    "2013" = n_distinct(codmun[ano == 2013]),
+    "2015" = n_distinct(codmun[ano == 2015]),
+    "2017" = n_distinct(codmun[ano == 2017]),
+    .groups = "drop")
