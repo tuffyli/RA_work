@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions
 # Last edited by: Tuffy Licciardi Issa
-# Date: 24/10/2025
+# Date: 05/11/2025
 # ---------------------------------------------------------------------------- #
 
 #' *************************************************************************** #
@@ -61,8 +61,8 @@ options(scipen = 999)
 #Saeb dataframe
 df_saeb <- readRDS( "Z:/Tuffy/Paper - Educ/Dados/saeb_nvl_aluno.rds") %>%
 mutate(codmun = ifelse(ano >= 2007, as.numeric(codmun) %/% 10, codmun),
-       codmun = as.character(codmun))  #Arranging for the older municipal codes
-
+       codmun = as.character(codmun)) %>%   #Arranging for the older municipal codes
+filter(codmun < 600000)
 
 
 
@@ -362,8 +362,114 @@ etable(mat_dos, por_dos,
        headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
        file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage/rudi_individuo_abbe.tex", replace = TRUE)
 
+#### 4.1.1.1 Graph ----
 
-### 4.1.1 Dosage ----
+model_list <- list(
+  mat  = mat_dos,
+  por = por_dos
+)
+
+for (model_name in names(model_list)) {
+  
+  
+  current_model <- model_list[[model_name]]
+  
+  temp <- broom::tidy(current_model, conf.int = TRUE) %>%
+    # Keep only terms starting with "dosageanos_exp::"
+    filter(str_detect(term, "^dosage:anos_exp::")) %>%
+    mutate(
+      # Extract time_exposure number after "dosageanos_exp::"
+      time_exposure = str_extract(term, "(?<=dosage:anos_exp::)-?\\d+"),
+      time_exposure = as.numeric(time_exposure),
+      # Extract group name (Above/Below)
+      grupo = str_extract(term, "(?<=grupo::)\\w+"),
+      grupo = as.factor(grupo)
+    )
+  
+  
+  
+  
+  temp_edu <- temp %>%
+    distinct(grupo) %>%             # one row per group (Above / Below)
+    mutate(
+      term = "time_to_treat:0",     # or another label that fits your pattern
+      estimate = 0,
+      std.error = 0,
+      statistic = 0,
+      p.value = 1,
+      conf.low = 0,
+      conf.high = 0,
+      time_exposure = 0
+    )
+  
+  # combine with your main dataframe
+  temp <- bind_rows(temp, temp_edu) %>%
+    arrange(grupo, time_exposure) %>% 
+    bind_rows(
+      temp_edu %>%
+        distinct(grupo) %>%
+        mutate(
+          time_exposure = 0,
+          estimate = 0,
+          conf.low = 0,
+          conf.high = 0
+        )
+    ) %>%
+    arrange(grupo, time_exposure)
+  
+  
+  p <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+    geom_vline(xintercept = 0, color = "black") +
+    geom_point(aes(color = grupo), shape = 15, size = 2) +
+    geom_line(aes(color = grupo)) +
+    #facet_wrap(~ grupo, ncol = 1) +     # <--- separate plot per group
+    labs(x = "Years of Exposure", y = "Nota",
+         color = NULL, fill = NULL) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11),
+      legend.position = c(0.95, 0.95),
+      legend.justification = c("right", "top") # anchor legend box
+    ) + # anchor legend box
+    scale_x_continuous(
+      breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                   max(temp$time_exposure, na.rm = TRUE),
+                   by = 2)
+    )
+  
+  
+  p <- p +
+    theme(
+      legend.background = element_blank(),
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11),
+      legend.position = c(0.94, 0.17),
+      legend.justification = c("right", "top") # anchor legend box
+    ) + # anchor legend box
+    scale_x_continuous(
+      breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                   max(temp$time_exposure, na.rm = TRUE),
+                   by = 2))
+  
+  
+  print(p)
+  
+  ggsave(
+    filename = paste0("grafico_", model_name, "_Rudi_dosage.png"),
+    plot = p,
+    path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Outro/",
+    width = 600/96, height = 420/96, dpi = 110
+  )
+  rm(temp_edu, temp, model_name, current_model, p)
+}
+rm(model_list)
+
+### 4.1.2 Aluno Dosage ----
 
 mat_dos <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(anos_exp, grupo, ref = 0)
                  + sexo + raca + mae_educ + idade + PIBpc #Controls
@@ -385,12 +491,125 @@ etable(mat_dos, por_dos,
        headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
        file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage_aluno/rudi_aluno_individuo_abbe.tex", replace = TRUE)
 
-rm(mat_dos, por_dos)
+
+
+
+#### 4.1.2.1 Graph ----
+
+model_list <- list(
+  mat  = mat_dos,
+  por = por_dos
+)
+
+for (model_name in names(model_list)) {
+  
+  
+  current_model <- model_list[[model_name]]
+  
+  temp <- broom::tidy(current_model, conf.int = TRUE) %>%
+    # Keep only terms starting with "dosageanos_exp::"
+    filter(str_detect(term, "^aluno_dosage:anos_exp::")) %>%
+    mutate(
+      # Extract time_exposure number after "dosageanos_exp::"
+      time_exposure = str_extract(term, "(?<=aluno_dosage:anos_exp::)-?\\d+"),
+      time_exposure = as.numeric(time_exposure),
+      # Extract group name (Above/Below)
+      grupo = str_extract(term, "(?<=grupo::)\\w+"),
+      grupo = as.factor(grupo)
+    )
+  
+  
+  
+  
+  temp_edu <- temp %>%
+    distinct(grupo) %>%             # one row per group (Above / Below)
+    mutate(
+      term = "time_to_treat:0",     # or another label that fits your pattern
+      estimate = 0,
+      std.error = 0,
+      statistic = 0,
+      p.value = 1,
+      conf.low = 0,
+      conf.high = 0,
+      time_exposure = 0
+    )
+  
+  # combine with your main dataframe
+  temp <- bind_rows(temp, temp_edu) %>%
+    arrange(grupo, time_exposure) %>% 
+    bind_rows(
+      temp_edu %>%
+        distinct(grupo) %>%
+        mutate(
+          time_exposure = 0,
+          estimate = 0,
+          conf.low = 0,
+          conf.high = 0
+        )
+    ) %>%
+    arrange(grupo, time_exposure)
+  
+  
+  p <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+    geom_vline(xintercept = 0, color = "black") +
+    geom_point(aes(color = grupo), shape = 15, size = 2) +
+    geom_line(aes(color = grupo)) +
+    #facet_wrap(~ grupo, ncol = 1) +     # <--- separate plot per group
+    labs(x = "Years of Exposure", y = "Nota",
+         color = NULL, fill = NULL) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11),
+      legend.position = c(0.95, 0.95),
+      legend.justification = c("right", "top") # anchor legend box
+    ) + # anchor legend box
+    scale_x_continuous(
+      breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                   max(temp$time_exposure, na.rm = TRUE),
+                   by = 2)
+    )
+  
+  
+  p <- p +
+    theme(
+      legend.background = element_blank(),
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11),
+      legend.position = c(0.94, 0.17),
+      legend.justification = c("right", "top") # anchor legend box
+    ) + # anchor legend box
+    scale_x_continuous(
+      breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                   max(temp$time_exposure, na.rm = TRUE),
+                   by = 2))
+  
+  
+  print(p)
+  
+  ggsave(
+    filename = paste0("grafico_", model_name, "_Rudi_dosage.png"),
+    plot = p,
+    path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Outro/",
+    width = 600/96, height = 420/96, dpi = 110
+  )
+  rm(temp_edu, temp, model_name, current_model, p)
+}
+rm(model_list, mat_dos, por_dos)
+
+
+
+# ---------------------- #
 ## 4.2 Roberto Ref ----
+# ---------------------- #
 #' This specification follows the estimation model from FUNDEF impact in educa-
 #' tion study.
 
-### 4.2.1 Dosage ----
+### 4.2.1 Main Regression ----
 
 
 
@@ -414,4 +633,112 @@ etable(mat_dos, por_dos,
        vcov = "hetero",
        headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
        file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage/roberto_individuo_abbe.tex", replace = TRUE)
+
+
+#### 4.2.1.1 Graph ----
+
+
+model_list <- list(
+  mat  = mat_dos,
+  por = por_dos
+)
+
+for (model_name in names(model_list)) {
+  
+  
+  current_model <- model_list[[model_name]]
+    
+  temp <- broom::tidy(current_model, conf.int = TRUE) %>%
+    # Keep only rows starting with "anos_exp::"
+    filter(str_detect(term, "^anos_exp::")) %>%
+    mutate(
+      # Extract numeric value after "anos_exp::"
+      time_exposure = str_extract(term, "(?<=anos_exp::)-?\\d+"),
+      time_exposure = as.numeric(time_exposure),
+      # Extract group name (Above/Below)
+      grupo = str_extract(term, "(?<=grupo::)\\w+"),
+      grupo = as.factor(grupo)
+    )
+    
+    
+    
+    
+    temp_edu <- temp %>%
+      distinct(grupo) %>%             # one row per group (Above / Below)
+      mutate(
+        term = "time_to_treat:0",     # or another label that fits your pattern
+        estimate = 0,
+        std.error = 0,
+        statistic = 0,
+        p.value = 1,
+        conf.low = 0,
+        conf.high = 0,
+        time_exposure = 0
+      )
+    
+    # combine with your main dataframe
+    temp <- bind_rows(temp, temp_edu) %>%
+      arrange(grupo, time_exposure) %>% 
+      bind_rows(
+        temp_edu %>%
+          distinct(grupo) %>%
+          mutate(
+            time_exposure = 0,
+            estimate = 0,
+            conf.low = 0,
+            conf.high = 0
+          )
+      ) %>%
+      arrange(grupo, time_exposure)
+    
+    
+    p <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
+      geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
+      geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+      geom_vline(xintercept = 0, color = "black") +
+      geom_point(aes(color = grupo), shape = 15, size = 2) +
+      geom_line(aes(color = grupo)) +
+      #facet_wrap(~ grupo, ncol = 1) +     # <--- separate plot per group
+      labs(x = "Years of Exposure", y = "Nota",
+           color = NULL, fill = NULL) +
+      theme_classic() +
+      theme(
+        axis.line = element_line(color = "grey70"),
+        panel.grid = element_blank(),
+        axis.title = element_text(size = 11),
+        legend.position = c(0.95, 0.95),
+        legend.justification = c("right", "top") # anchor legend box
+      ) + # anchor legend box
+      scale_x_continuous(
+        breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                     max(temp$time_exposure, na.rm = TRUE),
+                     by = 2)
+      )
+    
+    
+    p <- p +
+      theme(
+        legend.background = element_blank(),
+        axis.line = element_line(color = "grey70"),
+        panel.grid = element_blank(),
+        axis.title = element_text(size = 11),
+        legend.position = c(0.14, 0.17),
+        legend.justification = c("right", "top") # anchor legend box
+      ) + # anchor legend box
+      scale_x_continuous(
+        breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                     max(temp$time_exposure, na.rm = TRUE),
+                     by = 2))
+    
+    
+    print(p)
+    
+    ggsave(
+      filename = paste0("grafico_", model_name, "_Roberto.png"),
+      plot = p,
+      path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Outro/",
+      width = 600/96, height = 420/96, dpi = 110
+    )
+    rm(temp_edu, temp, model_name, p)
+}
 
