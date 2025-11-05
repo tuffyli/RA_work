@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Robustness tests
 # Last edited by: Tuffy Licciardi Issa
-# Date: 31/10/2025
+# Date: 05/11/2025
 # ---------------------------------------------------------------------------- #
 
 #' *************************************************************************** #
@@ -1149,8 +1149,9 @@ rm(list = ls())
  
 df_saeb <- readRDS( "Z:/Tuffy/Paper - Educ/Dados/saeb_nvl_aluno.rds") %>%
    mutate(codmun = ifelse(ano >= 2007, as.numeric(codmun) %/% 10, codmun),
-          codmun = as.character(codmun))  #Arranging for the older municipal codes
- 
+          codmun = as.character(codmun)) %>% #Arranging for the older municipal codes
+  filter(codmun < 60000)
+  
  
 #Main regression dataframe
 df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>% 
@@ -1199,7 +1200,8 @@ df_mun <- df %>%
   group_by(codmun, ano, id_uf) %>% 
   summarise(students = n(),
             .groups = "drop") %>% 
-  arrange(codmun, ano, id_uf)
+  arrange(codmun, ano, id_uf) %>% 
+  mutate_all(as.numeric)
 
 
 #### 4.1.1.1 Mun per year ----
@@ -1214,10 +1216,21 @@ mun_tab <- df_mun %>%
 
 table(mun_tab$ano)  
 
+#Saving the table
+latex_table <- knitr::kable(
+  uf_stu,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcccccc",
+  linesep = ""
+)
+writeLines(latex_table, "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Desc/mun_ano.tex")
+
+
 #### 4.1.1.2 UF - year -----
 
 uf_tab <- df_mun %>% 
-  group_by(uf) %>% 
+  group_by(id_uf) %>% 
   summarise(
     "2005" = n_distinct(codmun[ano == 2005]),
     "2007" = n_distinct(codmun[ano == 2007]),
@@ -1226,4 +1239,138 @@ uf_tab <- df_mun %>%
     "2013" = n_distinct(codmun[ano == 2013]),
     "2015" = n_distinct(codmun[ano == 2015]),
     "2017" = n_distinct(codmun[ano == 2017]),
-    .groups = "drop")
+    .groups = "drop") %>% 
+  mutate(uf = case_when( #Regions names
+    id_uf == 11 ~ "RO",
+    id_uf == 12 ~ "AC",
+    id_uf == 13 ~ "AM",
+    id_uf == 14 ~ "RR",
+    id_uf == 15 ~ "PA",
+    id_uf == 16 ~ "AP",
+    id_uf == 17 ~ "TO",
+    
+    id_uf == 21 ~ "MA",
+    id_uf == 22 ~ "PI",
+    id_uf == 23 ~ "CE",
+    id_uf == 24 ~ "RN",
+    id_uf == 25 ~ "PB",
+    id_uf == 26 ~ "PE",
+    id_uf == 27 ~ "AL",
+    id_uf == 28 ~ "SE",
+    id_uf == 29 ~ "BA",
+    
+    id_uf == 31 ~ "MG",
+    id_uf == 32 ~ "ES",
+    id_uf == 33 ~ "RJ",
+    id_uf == 35 ~ "SP",
+    
+    id_uf == 41 ~ "PR",
+    id_uf == 42 ~ "SC",
+    id_uf == 43 ~ "RS",
+    
+    id_uf == 50 ~ "MS",
+    id_uf == 51 ~ "MT",
+    id_uf == 52 ~ "GO",
+    id_uf == 53 ~ "DF",
+    T ~ NA
+  )) %>%
+  select(uf, everything(), -id_uf)
+
+latex_table <- knitr::kable(
+  uf_tab,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcccccc",
+  linesep = ""
+)
+writeLines(latex_table, "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Desc/mun_uf_ano.tex")
+
+
+df_mun %>% tab(id_uf)
+
+#### 4.1.1.3 Students - year ----
+uf_stu <- df_mun %>%
+  group_by(id_uf, ano) %>%
+  summarise(total_students = sum(students, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = ano, values_from = total_students) %>% 
+  mutate(uf = case_when( #Regions names
+    id_uf == 11 ~ "RO",
+    id_uf == 12 ~ "AC",
+    id_uf == 13 ~ "AM",
+    id_uf == 14 ~ "RR",
+    id_uf == 15 ~ "PA",
+    id_uf == 16 ~ "AP",
+    id_uf == 17 ~ "TO",
+    
+    id_uf == 21 ~ "MA",
+    id_uf == 22 ~ "PI",
+    id_uf == 23 ~ "CE",
+    id_uf == 24 ~ "RN",
+    id_uf == 25 ~ "PB",
+    id_uf == 26 ~ "PE",
+    id_uf == 27 ~ "AL",
+    id_uf == 28 ~ "SE",
+    id_uf == 29 ~ "BA",
+    
+    id_uf == 31 ~ "MG",
+    id_uf == 32 ~ "ES",
+    id_uf == 33 ~ "RJ",
+    id_uf == 35 ~ "SP",
+    
+    id_uf == 41 ~ "PR",
+    id_uf == 42 ~ "SC",
+    id_uf == 43 ~ "RS",
+    
+    id_uf == 50 ~ "MS",
+    id_uf == 51 ~ "MT",
+    id_uf == 52 ~ "GO",
+    id_uf == 53 ~ "DF",
+    T ~ NA
+  )) %>%
+  select(uf, everything(), -id_uf)
+
+#Saving Table as LaTeX
+latex_table <- knitr::kable(
+  uf_stu,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcccccc",
+  linesep = ""
+)
+writeLines(latex_table, "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Desc/aluno_uf_ano.tex")
+rm( latex_table)
+
+# ----------------------- #
+## 4.2 School Student ----
+# ----------------------- #
+
+#'Here I will invetigate if there was a significant difference of students within
+#'a school that is present through all the observations years.
+
+
+df_filter <- df_mun %>% 
+  group_by(codmun) %>% 
+  mutate(aux1 = 1,
+         aux2 = sum(aux1, na.rm = T),
+         time_to_treat = ano - 2007
+         ) %>% 
+  filter(aux2 == 7) %>% #Selecting only the mun present in all years
+  ungroup() %>% 
+  select(-aux1, -aux2)
+
+### ------------------ #
+### 4.2.1 Regression ----
+### ------------------ #
+
+est <- feols(students ~ i(time_to_treat, ref = 0) |
+                               codmun,
+                             data = df_filter,
+                             vcov = "hetero")
+
+etable(est)
+etable(est,
+       vcov = "hetero",
+       headers = list(":_:" = list("N° Alunos" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Desc/num_alunos.tex", replace = TRUE)
+
+
