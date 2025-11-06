@@ -1218,7 +1218,7 @@ table(mun_tab$ano)
 
 #Saving the table
 latex_table <- knitr::kable(
-  uf_stu,
+  mun_tab,
   format = "latex",
   booktabs = TRUE,
   align = "lcccccc",
@@ -1286,7 +1286,7 @@ latex_table <- knitr::kable(
 writeLines(latex_table, "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Desc/mun_uf_ano.tex")
 
 
-df_mun %>% tab(id_uf)
+#df_mun %>% tab(id_uf)
 
 #### 4.1.1.3 Students - year ----
 uf_stu <- df_mun %>%

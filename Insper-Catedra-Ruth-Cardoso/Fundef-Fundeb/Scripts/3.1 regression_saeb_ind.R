@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions
 # Last edited by: Tuffy Licciardi Issa
-# Date: 05/11/2025
+# Date: 06/11/2025
 # ---------------------------------------------------------------------------- #
 
 #' *************************************************************************** #
@@ -291,6 +291,7 @@ etable(main_dist, sec_dist,
        vcov = "hetero",
        headers = list(":_:" = list("5°Ano" = 1,"9°Ano" = 1)),
        file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage/dist_individuo_anos_exp.tex", replace = TRUE)
+
 
 # ---------------- #
 ## 3.2 Aluno Dosage ----
@@ -745,6 +746,318 @@ for (model_name in names(model_list)) {
       path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Outro/",
       width = 600/96, height = 420/96, dpi = 110
     )
-    #rm(temp_edu, temp, model_name, p)
+    rm(baseline_rows, temp, model_name, current_model, p)
 }
+
+rm(mat_dos, por_dos)
+# ------------------------------------ #
+## 4.3 Age Distort. ----
+# ------------------------------------ #
+### 4.3.1 Dosage ----
+#### 4.3.1.1 Regression ----
+
+main_dist <- feols(as.numeric(age_late) ~ dosage : i(anos_exp, grupo, ref = 0)
+                   + sexo + raca + mae_educ + idade + PIBpc #Controls
+                   | codmun + ano + uf^ano, #FE
+                   data = df %>% filter(grade == 5), #Only 5h grade
+                   #weights = df %>% filter(grade == 5) %>% select(peso),
+                   vcov = "hetero")
+
+
+sec_dist <- feols(as.numeric(age_late) ~ dosage : i(anos_exp, grupo, ref = 0)
+                  + sexo + raca + mae_educ + idade + PIBpc 
+                  | codmun + ano + uf^ano,
+                  data = df %>% filter(grade == 9),
+                  #weights = df$peso,
+                  vcov = "hetero")
+
+etable(main_dist, sec_dist)
+
+etable(main_dist, sec_dist,
+       vcov = "hetero",
+       headers = list(":_:" = list("5° Ano" = 1,"9° Ano" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage/dist_age_abbe_dosage.tex", replace = TRUE)
+
+
+
+#### 4.3.1.2 Graph ----
+
+
+model_list <- list(
+  ano5  = main_dist,
+  ano9 = sec_dist
+)
+
+for (model_name in names(model_list)) {
+  
+  
+  current_model <- model_list[[model_name]]
+  
+  temp <- broom::tidy(current_model, conf.int = TRUE) %>%
+    filter(str_detect(term, "anos_exp")) %>%
+    mutate(
+      # Extract time (number right after "anos_exp:")
+      time_exposure = str_extract(term, "(?<=anos_exp:)-?\\d+"),
+      time_exposure = as.numeric(time_exposure),
+      
+      # Extract group (text after the last colon)
+      grupo = str_extract(term, "[^:]+$"),
+      grupo = as.factor(grupo)
+    ) %>%
+    mutate(
+      time_exposure = sapply(
+        str_extract_all(term, "-?\\d*\\.?\\d+"),
+        function(x) if (length(x) > 0) as.numeric(tail(x, 1)) else NA_real_
+      )
+    ) %>%
+    select(term, estimate, std.error, statistic, p.value, conf.low, conf.high, grupo, time_exposure)
+  
+  # If extraction gave NAs for an entire grupo, create an internal sequence (fallback).
+  # This produces a centered seq: e.g. for 5 rows -> -2, -1, 0, 1, 2
+  temp <- temp %>%
+    group_by(grupo) %>%
+    mutate(
+      # if all NA in this group, make a centered sequence; else keep extracted values
+      time_exposure = if (all(is.na(time_exposure))) {
+        n <- n()
+        seq(-floor((n-1)/2), ceiling((n-1)/2), length.out = n) %>% as.integer()
+      } else {
+        time_exposure
+      }
+    ) %>%
+    ungroup() %>%
+    arrange(grupo, time_exposure)
+  
+  # if you want an explicit 0 baseline row per grupo (if not already present),
+  # create a baseline row and bind it in. This ensures there is always a point at 0.
+  baseline_rows <- temp %>%
+    distinct(grupo) %>%
+    mutate(
+      term = paste0(as.character(grupo), ":anos_exp:0"),
+      estimate = 0,
+      std.error = 0,
+      statistic = NA_real_,
+      p.value = 1,
+      conf.low = 0,
+      conf.high = 0,
+      time_exposure = 0
+    )
+  
+  # combine and order
+  temp <- bind_rows(temp, baseline_rows) %>%
+    distinct(term, grupo, time_exposure, .keep_all = TRUE) %>%  # avoid duplicate identical rows
+    arrange(grupo, time_exposure)
+  
+  
+  p <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+    geom_vline(xintercept = 0, color = "black") +
+    geom_point(aes(color = grupo), shape = 15, size = 2) +
+    geom_line(aes(color = grupo)) +
+    #facet_wrap(~ grupo, ncol = 1) +     # <--- separate plot per group
+    labs(x = "Years of Exposure", y = "Nota",
+         color = NULL, fill = NULL) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11),
+      legend.position = c(0.95, 0.95),
+      legend.justification = c("right", "top") # anchor legend box
+    ) + # anchor legend box
+    scale_x_continuous(
+      breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                   max(temp$time_exposure, na.rm = TRUE),
+                   by = 2)
+    )
+  
+  
+  p <- p +
+    theme(
+      legend.background = element_blank(),
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11),
+      legend.position = c(0.14, 0.17),
+      legend.justification = c("right", "top") # anchor legend box
+    ) + # anchor legend box
+    scale_x_continuous(
+      breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                   max(temp$time_exposure, na.rm = TRUE),
+                   by = 2))
+  
+  
+ p
+  
+  
+  ggsave(
+    filename = paste0("grafico_", model_name, "_atraso_abbe.png"),
+    plot = p,
+    path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
+    width = 600/96, height = 420/96, dpi = 110
+  )
+  rm(baseline_rows, temp, model_name, current_model, p)
+}
+
+
+
+
+
+# ------------------------- #
+### 4.3.2 Aluno Dosage ----
+# ------------------------- #
+
+
+#### 4.3.2.1 Regression ----
+
+main_dist <- feols(as.numeric(age_late) ~ dosage : i(anos_exp, grupo, ref = 0)
+                   + sexo + raca + mae_educ + idade + PIBpc #Controls
+                   | codmun + ano + uf^ano, #FE
+                   data = df %>% filter(grade == 5), #Only 5h grade
+                   #weights = df %>% filter(grade == 5) %>% select(peso),
+                   vcov = "hetero")
+
+
+sec_dist <- feols(as.numeric(age_late) ~ dosage : i(anos_exp, grupo, ref = 0)
+                  + sexo + raca + mae_educ + idade + PIBpc 
+                  | codmun + ano + uf^ano,
+                  data = df %>% filter(grade == 9),
+                  #weights = df$peso,
+                  vcov = "hetero")
+
+etable(main_dist, sec_dist)
+
+etable(main_dist, sec_dist,
+       vcov = "hetero",
+       headers = list(":_:" = list("5° Ano" = 1,"9° Ano" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage_aluno/dist_age_abbe_aluno_dosage.tex", replace = TRUE)
+
+
+
+#### 4.3.2.2 Graph ----
+
+
+model_list <- list(
+  ano5  = main_dist,
+  ano9 = sec_dist
+)
+
+for (model_name in names(model_list)) {
+  
+  
+  current_model <- model_list[[model_name]]
+  
+  temp <- broom::tidy(current_model, conf.int = TRUE) %>%
+    filter(str_detect(term, "anos_exp")) %>%
+    mutate(
+      # Extract time (number right after "anos_exp:")
+      time_exposure = str_extract(term, "(?<=anos_exp:)-?\\d+"),
+      time_exposure = as.numeric(time_exposure),
+      
+      # Extract group (text after the last colon)
+      grupo = str_extract(term, "[^:]+$"),
+      grupo = as.factor(grupo)
+    ) %>%
+    mutate(
+      time_exposure = sapply(
+        str_extract_all(term, "-?\\d*\\.?\\d+"),
+        function(x) if (length(x) > 0) as.numeric(tail(x, 1)) else NA_real_
+      )
+    ) %>%
+    select(term, estimate, std.error, statistic, p.value, conf.low, conf.high, grupo, time_exposure)
+  
+  # If extraction gave NAs for an entire grupo, create an internal sequence (fallback).
+  # This produces a centered seq: e.g. for 5 rows -> -2, -1, 0, 1, 2
+  temp <- temp %>%
+    group_by(grupo) %>%
+    mutate(
+      # if all NA in this group, make a centered sequence; else keep extracted values
+      time_exposure = if (all(is.na(time_exposure))) {
+        n <- n()
+        seq(-floor((n-1)/2), ceiling((n-1)/2), length.out = n) %>% as.integer()
+      } else {
+        time_exposure
+      }
+    ) %>%
+    ungroup() %>%
+    arrange(grupo, time_exposure)
+  
+  # if you want an explicit 0 baseline row per grupo (if not already present),
+  # create a baseline row and bind it in. This ensures there is always a point at 0.
+  baseline_rows <- temp %>%
+    distinct(grupo) %>%
+    mutate(
+      term = paste0(as.character(grupo), ":anos_exp:0"),
+      estimate = 0,
+      std.error = 0,
+      statistic = NA_real_,
+      p.value = 1,
+      conf.low = 0,
+      conf.high = 0,
+      time_exposure = 0
+    )
+  
+  # combine and order
+  temp <- bind_rows(temp, baseline_rows) %>%
+    distinct(term, grupo, time_exposure, .keep_all = TRUE) %>%  # avoid duplicate identical rows
+    arrange(grupo, time_exposure)
+  
+  
+  p <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+    geom_vline(xintercept = 0, color = "black") +
+    geom_point(aes(color = grupo), shape = 15, size = 2) +
+    geom_line(aes(color = grupo)) +
+    #facet_wrap(~ grupo, ncol = 1) +     # <--- separate plot per group
+    labs(x = "Years of Exposure", y = "Nota",
+         color = NULL, fill = NULL) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11),
+      legend.position = c(0.95, 0.95),
+      legend.justification = c("right", "top") # anchor legend box
+    ) + # anchor legend box
+    scale_x_continuous(
+      breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                   max(temp$time_exposure, na.rm = TRUE),
+                   by = 2)
+    )
+  
+  
+  p <- p +
+    theme(
+      legend.background = element_blank(),
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11),
+      legend.position = c(0.14, 0.17),
+      legend.justification = c("right", "top") # anchor legend box
+    ) + # anchor legend box
+    scale_x_continuous(
+      breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                   max(temp$time_exposure, na.rm = TRUE),
+                   by = 2))
+  
+  
+  p
+  
+  
+  ggsave(
+    filename = paste0("grafico_", model_name, "_atraso_abbe_aluno_dosage.png"),
+    plot = p,
+    path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
+    width = 600/96, height = 420/96, dpi = 110
+  )
+  rm(baseline_rows, temp, model_name, current_model, p)
+}
+
+
+
+
+
+
 
