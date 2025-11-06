@@ -585,7 +585,7 @@ for (model_name in names(model_list)) {
   print(p)
   
   ggsave(
-    filename = paste0("grafico_", model_name, "_Rudi_dosage.png"),
+    filename = paste0("grafico_", model_name, "_Rudi_aluno_dosage.png"),
     plot = p,
     path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Outro/",
     width = 600/96, height = 420/96, dpi = 110
@@ -739,6 +739,12 @@ for (model_name in names(model_list)) {
     print(p)
     
 
+    ggsave(
+      filename = paste0("grafico_", model_name, "_Roberto.png"),
+      plot = p,
+      path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Outro/",
+      width = 600/96, height = 420/96, dpi = 110
+    )
     #rm(temp_edu, temp, model_name, p)
 }
 
