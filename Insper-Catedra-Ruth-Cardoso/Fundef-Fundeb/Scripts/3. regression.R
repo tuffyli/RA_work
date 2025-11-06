@@ -966,13 +966,17 @@ etable(mat_tot5, port_tot5, mat_tot9, port_tot9,
   temp <- bind_rows(temp, temp_edu) %>%
     arrange(grupo, time_exposure)
   
-  p <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
+  p5 <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
     geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
     geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
     geom_vline(xintercept = 0, color = "black") +
     geom_point(aes(color = grupo), shape = 15, size = 2) +
     geom_line(aes(color = grupo)) +
-    labs(x = "Years of Exposure", y = "Nota", color = NULL, fill = NULL) +
+    labs(
+      title = "5° Ano",
+      x = "Years of Exposure",
+      y = "Nota",
+      color = NULL, fill = NULL) +
     theme_classic() +
     theme(
       axis.line = element_line(color = "grey70"),
@@ -988,16 +992,16 @@ etable(mat_tot5, port_tot5, mat_tot9, port_tot9,
                    by = 0.2)
     )
   
-  p
+  p5
 
   ggsave( #Saving image
     filename = paste0("carrillo_exp_5.png"),
-    plot = p,
+    plot = p5,
     path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
     width = 800/96, height = 620/96, dpi = 300
   )
 
-  rm(p, mat_tot5, port_tot5, temp, temp_edu)
+  rm( mat_tot5, port_tot5, temp, temp_edu)
 
   # ---------------------- #
   ###### 9th grade  ----
@@ -1051,13 +1055,13 @@ etable(mat_tot5, port_tot5, mat_tot9, port_tot9,
   temp <- bind_rows(temp, temp_edu) %>%
     arrange(grupo, time_exposure)
   
-  p <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
+  p9 <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
     geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
     geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
     geom_vline(xintercept = 0, color = "black") +
     geom_point(aes(color = grupo), shape = 15, size = 2) +
     geom_line(aes(color = grupo)) +
-    labs(x = "Years of Exposure", y = "Nota", color = NULL, fill = NULL) +
+    labs(title = "9° Ano", x = "Years of Exposure", y = "Nota", color = NULL, fill = NULL) +
     theme_classic() +
     theme(
       axis.line = element_line(color = "grey70"),
@@ -1073,17 +1077,37 @@ etable(mat_tot5, port_tot5, mat_tot9, port_tot9,
                    by = 0.2)
     )
   
-  p
+  p9
   
   ggsave( #Saving image
     filename = paste0("carrillo_exp_9.png"),
-    plot = p,
+    plot = p9,
     path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
     width = 800/96, height = 620/96, dpi = 300
   )
   
-  rm(p, mat_tot9, port_tot9, temp, temp_edu)
+  rm( mat_tot9, port_tot9, temp, temp_edu)
   
+  
+  ###### Combined -----
+  
+  grid_plot <- (p5 + p9)
+  
+  final <- grid_plot + patchwork::plot_annotation(
+    #title = "Event-study: infrastructure / staff outcomes",
+    caption = "Estimates from feols(...) with i(k, ref = -1)"
+  )
+  
+  final
+  
+  ggsave( #Saving image
+    filename = paste0("carrillo_exp_dosage.png"),
+    plot = final,
+    path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
+    width = 880/96, height = 520/96, dpi = 300
+  )
+  
+  rm(p5, p9, final, grid_plot)
 # --------------------------------------------------- #
 ### 6.5.2 Student Dosage ----
 # --------------------------------------------------- #
@@ -1224,6 +1248,200 @@ etable(mat_tot5, port_tot5, mat_tot9, port_tot9,
        headers = list(":_:" = list("Matemática" = 1,"Português" = 1, "Matemática" = 1,"Português" = 1)),
        file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage_aluno/es_treat_exp_aluno_dosage_reg.tex", replace = TRUE)
 
+
+
+##### 6.5.2.3.1 Graph ----
+
+# ---------------------- #
+###### 5th grade  ----
+
+temp <- bind_rows(
+  broom::tidy(mat_tot5, conf.int = TRUE) %>% mutate(grupo = "Matematica"),
+  broom::tidy(port_tot5, conf.int = TRUE) %>% mutate(grupo = "Portugues")
+) %>% 
+  filter(str_detect(term, "treat_exp")) %>%
+  mutate(
+    grupo = as.factor(grupo)
+  ) %>%
+  mutate(
+    time_exposure = sapply(
+      str_extract_all(term, "-?\\d*\\.?\\d+"),
+      function(x) if (length(x) > 0) as.numeric(tail(x, 1)) else NA_real_
+    )
+  ) %>%
+  select(term, estimate, std.error, statistic, p.value, conf.low, conf.high, grupo, time_exposure)
+
+# If extraction gave NAs for an entire grupo, create an internal sequence (fallback).
+# This produces a centered seq: e.g. for 5 rows -> -2, -1, 0, 1, 2
+temp <- temp %>%
+  group_by(grupo) %>%
+  mutate(
+    # if all NA in this group, make a centered sequence; else keep extracted values
+    time_exposure = if (all(is.na(time_exposure))) {
+      n <- n()
+      seq(-floor((n-1)/2), ceiling((n-1)/2), length.out = n) %>% as.integer()
+    } else {
+      time_exposure
+    }
+  ) %>%
+  ungroup() %>%
+  arrange(grupo, time_exposure)
+
+
+temp_edu <- temp %>%
+  distinct(grupo) %>%
+  mutate(
+    term = "time_to_treat:0",
+    estimate = 0,
+    std.error = 0,
+    statistic = 0,
+    p.value = 1,
+    conf.low = 0,
+    conf.high = 0,
+    time_exposure = 0
+  )
+
+temp <- bind_rows(temp, temp_edu) %>%
+  arrange(grupo, time_exposure)
+
+p5 <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_point(aes(color = grupo), shape = 15, size = 2) +
+  geom_line(aes(color = grupo)) +
+  labs(title = "5° Ano", x = "Years of Exposure", y = "Nota", color = NULL, fill = NULL) +
+  theme_classic() +
+  theme(
+    axis.line = element_line(color = "grey70"),
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 11),
+    legend.position = c(0.94, 0.17),
+    legend.justification = c("right", "top"),
+    legend.background = element_blank()
+  ) +
+  scale_x_continuous(
+    breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                 max(temp$time_exposure, na.rm = TRUE),
+                 by = 0.2)
+  )
+
+p5
+
+ggsave( #Saving image
+  filename = paste0("carrillo_exp_5.png"),
+  plot = p5,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
+  width = 800/96, height = 620/96, dpi = 300
+)
+
+rm( mat_tot5, port_tot5, temp, temp_edu)
+
+# ---------------------- #
+###### 9th grade  ----
+
+temp <- bind_rows(
+  broom::tidy(mat_tot9, conf.int = TRUE) %>% mutate(grupo = "Matematica"),
+  broom::tidy(port_tot9, conf.int = TRUE) %>% mutate(grupo = "Portugues")
+) %>% 
+  filter(str_detect(term, "treat_exp")) %>%
+  mutate(
+    grupo = as.factor(grupo)
+  ) %>%
+  mutate(
+    time_exposure = sapply(
+      str_extract_all(term, "-?\\d*\\.?\\d+"),
+      function(x) if (length(x) > 0) as.numeric(tail(x, 1)) else NA_real_
+    )
+  ) %>%
+  select(term, estimate, std.error, statistic, p.value, conf.low, conf.high, grupo, time_exposure)
+
+# If extraction gave NAs for an entire grupo, create an internal sequence (fallback).
+# This produces a centered seq: e.g. for 5 rows -> -2, -1, 0, 1, 2
+temp <- temp %>%
+  group_by(grupo) %>%
+  mutate(
+    # if all NA in this group, make a centered sequence; else keep extracted values
+    time_exposure = if (all(is.na(time_exposure))) {
+      n <- n()
+      seq(-floor((n-1)/2), ceiling((n-1)/2), length.out = n) %>% as.integer()
+    } else {
+      time_exposure
+    }
+  ) %>%
+  ungroup() %>%
+  arrange(grupo, time_exposure)
+
+
+temp_edu <- temp %>%
+  distinct(grupo) %>%
+  mutate(
+    term = "time_to_treat:0",
+    estimate = 0,
+    std.error = 0,
+    statistic = 0,
+    p.value = 1,
+    conf.low = 0,
+    conf.high = 0,
+    time_exposure = 0
+  )
+
+temp <- bind_rows(temp, temp_edu) %>%
+  arrange(grupo, time_exposure)
+
+p9 <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
+  geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+  geom_vline(xintercept = 0, color = "black") +
+  geom_point(aes(color = grupo), shape = 15, size = 2) +
+  geom_line(aes(color = grupo)) +
+  labs(title = "9° Ano", x = "Years of Exposure", y = "Nota", color = NULL, fill = NULL) +
+  theme_classic() +
+  theme(
+    axis.line = element_line(color = "grey70"),
+    panel.grid = element_blank(),
+    axis.title = element_text(size = 11),
+    legend.position = c(0.94, 0.17),
+    legend.justification = c("right", "top"),
+    legend.background = element_blank()
+  ) +
+  scale_x_continuous(
+    breaks = seq(min(temp$time_exposure, na.rm = TRUE),
+                 max(temp$time_exposure, na.rm = TRUE),
+                 by = 0.2)
+  )
+
+p9
+
+ggsave( #Saving image
+  filename = paste0("carrillo_exp_9.png"),
+  plot = p9,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
+  width = 800/96, height = 620/96, dpi = 300
+)
+
+rm( mat_tot9, port_tot9, temp, temp_edu)
+
+
+###### Combined -----
+
+
+grid_plot <- (p5 + p9)
+
+
+final <- grid_plot + patchwork::plot_annotation(
+  #title = "Event-study: infrastructure / staff outcomes",
+  caption = "Estimates from feols(...) with i(k, ref = -1)"
+)
+
+final
+
+ggsave( #Saving image
+  filename = paste0("carrillo_exp_aluno_dosage.png"),
+  plot = final,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Robust/",
+  width = 880/96, height = 520/96, dpi = 300
+)
 
 
 # ---------------------------------------------------------------------------- #

@@ -369,6 +369,7 @@ model_list <- list(
   por = por_dos
 )
 
+
 for (model_name in names(model_list)) {
   
   
@@ -449,12 +450,7 @@ for (model_name in names(model_list)) {
       panel.grid = element_blank(),
       axis.title = element_text(size = 11),
       legend.position = c(0.94, 0.17),
-      legend.justification = c("right", "top") # anchor legend box
-    ) + # anchor legend box
-    scale_x_continuous(
-      breaks = seq(min(temp$time_exposure, na.rm = TRUE),
-                   max(temp$time_exposure, na.rm = TRUE),
-                   by = 2))
+      legend.justification = c("right", "top")) 
   
   
   print(p)
@@ -466,7 +462,8 @@ for (model_name in names(model_list)) {
     width = 600/96, height = 420/96, dpi = 110
   )
   rm(temp_edu, temp, model_name, current_model, p)
-}
+
+  }
 rm(model_list)
 
 ### 4.1.2 Aluno Dosage ----
@@ -582,11 +579,7 @@ for (model_name in names(model_list)) {
       axis.title = element_text(size = 11),
       legend.position = c(0.94, 0.17),
       legend.justification = c("right", "top") # anchor legend box
-    ) + # anchor legend box
-    scale_x_continuous(
-      breaks = seq(min(temp$time_exposure, na.rm = TRUE),
-                   max(temp$time_exposure, na.rm = TRUE),
-                   by = 2))
+    )
   
   
   print(p)
@@ -649,47 +642,59 @@ for (model_name in names(model_list)) {
   current_model <- model_list[[model_name]]
     
   temp <- broom::tidy(current_model, conf.int = TRUE) %>%
-    # Keep only rows starting with "anos_exp::"
-    filter(str_detect(term, "^anos_exp::")) %>%
+    filter(str_detect(term, "anos_exp")) %>%
     mutate(
-      # Extract numeric value after "anos_exp::"
-      time_exposure = str_extract(term, "(?<=anos_exp::)-?\\d+"),
+      # Extract time (number right after "anos_exp:")
+      time_exposure = str_extract(term, "(?<=anos_exp:)-?\\d+"),
       time_exposure = as.numeric(time_exposure),
-      # Extract group name (Above/Below)
-      grupo = str_extract(term, "(?<=grupo::)\\w+"),
+      
+      # Extract group (text after the last colon)
+      grupo = str_extract(term, "[^:]+$"),
       grupo = as.factor(grupo)
-    )
-    
-    
-    
-    
-    temp_edu <- temp %>%
-      distinct(grupo) %>%             # one row per group (Above / Below)
-      mutate(
-        term = "time_to_treat:0",     # or another label that fits your pattern
-        estimate = 0,
-        std.error = 0,
-        statistic = 0,
-        p.value = 1,
-        conf.low = 0,
-        conf.high = 0,
-        time_exposure = 0
+    ) %>%
+    mutate(
+      time_exposure = sapply(
+        str_extract_all(term, "-?\\d*\\.?\\d+"),
+        function(x) if (length(x) > 0) as.numeric(tail(x, 1)) else NA_real_
       )
-    
-    # combine with your main dataframe
-    temp <- bind_rows(temp, temp_edu) %>%
-      arrange(grupo, time_exposure) %>% 
-      bind_rows(
-        temp_edu %>%
-          distinct(grupo) %>%
-          mutate(
-            time_exposure = 0,
-            estimate = 0,
-            conf.low = 0,
-            conf.high = 0
-          )
-      ) %>%
-      arrange(grupo, time_exposure)
+    ) %>%
+    select(term, estimate, std.error, statistic, p.value, conf.low, conf.high, grupo, time_exposure)
+  
+  # If extraction gave NAs for an entire grupo, create an internal sequence (fallback).
+  # This produces a centered seq: e.g. for 5 rows -> -2, -1, 0, 1, 2
+  temp <- temp %>%
+    group_by(grupo) %>%
+    mutate(
+      # if all NA in this group, make a centered sequence; else keep extracted values
+      time_exposure = if (all(is.na(time_exposure))) {
+        n <- n()
+        seq(-floor((n-1)/2), ceiling((n-1)/2), length.out = n) %>% as.integer()
+      } else {
+        time_exposure
+      }
+    ) %>%
+    ungroup() %>%
+    arrange(grupo, time_exposure)
+  
+  # if you want an explicit 0 baseline row per grupo (if not already present),
+  # create a baseline row and bind it in. This ensures there is always a point at 0.
+  baseline_rows <- temp %>%
+    distinct(grupo) %>%
+    mutate(
+      term = paste0(as.character(grupo), ":anos_exp:0"),
+      estimate = 0,
+      std.error = 0,
+      statistic = NA_real_,
+      p.value = 1,
+      conf.low = 0,
+      conf.high = 0,
+      time_exposure = 0
+    )
+  
+  # combine and order
+  temp <- bind_rows(temp, baseline_rows) %>%
+    distinct(term, grupo, time_exposure, .keep_all = TRUE) %>%  # avoid duplicate identical rows
+    arrange(grupo, time_exposure)
     
     
     p <- ggplot(temp, aes(x = time_exposure, y = estimate, group = grupo)) +
@@ -733,12 +738,7 @@ for (model_name in names(model_list)) {
     
     print(p)
     
-    ggsave(
-      filename = paste0("grafico_", model_name, "_Roberto.png"),
-      plot = p,
-      path = "Z:/Tuffy/Paper - Educ/Resultados/Figuras/ES/Outro/",
-      width = 600/96, height = 420/96, dpi = 110
-    )
-    rm(temp_edu, temp, model_name, p)
+
+    #rm(temp_edu, temp, model_name, p)
 }
 

@@ -398,7 +398,7 @@ event_style_plot <- function(est_obj, title = NULL, ylim = NULL) {
     bind_rows(
       event_df %>%
         mutate(
-          term = "k:-1",     # or another label that fits your pattern
+          term = "k:-1",     
           estimate = 0,
           std.error = 0,
           statistic = 0,
@@ -814,7 +814,7 @@ event_style_plot <- function(est_obj, title = NULL, ylim = NULL) {
     bind_rows(
       event_df %>%
         mutate(
-          term = "k:-1",     # or another label that fits your pattern
+          term = "k:-1",     
           estimate = 0,
           std.error = 0,
           statistic = 0,
