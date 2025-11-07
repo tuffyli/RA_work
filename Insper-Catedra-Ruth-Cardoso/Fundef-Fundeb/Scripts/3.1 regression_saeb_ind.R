@@ -100,7 +100,17 @@ df <- df_saeb %>%
          ),
          age_dist = ifelse(idade_aux == 0, 1, 0), #Age distortion
          
-         post_treat = ifelse(ano > 2007, 1, 0)
+         post_treat = ifelse(ano > 2007, 1, 0),
+         
+         #Separating the Brazilian Regions
+         region = case_when(
+           as.numeric(codmun) %/% 100000 == 1 ~ "Norte",        #North
+           as.numeric(codmun) %/% 100000 == 2 ~ "Nordeste",     #Northeast
+           as.numeric(codmun) %/% 100000 == 3 ~ "Sudeste",      #Southeast
+           as.numeric(codmun) %/% 100000 == 4 ~ "Sul",          #South
+           as.numeric(codmun) %/% 100000 == 5 ~ "Centro-Oeste", #Central-West
+           TRUE ~ NA
+         )
          )
 
 
@@ -183,6 +193,10 @@ etable(main_mat, main_pot,
 
 rm(main_mat, main_pot, sec_mat, sec_pot)
 
+
+
+
+
 # -------------------------------- #
 ## 2.2 Aluno Dosage ----
 # -------------------------------- #
@@ -215,7 +229,7 @@ etable(main_mat, main_pot,
 
 
 # ----------------- #
-### 2.2.2 Years exp ----
+### 2.2.2 *Years exp ----
 
 main_mat <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(anos_exp, ref = 0)
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
@@ -260,6 +274,70 @@ etable(main_mat, main_pot,
 
 
 rm(main_mat, main_pot, sec_mat, sec_pot)
+
+
+
+# ---------------------------------------------------------------------------- #
+#### 2.2.2.1 Region ----
+
+region_list <- unique(df$region)
+
+
+for (area in region_list) {
+  
+  ini <- Sys.time()
+  
+  message("Starting for region: ", area)
+  
+  
+  temp <- df %>% 
+    filter(region == area)
+  
+  #5h grade
+  mat_5 <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(anos_exp, ref = 0)
+                 + sexo + raca + mae_educ + idade + PIBpc #Controls
+                 | codmun + ano + uf^ano, #FE
+                 data = temp %>% filter(grade == 5), #Only 5h grade
+                 #weights = df %>% filter(grade == 5) %>% select(peso),
+                 vcov = "hetero")
+  
+  por_5 <- feols(as.numeric(profic_port) ~ aluno_dosage : i(anos_exp, ref = 0)
+                 + sexo + raca + mae_educ + idade + PIBpc #Controls
+                 | codmun + ano + uf^ano, #FE
+                 data = temp %>% filter(grade == 5), #Only 5h grade
+                 #weights = df %>% filter(grade == 5) %>% select(peso),
+                 vcov = "hetero")
+  
+  
+  message("Finished for: ", area)
+  
+  etable(mat_5, por_5)
+  
+  
+  
+  etable(mat_5, por_5,
+         vcov = "hetero",
+         headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
+         file = paste0("Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage_aluno/region/region_",
+                       tolower(area),"_individuo_anos_exp.tex"), replace = TRUE)
+  
+
+  message("Saved final table (", area,")")
+  fim <- Sys.time()
+  
+  
+  delta <- difftime(fim, ini, units = "secs")
+  mins <- floor(as.numeric(delta) / 60)
+  secs <- round(as.numeric(delta) %% 60)
+  
+  message("---------------------------------------------")
+  message("Total time elapsed: ",mins," mins e ", secs, " s")
+  message("---------------------------------------------")
+  
+  rm(temp, delta, ini, fim, mins, secs, mat_5, por_5)
+  
+}
+
 
 # ---------------------------------------------------------------------------- #
 # 3. Age vs. Grade Distortion ----

@@ -132,6 +132,11 @@ for(i in c(2005:2018)){
         kinder = ifelse(NIVELCRE == "s" | NIVELPRE == "s" , 1, 0),
         elementary = ifelse(NIV_F1A4_8 == "s" | NIV_F5A8_8 == "s" | NIV_F9FIM == "s" |
                               NIV_F9INI == "s", 1, 0),
+        
+        daycare = ifelse(NIVELCRE == "s", 1, 0),
+        preschool = ifelse(NIVELPRE == "s", 1, 0),
+        
+        
         high = ifelse(NIVELMED == "s", 1, 0),
         inclusion = ifelse(ESP_EXCL == "s" | ESP_T_ES == "s" | ENS_INCL == "s",
                            1, 0)
@@ -142,7 +147,7 @@ for(i in c(2005:2018)){
         
 
       ) %>% 
-      select(c(1:9,53:64)) %>% 
+      select(c(1:9,53:66)) %>% 
         rename(
           ano = ANO,
           school = MASCARA,
@@ -240,6 +245,9 @@ for(i in c(2005:2018)){
         kinder = ifelse(id_reg_infantil_creche == 1 |
                           id_reg_infantil_preescola == 1, 1, 0),
         
+        daycare = ifelse(id_reg_infantil_creche == 1, 1, 0),
+        preschool = ifelse(id_reg_infantil_preescola == 1, 1, 0),
+        
         elementary = ifelse(id_reg_fund_8_anos == 1 | id_reg_fund_9_anos == 1, 1, 0),
         
         high = ifelse(id_reg_medio_integrado == 1 | id_reg_medio_medio == 1 |
@@ -253,7 +261,7 @@ for(i in c(2005:2018)){
         ano = ano_censo,
         school = pk_cod_entidade
       ) %>% 
-      select( c(uf, codmun, ano, school, 25:35) ) #Final datafilter
+      select( c(uf, codmun, ano, school, 25:37) ) #Final datafilter
     
     
     
@@ -333,6 +341,9 @@ for(i in c(2005:2018)){
               kinder = ifelse(in_comum_creche == 1 |
                                 in_comum_pre == 1, 1, 0),
               
+              daycare = ifelse(in_comum_creche == 1, 1, 0),
+              preschool = ifelse(in_comum_pre == 1, 1, 0),
+              
               elementary = ifelse(in_comum_fund_ai == 1 | in_comum_fund_af == 1, 1, 0),
               
               high = ifelse(in_comum_medio_medio == 1 | in_comum_medio_integrado == 1 |
@@ -346,7 +357,7 @@ for(i in c(2005:2018)){
               ano = nu_ano_censo,
               school = co_entidade
             ) %>% 
-            select( c(uf, codmun, ano, school, 24:34) ) #Final datafilter'
+            select( c(uf, codmun, ano, school, 24:36) ) #Final datafilter'
           
           
         } else if(i %in% c(2018:2020)) {
@@ -409,6 +420,9 @@ for(i in c(2005:2018)){
                     kinder = ifelse(in_comum_creche == 1 |
                                       in_comum_pre == 1, 1, 0),
                     
+                    daycare = ifelse(in_comum_creche == 1, 1, 0),
+                    preschool = ifelse(in_comum_pre == 1, 1, 0),
+                    
                     elementary = ifelse(in_comum_fund_ai == 1 | in_comum_fund_af == 1, 1, 0),
                     
                     high = ifelse(in_comum_medio_medio == 1 | in_comum_medio_integrado == 1 |
@@ -422,7 +436,7 @@ for(i in c(2005:2018)){
                     ano = nu_ano_censo,
                     school = co_entidade
                   ) %>% 
-                  select( c(uf, codmun, ano, school, 24:34) ) #Final datafilter'
+                  select( c(uf, codmun, ano, school, 24:36) ) #Final datafilter'
                 
                 } else if(i %in% c(2019:2020)){
         ### 1.3.3 2019 - 2020 ----
@@ -480,6 +494,10 @@ for(i in c(2005:2018)){
                       kinder = ifelse(in_comum_creche == 1 |
                                         in_comum_pre == 1, 1, 0),
                       
+                      daycare = ifelse(in_comum_creche == 1, 1, 0),
+                      preschool = ifelse(in_comum_pre == 1, 1, 0),
+                      
+                      
                       elementary = ifelse(in_comum_fund_ai == 1 | in_comum_fund_af == 1, 1, 0),
                       
                       high = ifelse(in_comum_medio_medio == 1 | in_comum_medio_integrado == 1 |
@@ -503,7 +521,7 @@ for(i in c(2005:2018)){
                         qt_prof_minitores),
                       na.rm = TRUE
                     ))) %>%
-                    select( c(uf, codmun, ano, school, 24:34) )
+                    select( c(uf, codmun, ano, school, 24:36) )
                   } else {
     ## 1.4 2021 ----
     temp <- read.csv2(path_list[j]) %>% 
@@ -632,7 +650,7 @@ path_list <- c("Z:/Arquivos IFB/Censo Escolar/MicrodCenso Escolar2005/DADOS/DADO
                "Z:/Arquivos IFB/Censo Escolar/MicrodCenso Escolar2021/2021/dados/microdados_ed_basica_2021.csv"
                )
 
-for (i in c(2007:2018)) {
+for (i in c(2005:2018)) {
   
   
   gc()
@@ -664,10 +682,10 @@ for (i in c(2007:2018)) {
                QUAD_COB,  #Covered court
 
                #For the Enrollments
-               DEF11C:DEF11F, NEF11C:NEF11F, # EF iniciais (8 anos)
-               DE9F11C:DE9F11G, NE9F11C:NE9F11G, # EF iniciais (9 anos)
-               DEF11G:DEF11J, NEF11G:NEF11J, # EF finais (8 anos)
-               DE9F11H:DE9F11N, NE9F11H:NE9F11N, # EF finais (9 anos)
+               DEF11C:DEF11F, NEF11C:NEF11F,      # EF iniciais (8 anos)
+               DE9F11C:DE9F11G, NE9F11C:NE9F11G,  # EF iniciais (9 anos)
+               DEF11G:DEF11J, NEF11G:NEF11J,      # EF finais (8 anos)
+               DE9F11H:DE9F11N, NE9F11H:NE9F11N,  # EF finais (9 anos)
                VEE1431:VEE1437, # Alunos de educação especial do EF por ano de nascimento
 
                #ED especial por série:
@@ -682,8 +700,8 @@ for (i in c(2007:2018)) {
 
                DEM118, DEM119, DEM11A, DEM11B, DEM11C, #Highschool
                NEM118, NEM119, NEM11A, NEM11B, NEM11C,
-               DPE119, NPE119,                         #Preschool
-               DPE11D, NPE11D,
+               DPE119, NPE119,                         #Preschool (N) - Daycare
+               DPE11D, NPE11D,                         #          (D) - Preschool
                DES101F:DES101A, NES101F:NES101A        #EJA
       )
       ) %>%
@@ -725,16 +743,18 @@ for (i in c(2007:2018)) {
         em_tot = rowSums(across(c(DEM118:NEM11C)), na.rm = TRUE),
         ed_inf_tot = rowSums(across(c(DPE119:NPE11D)), na.rm = TRUE),
         eja_tot = rowSums(across(c(DES101F:NES101A)), na.rm = TRUE),
+        day_tot = rowSums(across(c(NPE119,NPE11D)), na.rm = TRUE),
+        pre_tot = rowSums(across(c(DPE119,NPE11D)), na.rm = TRUE)
 
 
       ) %>%
-      select(c(1:9,53:65, ef_tot:eja_tot)) %>%
+      select(c(1:9,53:65, ef_tot:pre_tot)) %>%
       rename(
         ano = ANO,
         school = MASCARA,
         codmun = CODMUNIC
       ) %>%
-      select(ano, school, codmun, ef_tot:eja_tot) %>%
+      select(ano, school, codmun, ef_tot:pre_tot) %>%
       mutate( uf = codmun %/% 100000) 
     
     
@@ -790,7 +810,9 @@ for (i in c(2007:2018)) {
           inf = ifelse(tp_etapa_ensino %in% c(1,2), 1, 0),    #Preschool
           ef = ifelse(tp_etapa_ensino %in% c(4:21,41), 1 ,0), #Elementary
           em = ifelse(tp_etapa_ensino %in% c(25:38), 1, 0),   #HighSchooç
-          eja = ifelse(tp_etapa_ensino %in% c(65:74), 1, 0)   #EJA
+          eja = ifelse(tp_etapa_ensino %in% c(65:74), 1, 0),  #EJA
+          day = ifelse(tp_etapa_ensino == 1, 1, 0),           #Daycare
+          pre = ifelse(tp_etapa_ensino == 2, 1, 0)            #Preschool
           
         ) %>% 
         group_by(co_uf, co_municipio, co_entidade, nu_ano_censo) %>% 
@@ -800,6 +822,8 @@ for (i in c(2007:2018)) {
           em_tot = sum(em, na.rm = T),
           ed_inf_tot = sum(inf, na.rm = T),
           eja_tot = sum(eja, na.rm = T),
+          day_tot = sum(day, na.rm = T),
+          pre_tot = sum(pre, na.rm = T),
         
           .groups = "drop"
           ) %>% 
@@ -863,3 +887,4 @@ df_combined <- df_school %>%
 
 saveRDS(df_combined, "Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds")
 rm(df_school, data)
+
