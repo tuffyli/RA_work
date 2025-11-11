@@ -60,7 +60,7 @@ df_sim <- readRDS("Z:/Tuffy/Paper - Educ/Dados/simulacao_const.rds") #%>%
 df_fib <- read.csv2("Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/Gastos municipais/FINBRA/Despesas/FINBRA_EDU_05_21.csv")
 
 
-#1.0 Pesos e PIB ----
+#1.0 Weights & GDP ----
 df_pesosaeb <- df_pesosaeb %>% 
   rename(
     peso_5 = ano_5,
@@ -178,7 +178,7 @@ mutate(#spending_dosage_gio = dif_rs_aluno/ed_spending_2006,
        
        dosage = (receita_real - receita_simulada)/receita_real,            #Prefered
        
-       dosage_perc = del_spending_dos *100,
+       #dosage_perc = del_spending_dos *100,
        
        aluno_dosage = (receita_real - receita_simulada)/total_alunos_2006) #Prefered
 
@@ -195,7 +195,7 @@ attr(df_reg$aluno_dosage, "label") <- "Diferença de receita (2007) por aluno (2
 saveRDS(df_reg, "Z:/Tuffy/Paper - Educ/Dados/regdf.rds")
 
 teste <- df_reg %>% 
-  select(2:5, 52, 53, 56, 58, 59, 61, 62, 65, 60, 77, 78, 81:89) %>% 
+  select(2:5, 52, 53, 56, 58, 59, 61, 62, 65, 60, 77, 78, 81:85) %>% 
   select(-ano) %>% 
   distinct() %>% 
   select(1:3, dif_coef_pp, dif_rs_aluno, dif_rs_aluno_100, del_spending_dos,
@@ -281,7 +281,7 @@ ggsave(
   path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/Scatter",
   width = 600/96, height = 420/96, dpi = 110)
 
-rm(p, temp)
+rm(p)
 
 
 # ---------------------------------------------------------------------------- #
@@ -688,37 +688,162 @@ for (area in region_list) {
 }
 
 rm(list = ls())
+gc()
+
+
+
+
 # ---------------------------------------------------------------------------- #
-#3. Daycare & Preschool ----
+#3. School Data ----
 # ---------------------------------------------------------------------------- #
 
 #' In this section I will breakdown the effects for various variables associated
 #' with the daycare and preschool system.
+#' 
+#' First I will define the graph function for the remaining estimations
+#' 
 
-# ------------------------- #
-## 3.0 Data ----
-# ------------------------- #
-
-
-df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") 
+event_style_plot <- function(est_obj, title = NULL, ylim = NULL) {
+  # extract tidy data from fixest::etable or broom::tidy
+  event_df <- broom::tidy(est_obj, conf.int = TRUE) %>% 
+    mutate(
+      k = str_extract(term, "(?<=k::)-?\\d+"),
+      k = as.numeric(k))
   
-
-
-
-
+  
+  event_df <- event_df %>% 
+    bind_rows(
+      event_df %>%
+        mutate(
+          term = "k:-1",     
+          estimate = 0,
+          std.error = 0,
+          statistic = 0,
+          p.value = 1,
+          conf.low = 0,
+          conf.high = 0,
+          k = -1
+        )
+    )
+  
+  ggplot(event_df, aes(x = k + 2007, y = estimate)) +
+    # shaded standard error area
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+                fill = "grey60", alpha = 0.3) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+    geom_vline(xintercept = 2006, color = "black") +
+    geom_point(shape = 15, size = 2, color = "black") +
+    geom_line(color = "black") +
+    labs(
+      title = title,
+      x = "Ano"
+    ) +
+    coord_cartesian(ylim = ylim) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11)
+    ) + 
+    scale_x_continuous(breaks = seq(2005, 2018, 2))
+  
+}
 
 # ------------------------- #
-## 3.1 Enrollment ----
+## 3.1 Data (Mun Lvl) ----
+# ------------------------- #
+
+#Starting with the scholl data
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
+  mutate(codmun = as.character(codmun %/% 10),
+         new_psc = ifelse(pre_tot > 0, 1, 0),
+         new_day = ifelse(day_tot > 0, 1, 0)
+         )
+
+#We will calculate the municipal exposure, weighted by the enrollment numbers
+df_school <- df_school %>% 
+  group_by(codmun, ano) %>% 
+  summarise(
+    total_enroll = sum(enroll, na.rm = T),
+    total_presch = sum(pre_tot, na.rm = T),
+    total_daycar = sum(day_tot, na.rm = T),
+    
+    #numeral variables
+    class     = total_enroll / sum(classroom, na.rm = T),
+    employee  = total_enroll / sum(employee, na.rm = T),
+    
+    
+    #School characteristics
+    exp_troom = sum(enroll*teach_room, na.rm = T)/total_enroll,
+    exp_lab   = sum(enroll*lab_dummy, na.rm = T) /total_enroll,
+    exp_lib   = sum(enroll*lib_dummy, na.rm = T) /total_enroll,
+    exp_play  = sum(enroll*play_area, na.rm = T) /total_enroll,
+    exp_lunch = sum(enroll*lunch, na.rm = T)     /total_enroll,
+    
+    #Courses Student Exposure
+    exp_psch  = sum(enroll*kinder, na.rm = T)    /total_enroll,
+    exp_elem  = sum(enroll*elementary, na.rm = T)/total_enroll,
+    exp_high  = sum(enroll*high, na.rm = T)      /total_enroll,
+    exp_inc   = sum(enroll*inclusion, na.rm = T) /total_enroll,
+    
+    #Childhood exp
+    child_psch = sum(pre_tot*preschool, na.rm = T),
+    child_dayc = sum(day_tot*daycare, na.rm = T),
+    
+    new_child_psch = sum(pre_tot*preschool, na.rm = T),
+    new_child_dayc = sum(day_tot*daycare, na.rm = T),
+    
+    #Numb. Schools
+    n_daycare = sum(daycare, na.rm = T),
+    n_preschl = sum(preschool, na.rm = T),
+    
+    new_n_daycare = sum(new_day, na.rm = T),
+    new_n_preschl = sum(new_psc, na.rm = T),
+    
+    .groups = "drop"
+  ) %>% 
+  mutate(k = ano - 2007)
 
 
+#Main regression dataframe
+df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>% 
+  select(codigo_ibge, ano, uf, nome, dif_coef_pp, dosage, aluno_dosage, PIBpc,
+         des_edu_pc, des_fund_pc, des_med_pc, des_inf_pc) %>% 
+  mutate(across(c(codigo_ibge, uf), as.character))
 
 
-# ------------------------ #
-## 3.2 Schools ----
+#Combining both databases
+df_comb <- df_school %>% 
+  left_join(df_reg %>%
+              filter(ano %in% c(2005:2018)) %>%
+              mutate(codigo_ibge = as.character(codigo_ibge)),
+            by = c("codmun" = "codigo_ibge", "ano" = "ano")) %>% 
+  
+  #Separating for Above and Below
+  mutate(grupo = case_when(
+             dosage > 0 ~ "Above",
+             dosage < 0 ~ "Below",
+             TRUE ~ NA
+           ),
+           grupo = factor(grupo)))
 
 
+# ---------------------------------------------------------------------------- #
+# 4. N° Preschool and Daycare
+# ---------------------------------------------------------------------------- #
+#' Here I will estimate the impact of the municipal dosage exposure over the number
+#' of schools who offer early-childhood education, such as daycare and/or preschool
+
+# ------------------- #
+## 4.1 Daycare ----
+# ------------------- #
+### 4.1.1 Dosage -----
 
 
+est_day <- feols(new_n_daycare ~ dosage * i(k, ref = -1) +
+                          PIBpc |
+                          codmun + ano + uf^ano,
+                        data = df_comb,
+                        vcov = "hetero")
 
-# ---------------------- #
-## 3.3 Spending ----
+etable(est_day)

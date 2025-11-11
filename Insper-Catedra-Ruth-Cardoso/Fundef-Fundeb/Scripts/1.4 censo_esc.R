@@ -2,7 +2,7 @@
 # Data Extraction
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 31/10/2025
+# Date: 11/11/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -39,6 +39,7 @@ library(ggtext)
 library(jsonlite)
 library(haven)
 library(ggplot2)
+library(readr)
 
 #Desativando a notação científica
 options(scipen = 999)
@@ -744,7 +745,7 @@ for (i in c(2005:2018)) {
         ed_inf_tot = rowSums(across(c(DPE119:NPE11D)), na.rm = TRUE),
         eja_tot = rowSums(across(c(DES101F:NES101A)), na.rm = TRUE),
         day_tot = rowSums(across(c(NPE119,NPE11D)), na.rm = TRUE),
-        pre_tot = rowSums(across(c(DPE119,NPE11D)), na.rm = TRUE)
+        pre_tot = rowSums(across(c(DPE119,DPE11D)), na.rm = TRUE)
 
 
       ) %>%
@@ -881,10 +882,14 @@ df_combined <- df_school %>%
             by = c("uf" = "uf", "ano" = "ano", "codmun" = "codmun", "school" = "school")) %>% 
   group_by(school, ano) %>% 
   mutate(
-    enroll = ef_tot + em_tot + ed_inf_tot + eja_tot #We dont coun the discarded variable of esp
+    enroll = ef_tot + em_tot + ed_inf_tot + eja_tot #We dont count the discarded variable of esp
   ) %>% 
   ungroup()
 
 saveRDS(df_combined, "Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds")
 rm(df_school, data)
+
+
+rm(list = ls())
+gc
 
