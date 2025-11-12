@@ -11,7 +11,7 @@ Analysis of municipal investment dynamics around the **2007 transition from FUND
 - **Goal:** quantify how the 2007 reform affected municipal spending/investment patterns.
 - **Unit of analysis:** municipality × year.
 - **Outcomes (examples):** education investment, capital expenditures, staffing, enrollment.
-- **Methods:** panel **Difference-in-Differences** / **event study** with fixed effects and robustness checks
+- **Methods:** Conitnuous treatment **Difference-in-Differences** / **event study** with fixed effects and robustness checks
   (alternative windows, placebo years, sensitivity to controls/clustering).
 
 ## Repository layout
