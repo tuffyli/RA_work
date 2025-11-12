@@ -14,7 +14,8 @@ This folder contains two related subprojects:
 
 - **[DST-ENEM](./DST-work/DST-ENEM/)**  
   Effects of the DST policy change on **high-stakes exam performance (ENEM)**.  
-  **Methods:** Difference-in-Differences (DiD), event-study, heterogeneous effects, robustness windows.
+  **Methods:**  **Difference-in-Discontinuities (DiDisc)** — following
+  [Picchetti, Pinto & Shinoki (arXiv:2405.18531)](https://arxiv.org/abs/2405.18531) — and **Geographical RDD** where spatial cutoffs apply.
 
 - **[DST-Homicides-Labor](./DST-work/DST-Homicides-Labor/)**  
   Effects on **public safety (homicides)** and **labor outcomes**.  
@@ -29,7 +30,7 @@ Analysis of **municipal investment** dynamics around Brazil’s **FUNDEF → FUN
 - **Question:** How did the 2007 reform reshape municipal spending/investment patterns?  
 - **Units/Panel:** Municipality × year (coverage per data availability).  
 - **Outcomes (examples):** education investment, capital expenditures, staffing, enrollment.  
-- **Methods:** Panel **DiD** / **event-study**, with fixed effects and robustness checks (placebos, alternative windows, re-weighting).
+- **Methods:** Continuous treatment **DiD** / **event-study**, with fixed effects and robustness checks (placebos, alternative windows, re-weighting).
 
 ---
 
