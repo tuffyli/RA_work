@@ -1221,7 +1221,7 @@ ggsave(                                                #Saving image
   filename = paste0("dosage_pesos.png"),
   plot = final,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/",
-  width = 1100/96, height = 620/96, dpi = 300
+  width = 1300/96, height = 620/96, dpi = 300
 )
 
 
@@ -1279,7 +1279,7 @@ ggsave(                                                #Saving image
   filename = paste0("aluno_dosage_pesos.png"),
   plot = final,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/",
-  width = 1100/96, height = 620/96, dpi = 300
+  width = 1300/96, height = 620/96, dpi = 300
 )
 
 
@@ -1642,10 +1642,10 @@ event_style_abv <- function(est_obj, title = NULL, ylim = NULL) {
     geom_point(aes(color = grupo), shape = 15, size = 2) +
     geom_line(aes(color = grupo)) +
     labs(
-      title = NULL,
+      title = title,
       x = "Ano"
     ) +
-    coord_cartesian(ylim = NULL) +
+    coord_cartesian(ylim = ylim) +
     theme_classic() +
     theme(
       axis.line = element_line(color = "grey70"),
@@ -1706,7 +1706,7 @@ ggsave(                                                #Saving image
   filename = paste0("dosage_pesos_abv.png"),
   plot = final,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/",
-  width = 1200/96, height = 620/96, dpi = 300
+  width = 1300/96, height = 620/96, dpi = 300
 )
 
 
@@ -1764,7 +1764,7 @@ ggsave(                                                #Saving image
   filename = paste0("aluno_dosage_pesos_abv.png"),
   plot = final,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/",
-  width = 1200/96, height = 620/96, dpi = 300
+  width = 1300/96, height = 620/96, dpi = 300
 )
 
 
@@ -2646,16 +2646,6 @@ rm( latex_table)
 #'a school that is present through all the observations years.
 
 
-# df_filter <- df_mun %>% 
-#   group_by(codmun) %>% 
-#   mutate(aux1 = 1,
-#          aux2 = sum(aux1, na.rm = T),
-#          time_to_treat = ano - 2007
-#   ) %>% 
-#   filter(aux2 == 7) %>% #Selecting only the mun present in all years
-#   ungroup() %>% 
-#   select(-aux1, -aux2)
-
 
 df_filter <- df_mun_school %>% 
   group_by(codmun) %>% 
@@ -2667,12 +2657,26 @@ df_filter <- df_mun_school %>%
   ungroup() %>% 
   select(-aux1, -aux2)
 
+
+df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>% 
+  select(codigo_ibge, ano, uf, nome, dif_coef_pp, dosage, aluno_dosage, PIBpc,
+         des_edu_pc, des_fund_pc, des_med_pc, des_inf_pc) %>% 
+  mutate(across(c(codigo_ibge, uf), as.numeric))
+
+
+df_filter <- df_filter %>% 
+  left_join(df_reg %>% select(codigo_ibge, ano, dosage, aluno_dosage), 
+            by = c("codmun" = "codigo_ibge", "ano"))
+
+
+rm(df_reg)
 ### ------------------ #
 ### 10.2.1 Regression ----
 ### ------------------ #
-#### 10.2.1.1 Students
+#### 10.2.1.1 Students ----
 #### ------------------ #
 
+#Total number of students
 est <- feols(total_students ~ i(time_to_treat, ref = 0) |
                codmun,
              data = df_filter,
@@ -2692,7 +2696,27 @@ etable(est, est2,
        file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_alunos.tex", replace = TRUE)
 
 
-#### 10.2.1.2 Students
+#Dosage interaction
+est <- feols(total_students ~ dosage:i(time_to_treat, ref = 0) |
+               codmun,
+             data = df_filter,
+             vcov = "hetero")
+
+
+est2 <- feols(total_students ~ dosage:i(time_to_treat, ref = 0) |
+                codmun,
+              data = df_filter,
+              weights = df_filter$schools, #Schools as weights
+              vcov = "hetero")
+
+etable(est, est2)
+etable(est, est2,
+       vcov = "hetero",
+       headers = list(":_:" = list("N° Alunos" = 1, "N° Alunos" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_alunos_dosage.tex", replace = TRUE)
+
+
+#### 10.2.1.2 Schools ----
 #### ------------------ #
 
 est <- feols(schools ~ i(time_to_treat, ref = 0) |
@@ -2704,14 +2728,32 @@ est <- feols(schools ~ i(time_to_treat, ref = 0) |
 est2 <- feols(schools ~ i(time_to_treat, ref = 0) |
                 codmun,
               data = df_filter,
-              weights = df_filter$total_students, #Schools as weights
+              weights = df_filter$total_students, #Students as weights
+              vcov = "hetero")
+
+etable(est, est2)
+etable(est, est2,
+       vcov = "hetero",
+       headers = list(":_:" = list("N° Escolas" = 1, "N° Escpças" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_schools.tex", replace = TRUE)
+
+
+
+#Dosage interaction
+est <- feols(schools ~ dosage:i(time_to_treat, ref = 0) |
+               codmun,
+             data = df_filter,
+             vcov = "hetero")
+
+
+est2 <- feols(schools ~ dosage:i(time_to_treat, ref = 0) |
+                codmun,
+              data = df_filter,
+              weights = df_filter$total_students, #Students as weights
               vcov = "hetero")
 
 etable(est, est2)
 etable(est, est2,
        vcov = "hetero",
        headers = list(":_:" = list("N° Alunos" = 1, "N° Alunos" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_schools.tex", replace = TRUE)
-
-
-
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_school_dosage.tex", replace = TRUE)
