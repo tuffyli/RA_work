@@ -12,7 +12,7 @@ Code and (where permitted) documentation from my **Research Assistant** work.
 ## Contents
 
 - **[Insper-Catedra-Ruth-Cardoso](./Insper-Catedra-Ruth-Cardoso/)**  
-  Project folders and pipelines (DST, FUNDEF→FUNDEB, etc.). See each subfolder’s README for details.
+  Projects related to my RA work @Insper, in the [Catedra Ruth Cardoso chair](https://www.insper.edu.br/pt/pesquisa/catedras). Research mostly related to development economics, with a focus on education and early-childhood.
 
 ---
 
