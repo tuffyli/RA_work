@@ -1,6 +1,8 @@
 # ---------------------------------------------------------------------------- #
-# Descrição da base de dados + Anexo
-# Library -----
+# Data Description
+# DataBase adjustment
+# Last edited by: Tuffy Licciardi Issa
+# Date: 11/07/2025
 # ---------------------------------------------------------------------------- #
 
 library(tidyverse)
@@ -272,3 +274,4 @@ print.xtable(
   },
   only.contents = T
 )
+
