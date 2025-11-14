@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions
 # Last edited by: Tuffy Licciardi Issa
-# Date: 07/11/2025
+# Date: 14/11/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -200,8 +200,8 @@ teste <- df_reg %>%
   select(2:5, 52, 53, 56, 58, 59, 61, 62, 65, 60, 77, 78, 81:85) %>% 
   select(-ano) %>% 
   distinct() %>% 
-  select(1:3, dif_coef_pp, dif_rs_aluno, dif_rs_aluno_100, del_spending_dos,
-         dosage, dosage_perc, aluno_dosage, shr_inf, everything())
+  select(1:3, dif_coef_pp, dif_rs_aluno, dif_rs_aluno_100,
+         dosage, aluno_dosage, shr_inf, everything())
 
 
 ### 1.1.2 Graph ----
@@ -285,6 +285,91 @@ ggsave(
 
 rm(p)
 
+#### 1.2.2.1 PIBpc ----
+
+
+df07 <- df_reg %>%
+  filter(tipo == "Municipal", rede == "Pública", as.numeric(ano) == 2007)
+
+p <- ggplot(df07, aes(x = PIBpc, y = dosage * 100)) +
+  geom_point(alpha = 0.7, size = 2, color = "#66c2a5") +
+  geom_smooth(method = "lm", se = FALSE, color = "#1b7837") +
+  labs(
+    x = "PIB per-capita (2007) R$",
+    y = "Diferença de receita como proporção FUNDEB (2007) (%)"
+  ) +
+  # scale_y_continuous(
+  #   breaks = seq(-20, 100, by = 20),
+  #   #limits = c(-30, 100)
+  # ) +
+  # scale_x_continuous(
+  #   breaks = seq(0, 100, by = 20),
+  #   #limits = c(0, 100)
+  # ) +
+  # xlim(-5, 5)+
+  #ylim(-30,100)+
+  stat_smooth(method = "lm", se = FALSE, color = "#1b7837", linetype = "solid") +
+  theme_minimal() +
+  geom_hline(yintercept = 0, linetype = "dashed",
+             color = "black", linewidth = 0.6) +
+  theme(
+    text = element_text(family = "sans", color = "black", size = 11),
+    plot.title = element_text(hjust = 0.5),
+    plot.caption = element_markdown(hjust = 0, face = "italic")
+  )
+
+p
+
+ggsave(
+  filename = ("scatter_pibpc_dos.png"), # Nome baseado no modelo
+  plot = p,                           # [English: Name based model]
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/Scatter",
+  width = 600/96, height = 420/96, dpi = 110)
+
+rm(p, temp)
+
+#### Dosage de alunos
+# [English: Student dosage]
+
+p <- ggplot(df07, aes(x = PIBpc, y = aluno_dosage)) +
+  geom_point(alpha = 0.7, size = 2, color = "#66c2a5") +
+  geom_smooth(method = "lm", se = FALSE, color = "#1b7837") +
+  labs(
+    x = "PIB per-capita (2007) R$",
+    y = "Aluno Dosage; Diferença de receita por matrícula (R$)"
+  ) +
+  # scale_y_continuous(
+  #   breaks = seq(-400, 2000, by = 200)#,
+  #   #limits = c(-30, 100)
+  # ) +
+  # scale_x_continuous(
+  #   breaks = seq(0, 100, by = 20)#,
+  #   #limits = c(0, 100)
+  # ) +
+  # xlim(-5, 5)+
+  #ylim(-30,100)+
+  stat_smooth(method = "lm", se = FALSE, color = "#1b7837", linetype = "solid") +
+  theme_minimal() +
+  geom_hline(yintercept = 0, linetype = "dashed",
+             color = "black", linewidth = 0.6) +
+  theme(
+    text = element_text(family = "sans", color = "black", size = 11),
+    plot.title = element_text(hjust = 0.5),
+    plot.caption = element_markdown(hjust = 0, face = "italic")
+  )
+
+p
+
+ggsave(
+  filename = ("scatter_pibpc_ados.png"), # Nome baseado no modelo
+  plot = p,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/Scatter",
+  width = 600/96, height = 420/96, dpi = 110)
+
+rm(p)
+
+
+
 
 # ---------------------------------------------------------------------------- #
 # 2. Education Spending ----
@@ -352,8 +437,7 @@ etable(mod_edu, mod_fund, mod_med, mod_inf,
 
 
 
-# Exportar:
-
+# Export:
 etable(mod_edu, mod_fund, mod_med, mod_inf,
        vcov = "hetero",
        headers = list(":_:" = list("Total" = 1,"Fundamental" = 1, "Médio" = 1,"Infantil" = 1)),
@@ -366,8 +450,8 @@ etable(mod_edu, mod_fund, mod_med, mod_inf,
 
 models_list <- list(
   edu  = mod_edu,
-  fund = mod_fund,
-  med  = mod_med,
+  #fund = mod_fund,
+  #med  = mod_med,
   inf  = mod_inf
 )
 
@@ -551,8 +635,8 @@ etable(mod_edu, mod_fund, mod_med, mod_inf,
 
 models_list <- list(
   edu  = mod_edu,
-  fund = mod_fund,
-  med  = mod_med,
+  #fund = mod_fund,
+  #med  = mod_med,
   inf  = mod_inf
 )
 
@@ -822,17 +906,17 @@ df_comb <- df_school %>%
               mutate(codigo_ibge = as.character(codigo_ibge)),
             by = c("codmun" = "codigo_ibge", "ano" = "ano")) %>% 
   
-  #Separating for Above and Below
+  #Separating for Winner and Loser
   mutate(grupo = case_when(
-             dosage > 0 ~ "Above",
-             dosage < 0 ~ "Below",
+             dosage > 0 ~ "Winner",
+             dosage < 0 ~ "Loser",
              TRUE ~ NA
            ),
            grupo = factor(grupo))
 
 
 # ---------------------------------------------------------------------------- #
-# 4. N° Preschool and Daycare
+# 4. N° Preschool and Daycare ----
 # ---------------------------------------------------------------------------- #
 #' Here I will estimate the impact of the municipal dosage exposure over the number
 #' of schools who offer early-childhood education, such as daycare and/or preschool
@@ -853,29 +937,29 @@ est_day_nw <- feols(new_n_daycare ~ dosage * i(k, ref = -1) +
                  data = df_comb,
                  vcov = "hetero")
 
+# 
+# est_day_wa <- feols(new_n_daycare ~ dosage * i(k, ref = -1) +
+#                               PIBpc |
+#                               codmun + ano + uf^ano,
+#                             weights = df_comb$total_enroll,  #Total municipalility enrollment
+#                             data = df_comb,
+#                             vcov = "hetero")
+# 
+# 
+# est_day_ws <- feols(new_n_daycare ~ dosage * i(k, ref = -1) +
+#                       PIBpc |
+#                       codmun + ano + uf^ano,
+#                     weights = df_comb$schools,          #Total number of schools
+#                     data = df_comb,
+#                     vcov = "hetero")
 
-est_day_wa <- feols(new_n_daycare ~ dosage * i(k, ref = -1) +
-                              PIBpc |
-                              codmun + ano + uf^ano,
-                            weights = df_comb$total_enroll,  #Total municipalility enrollment
-                            data = df_comb,
-                            vcov = "hetero")
 
 
-est_day_ws <- feols(new_n_daycare ~ dosage * i(k, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$schools,          #Total number of schools
-                    data = df_comb,
-                    vcov = "hetero")
+etable(est_day_nw)
 
-
-
-etable(est_day_nw, est_day_wa, est_day_ws)
-
-etable(est_day_nw, est_day_wa, est_day_ws,
+etable(est_day_nw, 
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/daycare_numbers_d.tex"), replace = TRUE)
 
 # ------------------- #
@@ -889,28 +973,13 @@ est_day_nw_ad <- feols(new_n_daycare ~ aluno_dosage * i(k, ref = -1) +
                     vcov = "hetero")
 
 
-est_day_wa_ad <- feols(new_n_daycare ~ aluno_dosage * i(k, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$total_enroll,  #Total municipalility enrollment
-                    data = df_comb,
-                    vcov = "hetero")
 
 
-est_day_ws_ad <- feols(new_n_daycare ~ aluno_dosage * i(k, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$schools,          #Total number of schools
-                    data = df_comb,
-                    vcov = "hetero")
+etable(est_day_nw_ad)
 
-
-
-etable(est_day_nw_ad, est_day_wa_ad, est_day_ws_ad)
-
-etable(est_day_nw_ad, est_day_wa_ad, est_day_ws_ad,
+etable(est_day_nw_ad,
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage_aluno/daycare_numbers_ad.tex"), replace = TRUE)
 
 
@@ -932,28 +1001,13 @@ est_pre_nw <- feols(new_n_preschl ~ dosage * i(k, ref = -1) +
                     vcov = "hetero")
 
 
-est_pre_wa <- feols(new_n_preschl ~ dosage * i(k, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$total_enroll,  #Total municipalility enrollment
-                    data = df_comb,
-                    vcov = "hetero")
 
 
-est_pre_ws <- feols(new_n_preschl ~ dosage * i(k, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$schools,          #Total number of schools
-                    data = df_comb,
-                    vcov = "hetero")
+etable(est_pre_nw )
 
-
-
-etable(est_pre_nw, est_pre_wa, est_pre_ws)
-
-etable(est_pre_nw, est_pre_wa, est_pre_ws,
+etable(est_pre_nw, 
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/preschool_numbers_d.tex"), replace = TRUE)
 
 # ------------------- #
@@ -967,28 +1021,11 @@ est_pre_nw_ad <- feols(new_n_preschl ~ aluno_dosage * i(k, ref = -1) +
                        vcov = "hetero")
 
 
-est_pre_wa_ad <- feols(new_n_preschl ~ aluno_dosage * i(k, ref = -1) +
-                         PIBpc |
-                         codmun + ano + uf^ano,
-                       weights = df_comb$total_enroll,  #Total municipalility enrollment
-                       data = df_comb,
-                       vcov = "hetero")
+etable(est_pre_nw_ad )
 
-
-est_pre_ws_ad <- feols(new_n_preschl ~ aluno_dosage * i(k, ref = -1) +
-                         PIBpc |
-                         codmun + ano + uf^ano,
-                       weights = df_comb$schools,          #Total number of schools
-                       data = df_comb,
-                       vcov = "hetero")
-
-
-
-etable(est_pre_nw_ad, est_pre_wa_ad, est_pre_ws_ad)
-
-etable(est_pre_nw_ad, est_pre_wa_ad, est_pre_ws_ad,
+etable(est_pre_nw_ad,
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage_aluno/preschool_numbers_ad.tex"), replace = TRUE)
 
 
@@ -1009,28 +1046,14 @@ est_dayen_nw <- feols(new_child_dayc ~ dosage * i(k, ref = -1) +
                     vcov = "hetero")
 
 
-est_dayen_wa <- feols(new_child_dayc ~ dosage * i(k, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$total_enroll,  #Total municipalility enrollment
-                    data = df_comb,
-                    vcov = "hetero")
-
-
-est_dayen_ws <- feols(new_child_dayc ~ dosage * i(k, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$schools,          #Total number of schools
-                    data = df_comb,
-                    vcov = "hetero")
 
 
 
-etable(est_dayen_nw, est_dayen_wa, est_dayen_ws)
+etable(est_dayen_nw)
 
-etable(est_dayen_nw, est_dayen_wa, est_dayen_ws,
+etable(est_dayen_nw, 
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/daycare_enroll_d.tex"), replace = TRUE)
 
 # ------------------- #
@@ -1044,28 +1067,12 @@ est_dayen_nw_ad <- feols(new_child_dayc ~ aluno_dosage * i(k, ref = -1) +
                        vcov = "hetero")
 
 
-est_dayen_wa_ad <- feols(new_child_dayc ~ aluno_dosage * i(k, ref = -1) +
-                         PIBpc |
-                         codmun + ano + uf^ano,
-                       weights = df_comb$total_enroll,  #Total municipalility enrollment
-                       data = df_comb,
-                       vcov = "hetero")
 
+etable(est_dayen_nw_ad)
 
-est_dayen_ws_ad <- feols(new_child_dayc ~ aluno_dosage * i(k, ref = -1) +
-                         PIBpc |
-                         codmun + ano + uf^ano,
-                       weights = df_comb$schools,          #Total number of schools
-                       data = df_comb,
-                       vcov = "hetero")
-
-
-
-etable(est_dayen_nw_ad, est_dayen_wa_ad, est_dayen_ws_ad)
-
-etable(est_dayen_nw_ad, est_dayen_wa_ad, est_dayen_ws_ad,
+etable(est_dayen_nw_ad,
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage_aluno/daycare_enroll_ad.tex"), replace = TRUE)
 
 
@@ -1087,28 +1094,12 @@ est_preen_nw <- feols(new_child_psch ~ dosage * i(k, ref = -1) +
                     vcov = "hetero")
 
 
-est_preen_wa <- feols(new_child_psch ~ dosage * i(k, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$total_enroll,  #Total municipalility enrollment
-                    data = df_comb,
-                    vcov = "hetero")
 
+etable(est_preen_nw)
 
-est_preen_ws <- feols(new_child_psch ~ dosage * i(k, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$schools,          #Total number of schools
-                    data = df_comb,
-                    vcov = "hetero")
-
-
-
-etable(est_preen_nw, est_preen_wa, est_preen_ws)
-
-etable(est_preen_nw, est_preen_wa, est_preen_ws,
+etable(est_preen_nw,
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/preschool_enroll_d.tex"), replace = TRUE)
 
 # ------------------- #
@@ -1122,28 +1113,13 @@ est_preen_nw_ad <- feols(new_child_psch ~ aluno_dosage * i(k, ref = -1) +
                        vcov = "hetero")
 
 
-est_preen_wa_ad <- feols(new_child_psch ~ aluno_dosage * i(k, ref = -1) +
-                         PIBpc |
-                         codmun + ano + uf^ano,
-                       weights = df_comb$total_enroll,  #Total municipalility enrollment
-                       data = df_comb,
-                       vcov = "hetero")
 
 
-est_preen_ws_ad <- feols(new_child_psch ~ aluno_dosage * i(k, ref = -1) +
-                         PIBpc |
-                         codmun + ano + uf^ano,
-                       weights = df_comb$schools,          #Total number of schools
-                       data = df_comb,
-                       vcov = "hetero")
+etable(est_preen_nw_ad)
 
-
-
-etable(est_preen_nw_ad, est_preen_wa_ad, est_preen_ws_ad)
-
-etable(est_preen_nw_ad, est_preen_wa_ad, est_preen_ws_ad,
+etable(est_preen_nw_ad,
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage_aluno/preschool_enroll_ad.tex"), replace = TRUE)
 
 # ------------- #
@@ -1152,22 +1128,12 @@ etable(est_preen_nw_ad, est_preen_wa_ad, est_preen_ws_ad,
 #### 4.3.3.1 Dosage ----
 
 #The first Step is to label all the graphs:
-p_day_nw <- event_style_plot(est_day_nw, "Escolas (Creche)")  #Daycare
-p_day_wa <- event_style_plot(est_day_wa, "Escolas (Creche)")
-p_day_ws <- event_style_plot(est_day_ws, "Escolas (Creche)")
-
-p_pre_nw <- event_style_plot(est_pre_nw, "Escolas (Pré)")  #Daycare
-p_pre_wa <- event_style_plot(est_pre_wa, "Escolas (Pré)")
-p_pre_ws <- event_style_plot(est_pre_ws, "Escolas (Pré)")
+p_day_nw <- event_style_plot(est_day_nw, "Creche")  #Daycare
+p_pre_nw <- event_style_plot(est_pre_nw, "Pré-Escola")     #Preschool
 
 #Students
-p_dayen_nw <- event_style_plot(est_day_nw, "Matriculas (Creche)")  #Daycare
-p_dayen_wa <- event_style_plot(est_day_wa, "Matriculas (Creche)")
-p_dayen_ws <- event_style_plot(est_day_ws, "Matriculas (Creche)")
-
-p_preen_nw <- event_style_plot(est_pre_nw, "Matriculas (Pré)")  #Daycare
-p_preen_wa <- event_style_plot(est_pre_wa, "Matriculas (Pré)")
-p_preen_ws <- event_style_plot(est_pre_ws, "Matriculas (Pré)")
+p_dayen_nw <- event_style_plot(est_dayen_nw, "Creche")  #Daycare
+p_preen_nw <- event_style_plot(est_preen_nw, "Pré-Escola")     #Preschool
 
 
 
@@ -1188,16 +1154,14 @@ label_row <- function(text, size_pt = 10) {
 
 
 # Create the right column with vertical labels (one per row)
-labels_col <- label_row("Sem Peso",     size_pt = 6) /   # top row
-  label_row("Peso Alunos", size_pt = 6) /   # middle row
-  label_row("Peso Escolas",size_pt = 6) # bottom row
+labels_col <- label_row("N° Escolas",     size_pt = 6) /   # top row
+  #label_row("Peso Alunos", size_pt = 6) /   # middle row
+  label_row("N° Matrículas",size_pt = 6) # bottom row
 
 # put the 12 plots in the exact left-to-right, top-to-bottom order
 plots <- list(
-  p_day_nw,  p_pre_nw,  p_dayen_nw,  p_preen_nw,
-  p_day_wa,  p_pre_wa,  p_dayen_wa,  p_preen_wa,
-  p_day_ws,  p_pre_ws,  p_dayen_ws,  p_preen_ws
-)
+  p_day_nw,  p_pre_nw,  p_dayen_nw,  p_preen_nw
+  )
 
 # normalize per-plot margins so they don't force reflow
 normalize_margin <- function(p) {
@@ -1206,8 +1170,8 @@ normalize_margin <- function(p) {
 plots <- lapply(plots, normalize_margin)
 
 # Force a 4 columns x 3 rows layout
-grid_plot <- patchwork::wrap_plots(plots, ncol = 4, nrow = 3) +
-  plot_layout(guides = "collect", widths = rep(1, 4), heights = rep(1,3))
+grid_plot <- patchwork::wrap_plots(plots, ncol = 2, nrow = 2) +
+  plot_layout(guides = "collect", widths = rep(1, 2), heights = rep(1,2))
 
 # Now combine with the label column (already defined earlier as labels_col)
 final <- (labels_col | grid_plot ) +
@@ -1235,37 +1199,26 @@ rm( plots, grid_plot, final,
 
 #### 4.3.3.2 Aluno Dosage ----
 
-p_day_nw <- event_style_plot(est_day_nw_ad, "Escolas (Creche)")  #Daycare
-p_day_wa <- event_style_plot(est_day_wa_ad, "Escolas (Creche)")
-p_day_ws <- event_style_plot(est_day_ws_ad, "Escolas (Creche)")
-
-p_pre_nw <- event_style_plot(est_pre_nw_ad, "Escolas (Pré)")  #Preschool
-p_pre_wa <- event_style_plot(est_pre_wa_ad, "Escolas (Pré)")
-p_pre_ws <- event_style_plot(est_pre_ws_ad, "Escolas (Pré)")
+#Schools
+p_day_nw <- event_style_plot(est_day_nw_ad, "Creche")  #Daycare
+p_pre_nw <- event_style_plot(est_pre_nw_ad, "Pré-Escola")  #Preschool
 
 #Students
-p_dayen_nw <- event_style_plot(est_day_nw_ad, "Matriculas (Creche)")  #Daycare
-p_dayen_wa <- event_style_plot(est_day_wa_ad, "Matriculas (Creche)")
-p_dayen_ws <- event_style_plot(est_day_ws_ad, "Matriculas (Creche)")
-
-p_preen_nw <- event_style_plot(est_pre_nw_ad, "Matriculas (Pré)")  #Preschool
-p_preen_wa <- event_style_plot(est_pre_wa_ad, "Matriculas (Pré)")
-p_preen_ws <- event_style_plot(est_pre_ws_ad, "Matriculas (Pré)")
+p_dayen_nw <- event_style_plot(est_dayen_nw_ad, "Creche")  #Daycare
+p_preen_nw <- event_style_plot(est_preen_nw_ad, "Pré-Escola")  #Preschool
 
 
 
 
 plots <- list(
-  p_day_nw,  p_pre_nw,  p_dayen_nw,  p_preen_nw,
-  p_day_wa,  p_pre_wa,  p_dayen_wa,  p_preen_wa,
-  p_day_ws,  p_pre_ws,  p_dayen_ws,  p_preen_ws
+  p_day_nw,  p_pre_nw,  p_dayen_nw,  p_preen_nw
 )
 
 
 
 # Force a 4 columns x 3 rows layout
-grid_plot <- patchwork::wrap_plots(plots, ncol = 4, nrow = 3) +
-  plot_layout(guides = "collect", widths = rep(1, 4), heights = rep(1,3))
+grid_plot <- patchwork::wrap_plots(plots, ncol = 2, nrow = 2) +
+  plot_layout(guides = "collect", widths = rep(1, 2), heights = rep(1,2))
 
 # Now combine with the label column (already defined earlier as labels_col)
 final <- (labels_col | grid_plot ) +
@@ -1292,81 +1245,49 @@ rm(plots, grid_plot, final, event_style_plot,
 
 
 # ---------------------------------------------------------------------------- #
-# 5. Above and Below ----
+# 5. Winner and Loser ----
 # ---------------------------------------------------------------------------- #
 
 #' *****
 #' Continuing the regressions, I will repeate the last observed ones, but dividing
-#' by municipalities groups of Above or Below.
+#' by municipalities groups of Winner or Loser.
 
 ##5.1 Daycare ----
 ### 5.1.1 Dosage -----
 
 #Number of daycare facilities per municipality
-est_day_nw <- feols(new_n_daycare ~ dosage : i(k, grupo, ref = -1) +
+est_day_nw <- feols(new_n_daycare ~ abs(dosage) : i(k, grupo, ref = -1) +
                       PIBpc |
                       codmun + ano + uf^ano,
                     data = df_comb,
                     vcov = "hetero")
 
 
-est_day_wa <- feols(new_n_daycare ~ dosage : i(k, grupo, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$total_enroll,  #Total municipalility enrollment
-                    data = df_comb,
-                    vcov = "hetero")
+etable(est_day_nw)
 
-
-est_day_ws <- feols(new_n_daycare ~ dosage : i(k, grupo, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$schools,          #Total number of schools
-                    data = df_comb,
-                    vcov = "hetero")
-
-
-
-etable(est_day_nw, est_day_wa, est_day_ws)
-
-etable(est_day_nw, est_day_wa, est_day_ws,
+etable(est_day_nw, 
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/daycare_numbers_abv.tex"), replace = TRUE)
 
 # ------------------- #
 ### 5.1.2 Aluno Dosage ----
 
 #Number of daycare facilities per municipality
-est_day_nw_ad <- feols(new_n_daycare ~ aluno_dosage : i(k, grupo, ref = -1) +
+est_day_nw_ad <- feols(new_n_daycare ~ abs(aluno_dosage) : i(k, grupo, ref = -1) +
                          PIBpc |
                          codmun + ano + uf^ano,
                        data = df_comb,
                        vcov = "hetero")
 
 
-est_day_wa_ad <- feols(new_n_daycare ~ aluno_dosage : i(k, grupo, ref = -1) +
-                         PIBpc |
-                         codmun + ano + uf^ano,
-                       weights = df_comb$total_enroll,  #Total municipalility enrollment
-                       data = df_comb,
-                       vcov = "hetero")
 
 
-est_day_ws_ad <- feols(new_n_daycare ~ aluno_dosage : i(k, grupo, ref = -1) +
-                         PIBpc |
-                         codmun + ano + uf^ano,
-                       weights = df_comb$schools,          #Total number of schools
-                       data = df_comb,
-                       vcov = "hetero")
+etable(est_day_nw_ad)
 
-
-
-etable(est_day_nw_ad, est_day_wa_ad, est_day_ws_ad)
-
-etable(est_day_nw_ad, est_day_wa_ad, est_day_ws_ad,
+etable(est_day_nw_ad, 
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage_aluno/daycare_numbers_abv.tex"), replace = TRUE)
 
 
@@ -1381,70 +1302,36 @@ etable(est_day_nw_ad, est_day_wa_ad, est_day_ws_ad,
 ### 5.2.1 Dosage -----
 
 #Number of daycare facilities per municipality
-est_pre_nw <- feols(new_n_preschl ~ dosage : i(k, grupo, ref = -1) +
+est_pre_nw <- feols(new_n_preschl ~ abs(dosage) : i(k, grupo, ref = -1) +
                       PIBpc |
                       codmun + ano + uf^ano,
                     data = df_comb,
                     vcov = "hetero")
 
+etable(est_pre_nw)
 
-est_pre_wa <- feols(new_n_preschl ~ dosage : i(k, grupo, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$total_enroll,  #Total municipalility enrollment
-                    data = df_comb,
-                    vcov = "hetero")
-
-
-est_pre_ws <- feols(new_n_preschl ~ dosage : i(k, grupo, ref = -1) +
-                      PIBpc |
-                      codmun + ano + uf^ano,
-                    weights = df_comb$schools,          #Total number of schools
-                    data = df_comb,
-                    vcov = "hetero")
-
-
-
-etable(est_pre_nw, est_pre_wa, est_pre_ws)
-
-etable(est_pre_nw, est_pre_wa, est_pre_ws,
+etable(est_pre_nw,
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/preschool_numbers_abv.tex"), replace = TRUE)
 
 # ------------------- #
 ### 5.2.2 Aluno Dosage ----
 
 #Number of daycare facilities per municipality
-est_pre_nw_ad <- feols(new_n_preschl ~ aluno_dosage : i(k, grupo, ref = -1) +
+est_pre_nw_ad <- feols(new_n_preschl ~ abs(aluno_dosage) : i(k, grupo, ref = -1) +
                          PIBpc |
                          codmun + ano + uf^ano,
                        data = df_comb,
                        vcov = "hetero")
 
 
-est_pre_wa_ad <- feols(new_n_preschl ~ aluno_dosage : i(k, grupo, ref = -1) +
-                         PIBpc |
-                         codmun + ano + uf^ano,
-                       weights = df_comb$total_enroll,  #Total municipalility enrollment
-                       data = df_comb,
-                       vcov = "hetero")
 
+etable(est_pre_nw_ad)
 
-est_pre_ws_ad <- feols(new_n_preschl ~ aluno_dosage : i(k, grupo, ref = -1) +
-                         PIBpc |
-                         codmun + ano + uf^ano,
-                       weights = df_comb$schools,          #Total number of schools
-                       data = df_comb,
-                       vcov = "hetero")
-
-
-
-etable(est_pre_nw_ad, est_pre_wa_ad, est_pre_ws_ad)
-
-etable(est_pre_nw_ad, est_pre_wa_ad, est_pre_ws_ad,
+etable(est_pre_nw_ad,
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage_aluno/preschool_numbers_abv.tex"), replace = TRUE)
 
 
@@ -1458,70 +1345,39 @@ etable(est_pre_nw_ad, est_pre_wa_ad, est_pre_ws_ad,
 #### 5.3.1.1 Dosage -----
 
 #Number of daycare facilities per municipality
-est_dayen_nw <- feols(new_child_dayc ~ dosage : i(k, grupo, ref = -1) +
+est_dayen_nw <- feols(new_child_dayc ~ abs(dosage) : i(k, grupo, ref = -1) +
                         PIBpc |
                         codmun + ano + uf^ano,
                       data = df_comb,
                       vcov = "hetero")
 
 
-est_dayen_wa <- feols(new_child_dayc ~ dosage : i(k, grupo, ref = -1) +
-                        PIBpc |
-                        codmun + ano + uf^ano,
-                      weights = df_comb$total_enroll,  #Total municipalility enrollment
-                      data = df_comb,
-                      vcov = "hetero")
 
 
-est_dayen_ws <- feols(new_child_dayc ~ dosage : i(k, grupo, ref = -1) +
-                        PIBpc |
-                        codmun + ano + uf^ano,
-                      weights = df_comb$schools,          #Total number of schools
-                      data = df_comb,
-                      vcov = "hetero")
+etable(est_dayen_nw)
 
-
-
-etable(est_dayen_nw, est_dayen_wa, est_dayen_ws)
-
-etable(est_dayen_nw, est_dayen_wa, est_dayen_ws,
+etable(est_dayen_nw, 
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/daycare_enroll_abv.tex"), replace = TRUE)
 
 # ------------------- #
 #### 5.3.1.2 Aluno Dosage ----
 
 #Number of daycare facilities per municipality
-est_dayen_nw_ad <- feols(new_child_dayc ~ aluno_dosage : i(k, grupo, ref = -1) +
+est_dayen_nw_ad <- feols(new_child_dayc ~ abs(aluno_dosage) : i(k, grupo, ref = -1) +
                            PIBpc |
                            codmun + ano + uf^ano,
                          data = df_comb,
                          vcov = "hetero")
 
 
-est_dayen_wa_ad <- feols(new_child_dayc ~ aluno_dosage : i(k, grupo, ref = -1) +
-                           PIBpc |
-                           codmun + ano + uf^ano,
-                         weights = df_comb$total_enroll,  #Total municipalility enrollment
-                         data = df_comb,
-                         vcov = "hetero")
 
+etable(est_dayen_nw_ad)
 
-est_dayen_ws_ad <- feols(new_child_dayc ~ aluno_dosage : i(k, grupo, ref = -1) +
-                           PIBpc |
-                           codmun + ano + uf^ano,
-                         weights = df_comb$schools,          #Total number of schools
-                         data = df_comb,
-                         vcov = "hetero")
-
-
-
-etable(est_dayen_nw_ad, est_dayen_wa_ad, est_dayen_ws_ad)
-
-etable(est_dayen_nw_ad, est_dayen_wa_ad, est_dayen_ws_ad,
+etable(est_dayen_nw_ad,
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage_aluno/daycare_enroll_abv.tex"), replace = TRUE)
 
 
@@ -1536,70 +1392,39 @@ etable(est_dayen_nw_ad, est_dayen_wa_ad, est_dayen_ws_ad,
 #### 5.3.2.1 Dosage -----
 
 #Number of daycare facilities per municipality
-est_preen_nw <- feols(new_child_psch ~ dosage : i(k, grupo, ref = -1) +
+est_preen_nw <- feols(new_child_psch ~ abs(dosage) : i(k, grupo, ref = -1) +
                         PIBpc |
                         codmun + ano + uf^ano,
                       data = df_comb,
                       vcov = "hetero")
 
 
-est_preen_wa <- feols(new_child_psch ~ dosage : i(k, grupo, ref = -1) +
-                        PIBpc |
-                        codmun + ano + uf^ano,
-                      weights = df_comb$total_enroll,  #Total municipalility enrollment
-                      data = df_comb,
-                      vcov = "hetero")
+etable(est_preen_nw)
 
-
-est_preen_ws <- feols(new_child_psch ~ dosage : i(k, grupo, ref = -1) +
-                        PIBpc |
-                        codmun + ano + uf^ano,
-                      weights = df_comb$schools,          #Total number of schools
-                      data = df_comb,
-                      vcov = "hetero")
-
-
-
-etable(est_preen_nw, est_preen_wa, est_preen_ws)
-
-etable(est_preen_nw, est_preen_wa, est_preen_ws,
+etable(est_preen_nw,
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/preschool_enroll_abv.tex"), replace = TRUE)
 
 # ------------------- #
 #### 5.3.2.2 Aluno Dosage ----
 
 #Number of daycare facilities per municipality
-est_preen_nw_ad <- feols(new_child_psch ~ aluno_dosage : i(k, grupo, ref = -1) +
+est_preen_nw_ad <- feols(new_child_psch ~ abs(aluno_dosage) : i(k, grupo, ref = -1) +
                            PIBpc |
                            codmun + ano + uf^ano,
                          data = df_comb,
                          vcov = "hetero")
 
 
-est_preen_wa_ad <- feols(new_child_psch ~ aluno_dosage : i(k, grupo, ref = -1) +
-                           PIBpc |
-                           codmun + ano + uf^ano,
-                         weights = df_comb$total_enroll,  #Total municipalility enrollment
-                         data = df_comb,
-                         vcov = "hetero")
-
-
-est_preen_ws_ad <- feols(new_child_psch ~ aluno_dosage : i(k, grupo, ref = -1) +
-                           PIBpc |
-                           codmun + ano + uf^ano,
-                         weights = df_comb$schools,          #Total number of schools
-                         data = df_comb,
-                         vcov = "hetero")
 
 
 
-etable(est_preen_nw_ad, est_preen_wa_ad, est_preen_ws_ad)
+etable(est_preen_nw_ad)
 
-etable(est_preen_nw_ad, est_preen_wa_ad, est_preen_ws_ad,
+etable(est_preen_nw_ad, 
        vcov = "hetero",
-       headers = list(":_:" = list("(1)" = 1,"(2)" = 1, "(3)" = 1)),
+       headers = list(":_:" = list("(1)" = 1)),
        file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage_aluno/preschool_enroll_abv.tex"), replace = TRUE)
 
 # ------------- #
@@ -1660,39 +1485,29 @@ event_style_abv <- function(est_obj, title = NULL, ylim = NULL) {
 #### 5.3.3.1 Dosage ----
 
 #The first Step is to label all the graphs:
-p_day_nw <- event_style_abv(est_day_nw, "Escolas (Creche)")  #Daycare
-p_day_wa <- event_style_abv(est_day_wa, "Escolas (Creche)")
-p_day_ws <- event_style_abv(est_day_ws, "Escolas (Creche)")
-
-p_pre_nw <- event_style_abv(est_pre_nw, "Escolas (Pré)")  #Daycare
-p_pre_wa <- event_style_abv(est_pre_wa, "Escolas (Pré)")
-p_pre_ws <- event_style_abv(est_pre_ws, "Escolas (Pré)")
+#Schools
+p_day_nw <- event_style_abv(est_day_nw, "Creche")      #Daycare
+p_pre_nw <- event_style_abv(est_pre_nw, "Pré-Escola")  #Preschool
 
 #Students
-p_dayen_nw <- event_style_abv(est_day_nw, "Matriculas (Creche)")  #Daycare
-p_dayen_wa <- event_style_abv(est_day_wa, "Matriculas (Creche)")
-p_dayen_ws <- event_style_abv(est_day_ws, "Matriculas (Creche)")
+p_dayen_nw <- event_style_abv(est_dayen_nw, "Creche")      #Daycare
+p_preen_nw <- event_style_abv(est_preen_nw, "Pré-Escola")  #Preschool
 
-p_preen_nw <- event_style_abv(est_pre_nw, "Matriculas (Pré)")  #Daycare
-p_preen_wa <- event_style_abv(est_pre_wa, "Matriculas (Pré)")
-p_preen_ws <- event_style_abv(est_pre_ws, "Matriculas (Pré)")
 
 
 
 
 # put the 12 plots in the exact left-to-right, top-to-bottom order
 plots <- list(
-  p_day_nw,  p_pre_nw,  p_dayen_nw,  p_preen_nw,
-  p_day_wa,  p_pre_wa,  p_dayen_wa,  p_preen_wa,
-  p_day_ws,  p_pre_ws,  p_dayen_ws,  p_preen_ws
+  p_day_nw,  p_pre_nw,  p_dayen_nw,  p_preen_nw
 )
 
 
 plots <- lapply(plots, normalize_margin)
 
 # Force a 4 columns x 3 rows layout
-grid_plot <- patchwork::wrap_plots(plots, ncol = 4, nrow = 3) +
-  plot_layout(guides = "collect", widths = rep(1, 4), heights = rep(1,3))
+grid_plot <- patchwork::wrap_plots(plots, ncol = 2, nrow = 2) +
+  plot_layout(guides = "collect", widths = rep(1, 2), heights = rep(1,2))
 
 # Now combine with the label column (already defined earlier as labels_col)
 final <- (labels_col | grid_plot ) +
@@ -1720,37 +1535,27 @@ rm( plots, grid_plot, final,
 
 #### 5.3.3.2 Aluno Dosage ----
 
-p_day_nw <- event_style_abv(est_day_nw_ad, "Escolas (Creche)")  #Daycare
-p_day_wa <- event_style_abv(est_day_wa_ad, "Escolas (Creche)")
-p_day_ws <- event_style_abv(est_day_ws_ad, "Escolas (Creche)")
+#Schools
+p_day_nw <- event_style_abv(est_day_nw_ad, "Creche")      #Daycare
+p_pre_nw <- event_style_abv(est_pre_nw_ad, "Pré-Escola")  #Preschool
 
-p_pre_nw <- event_style_abv(est_pre_nw_ad, "Escolas (Pré)")  #Preschool
-p_pre_wa <- event_style_abv(est_pre_wa_ad, "Escolas (Pré)")
-p_pre_ws <- event_style_abv(est_pre_ws_ad, "Escolas (Pré)")
 
 #Students
-p_dayen_nw <- event_style_abv(est_day_nw_ad, "Matriculas (Creche)")  #Daycare
-p_dayen_wa <- event_style_abv(est_day_wa_ad, "Matriculas (Creche)")
-p_dayen_ws <- event_style_abv(est_day_ws_ad, "Matriculas (Creche)")
-
-p_preen_nw <- event_style_abv(est_pre_nw_ad, "Matriculas (Pré)")  #Preschool
-p_preen_wa <- event_style_abv(est_pre_wa_ad, "Matriculas (Pré)")
-p_preen_ws <- event_style_abv(est_pre_ws_ad, "Matriculas (Pré)")
+p_dayen_nw <- event_style_abv(est_dayen_nw_ad, "Creche")      #Daycare
+p_preen_nw <- event_style_abv(est_preen_nw_ad, "Pré-Escola")  #Preschool
 
 
 
 
 plots <- list(
-  p_day_nw,  p_pre_nw,  p_dayen_nw,  p_preen_nw,
-  p_day_wa,  p_pre_wa,  p_dayen_wa,  p_preen_wa,
-  p_day_ws,  p_pre_ws,  p_dayen_ws,  p_preen_ws
+  p_day_nw,  p_pre_nw,  p_dayen_nw,  p_preen_nw
 )
 
 
 
 # Force a 4 columns x 3 rows layout
-grid_plot <- patchwork::wrap_plots(plots, ncol = 4, nrow = 3) +
-  plot_layout(guides = "collect", widths = rep(1, 4), heights = rep(1,3))
+grid_plot <- patchwork::wrap_plots(plots, ncol = 2, nrow = 2) +
+  plot_layout(guides = "collect", widths = rep(1, 2), heights = rep(1,2))
 
 # Now combine with the label column (already defined earlier as labels_col)
 final <- (labels_col | grid_plot ) +
@@ -1807,7 +1612,7 @@ df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>%
 #Combining both dataframes
 df <- df_saeb %>% 
   left_join(df_reg %>%
-              filter(ano %in% c(2005:2017)) %>%
+              filter(ano %in% c(2007:2017)) %>% #Excluding 2005
               mutate(codigo_ibge = as.character(codigo_ibge)),
             by = c("codmun" = "codigo_ibge", "ano" = "ano")) %>% 
   mutate(
@@ -1819,6 +1624,9 @@ df <- df_saeb %>%
          
          anos_exp = ano - 2007,
          anos_exp = ifelse(grade == 9, anos_exp - 2, anos_exp), #Adjsutment for the 9th grade
+         
+         ano_nasc = ano - (idade), #Birth year as reference
+         ano_nasc = as.factor(ano_nasc),
          
          
          peso = as.numeric(peso), #Weights
@@ -1832,6 +1640,8 @@ df <- df_saeb %>%
          
          post_treat = ifelse(ano > 2007, 1, 0),
          
+         rob_winner_dummy = ifelse(dosage > 0, 1, 0),
+         
          #Separating the Brazilian Regions
          region = case_when(
            as.numeric(codmun) %/% 100000 == 1 ~ "Norte",        #North
@@ -1844,59 +1654,99 @@ df <- df_saeb %>%
   )
 
 
+#Weights dataframes
+df_w5 <- df %>% filter(grade == 5) %>% select(peso, peso_mt, peso_lp)  #5th grade
+df_w9 <- df %>% filter(grade == 9) %>% select(peso, peso_mt, peso_lp)  #9th grade
+
 # ---------------------------------------------------------------------------- #
 # 7. Main Regression ----
 # ---------------------------------------------------------------------------- #
 ## 7.1 Dosage ----
 # ------------------ #
 
+
+
+
 ### 7.1.1 Years exp ----
 
-main_mat <- feols(as.numeric(profic_mat) ~ dosage : i(anos_exp, ref = 0)
+main_mat <- feols(as.numeric(profic_mat) ~ dosage : i(ano_nasc, ref = 2003)
+                  + sexo + raca + mae_educ + idade + PIBpc #Controls
+                  | codmun + ano + uf^ano, #FE
+                  data = df %>% filter(grade == 5) , #Only 5h grade
+                  weights = df_w5$peso_mt,
+                  vcov = "hetero")
+
+main_pot <- feols(as.numeric(profic_port) ~ dosage : i(ano_nasc, ref = 2003)
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
                   data = df %>% filter(grade == 5), #Only 5h grade
-                  #weights = df %>% filter(grade == 5) %>% select(peso),
-                  vcov = "hetero")
-
-main_pot <- feols(as.numeric(profic_port) ~ dosage : i(anos_exp, ref = 0)
-                  + sexo + raca + mae_educ + idade + PIBpc #Controls
-                  | codmun + ano + uf^ano, #FE
-                  data = df %>% filter(grade == 5), #Only 5h grade
-                  #weights = df %>% filter(grade == 5) %>% select(peso),
+                  weights = df_w5$peso_lp,
                   vcov = "hetero")
 
 
-sec_mat <- feols(as.numeric(profic_mat) ~ dosage : i(anos_exp, ref = 0)
-                 + sexo + raca + mae_educ + idade + PIBpc 
-                 | codmun + ano + uf^ano,
-                 data = df %>% filter(grade == 9),
-                 #weights = df$peso,
-                 vcov = "hetero")
+# sec_mat <- feols(as.numeric(profic_mat) ~ dosage : i(ano_nasc, ref = 0)
+#                  + sexo + raca + mae_educ + idade + PIBpc 
+#                  | codmun + ano + uf^ano,
+#                  data = df %>% filter(grade == 9),
+#                  weights = df_w9$peso,
+#                  vcov = "hetero")
+# 
+# 
+# 
+# sec_pot <- feols(as.numeric(profic_port) ~ dosage : i(ano_nasc, ref = 0)
+#                  + sexo + raca + mae_educ + idade + PIBpc 
+#                  | codmun + ano + uf^ano,
+#                  data = df %>% filter(grade == 9),
+#                  weights = df_w9$peso,
+#                 vcov = "hetero")
 
-
-
-sec_pot <- feols(as.numeric(profic_port) ~ dosage : i(anos_exp, ref = 0)
-                 + sexo + raca + mae_educ + idade + PIBpc 
-                 | codmun + ano + uf^ano,
-                 data = df %>% filter(grade == 9),
-                 #weights = df$peso,
-                 vcov = "hetero")
-
-etable(main_mat, main_pot,
-       sec_mat, sec_pot)
+etable(main_mat, main_pot
+       #,sec_mat, sec_pot
+       )
 
 
 
 etable(main_mat, main_pot,
        vcov = "hetero",
        headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/nvl_individuo_anos_exp.tex", replace = TRUE)
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/nvl_individuo_idade_exp.tex", replace = TRUE)
 
 
 rm(main_mat, main_pot, sec_mat, sec_pot)
 
+# ------------------------------ #
+### 7.1.2 Roberto Spec -----
+# ------------------------------ #
 
+main_mat <- feols(as.numeric(profic_mat) ~ rob_winner_dummy : i(ano_nasc, ref = 2003)
+                  + sexo + raca + mae_educ + idade + PIBpc #Controls
+                  | codmun + ano + uf^ano, #FE
+                  data = df %>% filter(grade == 5) , #Only 5h grade
+                  weights = df_w5$peso_mt,
+                  vcov = "hetero")
+
+main_pot <- feols(as.numeric(profic_port) ~ rob_winner_dummy : i(ano_nasc, ref = 2003)
+                  + sexo + raca + mae_educ + idade + PIBpc #Controls
+                  | codmun + ano + uf^ano, #FE
+                  data = df %>% filter(grade == 5), #Only 5h grade
+                  weights = df_w5$peso_lp,
+                  vcov = "hetero")
+
+
+
+etable(main_mat, main_pot
+       #,sec_mat, sec_pot
+)
+
+
+
+etable(main_mat, main_pot,
+       vcov = "hetero",
+       headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/roberto_nvl_individuo_idade_exp.tex", replace = TRUE)
+
+
+rm(main_mat, main_pot, sec_mat, sec_pot)
 
 
 
@@ -1907,46 +1757,47 @@ rm(main_mat, main_pot, sec_mat, sec_pot)
 # ----------------- #
 ### 7.2.1 *Years exp ----
 
-main_mat <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(anos_exp, ref = 0)
-                  + sexo + raca + mae_educ + idade + PIBpc #Controls
+main_mat <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(ano_nasc, ref = 2003)
+                  + sexo + raca + mae_educ + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
                   data = df %>% filter(grade == 5), #Only 5h grade
-                  #weights = df %>% filter(grade == 5) %>% select(peso),
+                  weights = df_w5$peso_mt,
                   vcov = "hetero")
 
-main_pot <- feols(as.numeric(profic_port) ~ aluno_dosage : i(anos_exp, ref = 0)
-                  + sexo + raca + mae_educ + idade + PIBpc #Controls
+main_pot <- feols(as.numeric(profic_port) ~ aluno_dosage : i(ano_nasc, ref = 2003)
+                  + sexo + raca + mae_educ + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
                   data = df %>% filter(grade == 5), #Only 5h grade
-                  #weights = df %>% filter(grade == 5) %>% select(peso),
+                  weights = df_w5$peso_lp,
                   vcov = "hetero")
 
+# 
+# sec_mat <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(anos_exp, ref = 0)
+#                  + sexo + raca + mae_educ + idade + PIBpc 
+#                  | codmun + ano + uf^ano,
+#                  data = df %>% filter(grade == 9),
+#                  #weights = df$peso,
+#                  vcov = "hetero")
+# 
+# 
+# 
+# sec_pot <- feols(as.numeric(profic_port) ~ aluno_dosage : i(anos_exp, ref = 0)
+#                  + sexo + raca + mae_educ + idade + PIBpc 
+#                  | codmun + ano + uf^ano,
+#                  data = df %>% filter(grade == 9),
+#                  #weights = df$peso,
+#                  vcov = "hetero")
 
-sec_mat <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(anos_exp, ref = 0)
-                 + sexo + raca + mae_educ + idade + PIBpc 
-                 | codmun + ano + uf^ano,
-                 data = df %>% filter(grade == 9),
-                 #weights = df$peso,
-                 vcov = "hetero")
-
-
-
-sec_pot <- feols(as.numeric(profic_port) ~ aluno_dosage : i(anos_exp, ref = 0)
-                 + sexo + raca + mae_educ + idade + PIBpc 
-                 | codmun + ano + uf^ano,
-                 data = df %>% filter(grade == 9),
-                 #weights = df$peso,
-                 vcov = "hetero")
-
-etable(main_mat, main_pot,
-       sec_mat, sec_pot)
+etable(main_mat, main_pot
+       #,sec_mat, sec_pot
+       )
 
 
 
 etable(main_mat, main_pot,
        vcov = "hetero",
        headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage_aluno/nvl_individuo_anos_exp.tex", replace = TRUE)
+       file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage_aluno/nvl_individuo_idade_exp.tex", replace = TRUE)
 
 
 rm(main_mat, main_pot, sec_mat, sec_pot)
@@ -1967,21 +1818,25 @@ for (area in region_list) {
   
   
   temp <- df %>% 
-    filter(region == area)
+    filter(region == area,
+           grade == 5)
+  
+  temp_w <- temp %>% # Weights dataframe
+    select(peso, peso_mt, peso_lp)
   
   #5h grade
-  mat_5 <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(anos_exp, ref = 0)
+  mat_5 <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(idade_exp, ref = 0)
                  + sexo + raca + mae_educ + idade + PIBpc #Controls
                  | codmun + ano + uf^ano, #FE
                  data = temp %>% filter(grade == 5), #Only 5h grade
-                 #weights = df %>% filter(grade == 5) %>% select(peso),
+                 weights = temp_w$peso_mt,
                  vcov = "hetero")
   
-  por_5 <- feols(as.numeric(profic_port) ~ aluno_dosage : i(anos_exp, ref = 0)
+  por_5 <- feols(as.numeric(profic_port) ~ aluno_dosage : i(idade_exp, ref = 0)
                  + sexo + raca + mae_educ + idade + PIBpc #Controls
                  | codmun + ano + uf^ano, #FE
                  data = temp %>% filter(grade == 5), #Only 5h grade
-                 #weights = df %>% filter(grade == 5) %>% select(peso),
+                 weights = temp_w$peso_lp,
                  vcov = "hetero")
   
   
@@ -2080,23 +1935,23 @@ rm(main_dist, sec_dist)
 
 
 # ---------------------------------------------------------------------------- #
-# 9. Above vs. Below ----
+# 9. Winner vs. Loser ----
 # ---------------------------------------------------------------------------- #
 #' Here I will create an auxiliar dummy indicating if the municipality is placed
 #' into the group of beneficiary or contributer
 
 df <- df %>% 
   mutate(grupo = case_when(
-    dosage > 0 ~ "Above",   # net beneficiary
-    dosage < 0 ~ "Below",   # net contributer
+    dosage > 0 ~ "Winner",   # net beneficiary
+    dosage < 0 ~ "Loser",   # net contributer
     TRUE ~ NA_character_
   ),
-  grupo = factor(grupo, levels = c("Below", "Above"))) #Beneficiary dummy
+  grupo = factor(grupo, levels = c("Loser", "Winner"))) #Beneficiary dummy
 
 ## 9.1 Ref. Specification ----
 #' This specification is more similar to the Rudi Rocha reference paper, regar-
 #' ding the health spending policy change in Brazil. In a similar way from the
-#' authors, I will divide the group into Above and Below, meaning the ones that
+#' authors, I will divide the group into Winner and Loser, meaning the ones that
 #' received more from the policy change and the ones that presented losses.
 
 # ------------------------------------ #
@@ -2105,7 +1960,7 @@ df <- df %>%
 ### 9.2.1 Dosage ----
 #### 9.2.1.1 Regression ----
 
-main_dist <- feols(as.numeric(age_late) ~ dosage : i(anos_exp, grupo, ref = 0)
+main_dist <- feols(as.numeric(age_late) ~ abs(dosage) : i(anos_exp, grupo, ref = 0)
                    + sexo + raca + mae_educ + idade + PIBpc #Controls
                    | codmun + ano + uf^ano, #FE
                    data = df %>% filter(grade == 5), #Only 5h grade
@@ -2113,7 +1968,7 @@ main_dist <- feols(as.numeric(age_late) ~ dosage : i(anos_exp, grupo, ref = 0)
                    vcov = "hetero")
 
 
-sec_dist <- feols(as.numeric(age_late) ~ dosage : i(anos_exp, grupo, ref = 0)
+sec_dist <- feols(as.numeric(age_late) ~ abs(dosage) : i(anos_exp, grupo, ref = 0)
                   + sexo + raca + mae_educ + idade + PIBpc 
                   | codmun + ano + uf^ano,
                   data = df %>% filter(grade == 9),
@@ -2254,11 +2109,11 @@ for (model_name in names(model_list)) {
 
 
 # ------------------------- #
-### 9.3.2 Aluno Dosage ----
+### 9.2.2 Aluno Dosage ----
 # ------------------------- #
 
 
-#### 9.3.2.1 Regression ----
+#### 9.2.2.1 Regression ----
 
 main_dist <- feols(as.numeric(age_late) ~ dosage : i(anos_exp, grupo, ref = 0)
                    + sexo + raca + mae_educ + idade + PIBpc #Controls
@@ -2284,7 +2139,7 @@ etable(main_dist, sec_dist,
 
 
 
-#### 9.3.2.2 Graph ----
+#### 9.2.2.2 Graph ----
 
 
 model_list <- list(
@@ -2408,6 +2263,97 @@ for (model_name in names(model_list)) {
 
 
 
+# ------------------------------------ #
+## 9.3 Grade -----
+# ------------------------------------ #
+
+
+### 9.3.1 Dosage ----
+
+main_mat <- feols(as.numeric(profic_mat) ~ abs(dosage) : i(ano_nasc, grupo, ref = -1)
+                  + sexo + raca + mae_educ + idade + PIBpc #Controls
+                  | codmun + ano + uf^ano, #FE
+                  data = df %>% filter(grade == 5) , #Only 5h grade
+                  weights = df_w5$peso_mt,
+                  vcov = "hetero")
+
+main_pot <- feols(as.numeric(profic_port) ~ abs(dosage) : i(ano_nasc, grupo, ref = -1)
+                  + sexo + raca + mae_educ + idade + PIBpc #Controls
+                  | codmun + ano + uf^ano, #FE
+                  data = df %>% filter(grade == 5), #Only 5h grade
+                  weights = df_w5$peso_lp,
+                  vcov = "hetero")
+
+
+etable(main_mat, main_pot
+       #,sec_mat, sec_pot
+)
+
+
+
+etable(main_mat, main_pot,
+       vcov = "hetero",
+       headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/wl_nvl_individuo_idade_exp.tex", replace = TRUE)
+
+
+rm(main_mat, main_pot, sec_mat, sec_pot)
+
+
+
+
+
+# -------------------------------- #
+## 7.2 Aluno Dosage ----
+# -------------------------------- #
+
+# ----------------- #
+### 7.2.1 *Years exp ----
+
+main_mat <- feols(as.numeric(profic_mat) ~ abs(aluno_dosage) : i(ano_nasc, ref = -1)
+                  + sexo + raca + mae_educ + PIBpc #Controls
+                  | codmun + ano + uf^ano, #FE
+                  data = df %>% filter(grade == 5), #Only 5h grade
+                  weights = df_w5$peso_mt,
+                  vcov = "hetero")
+
+main_pot <- feols(as.numeric(profic_port) ~ abs(aluno_dosage) : i(ano_nasc, ref = -1)
+                  + sexo + raca + mae_educ + PIBpc #Controls
+                  | codmun + ano + uf^ano, #FE
+                  data = df %>% filter(grade == 5), #Only 5h grade
+                  weights = df_w5$peso_lp,
+                  vcov = "hetero")
+
+# 
+# sec_mat <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(anos_exp, ref = 0)
+#                  + sexo + raca + mae_educ + idade + PIBpc 
+#                  | codmun + ano + uf^ano,
+#                  data = df %>% filter(grade == 9),
+#                  #weights = df$peso,
+#                  vcov = "hetero")
+# 
+# 
+# 
+# sec_pot <- feols(as.numeric(profic_port) ~ aluno_dosage : i(anos_exp, ref = 0)
+#                  + sexo + raca + mae_educ + idade + PIBpc 
+#                  | codmun + ano + uf^ano,
+#                  data = df %>% filter(grade == 9),
+#                  #weights = df$peso,
+#                  vcov = "hetero")
+
+etable(main_mat, main_pot
+       #,sec_mat, sec_pot
+)
+
+
+
+etable(main_mat, main_pot,
+       vcov = "hetero",
+       headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/Dosage_aluno/wl_nvl_individuo_idade_exp.tex", replace = TRUE)
+
+
+rm(main_mat, main_pot, sec_mat, sec_pot)
 
 
 
@@ -2757,3 +2703,7 @@ etable(est, est2,
        vcov = "hetero",
        headers = list(":_:" = list("N° Alunos" = 1, "N° Alunos" = 1)),
        file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_school_dosage.tex", replace = TRUE)
+
+
+
+rm(list = ls())

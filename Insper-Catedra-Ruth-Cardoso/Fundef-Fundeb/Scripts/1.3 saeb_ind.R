@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # SAEB data in the individual level
 # Last edited by: Tuffy Licciardi Issa
-# Date: 05/11/2025
+# Date: 14/11/2025
 # ---------------------------------------------------------------------------- #
 
 #' Objective:
@@ -96,6 +96,9 @@ for (idx in seq(1, length(paths_list), by = 2)) {
 
   df1 <- read_dta(path_a)  
   df2 <- read_dta(path_b)
+  
+  print(colnames(df1))
+  print(colnames(df2))
   ###1.2.1 2005 ----
   if( year == 2005) {
     
@@ -106,7 +109,9 @@ for (idx in seq(1, length(paths_list), by = 2)) {
              q1, q2, q4, q20) %>% 
       filter(dep_admin == 2) %>%  #Only Municipal Schools
       mutate(
-        grade = 5
+        grade = 5,
+        peso_lp = peso,
+        peso_mt = peso,
       ) %>% 
       rename(
         sexo = q1,
@@ -143,7 +148,9 @@ for (idx in seq(1, length(paths_list), by = 2)) {
              q1, q2, q4, q20) %>%
       filter(dep_admin == 2) %>% #Selecting only municipal schools
       mutate(
-        grade = 5
+        grade = 5,
+        peso_lp = peso,
+        peso_mt = peso,
       ) %>% 
       rename(
         sexo = q1,
@@ -253,7 +260,9 @@ for (idx in seq(1, length(paths_list), by = 2)) {
       ) %>% 
       filter(!is.na(idade)) %>% 
       mutate(ano = year,
-             peso = 1) %>%
+             peso = 1,
+             peso_mt = 1,
+             peso_lp = 1) %>%
       
       mutate( #Other control variables
         
@@ -350,7 +359,9 @@ for (idx in seq(1, length(paths_list), by = 2)) {
       ) %>% 
       filter(!is.na(idade)) %>% 
       mutate(ano = year,
-             peso = 1) %>%
+             peso = 1,
+             peso_mt = 1, 
+             peso_lp = 1) %>%
       
       mutate( #Other control variables
         
@@ -428,7 +439,9 @@ for (idx in seq(1, length(paths_list), by = 2)) {
       ) %>% 
       filter(!is.na(idade)) %>% 
       mutate(ano = year,
-             peso = 1) %>%
+             peso = 1,
+             peso_mt = 1,
+             peso_lp = 1) %>%
       
       mutate( #Other control variables
         
@@ -520,6 +533,8 @@ for (idx in seq(1, length(paths_list), by = 2)) {
           
           grade = ifelse(serie == 9, 9, 5),
           peso = mean(peso_aluno_lp + peso_aluno_mt, na.rm = T),
+          peso_mt = peso_aluno_mt,
+          peso_lp = peso_aluno_lp,
           treat_exp = ifelse(grade == 5, (year - 2007)/idade,
                              (year - 2009)/(idade - year + 2007)) #Treatment exposition
         )
@@ -563,6 +578,8 @@ for (idx in seq(1, length(paths_list), by = 2)) {
           
           grade = ifelse(serie == 9, 9, 5),
           peso = mean(peso_aluno_lp + peso_aluno_mt, na.rm = T),
+          peso_mt = peso_aluno_mt,
+          peso_lp = peso_aluno_lp,
           treat_exp = ifelse(grade == 5, (year - 2007)/idade,
                              (year - 2009)/(idade - year + 2007)) #Treatment exposition
         )
@@ -608,6 +625,8 @@ for (idx in seq(1, length(paths_list), by = 2)) {
           
           grade = ifelse(serie == 9, 9, 5),
           peso = mean(peso_aluno_lp + peso_aluno_mt, na.rm = T),
+          peso_mt = peso_aluno_mt,
+          peso_lp = peso_aluno_lp,
           treat_exp = ifelse(grade == 5, (year - 2007)/idade,
                              (year - 2009)/(idade - year + 2007)) #Treatment exposition
         )
