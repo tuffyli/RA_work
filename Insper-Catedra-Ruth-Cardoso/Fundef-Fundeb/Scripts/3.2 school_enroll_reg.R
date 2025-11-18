@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions on enrollment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 05/11/2025
+# Date: 18/11/2025
 # ---------------------------------------------------------------------------- #
 
 #' *************************************************************************** #
@@ -302,7 +302,7 @@ rm(list = ls())
 # ------------------ #
 
 #School data
-df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base.rds") %>% 
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
   mutate(codmun = as.character(codmun %/% 10),
          k = as.numeric(ano) - 2007) 
 
@@ -316,7 +316,7 @@ df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>%
 #Combining both databases
 df_comb <- df_school %>% 
   left_join(df_reg %>%
-              filter(ano %in% c(2005:2017)) %>%
+              filter(ano %in% c(2005:2018)) %>%
               mutate(codigo_ibge = as.character(codigo_ibge)),
             by = c("codmun" = "codigo_ibge", "ano" = "ano"))  
 
