@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions
 # Last edited by: Tuffy Licciardi Issa
-# Date: 18/11/2025
+# Date: 19/11/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -997,9 +997,9 @@ p_employ <- event_style_plot(est_employ,"Funcionários")   #Employee
 
 blank <- ggplot() + theme_void()
 
-grid_plot <- (p_class + p_troom + p_labs) /
-  (p_libra + p_play + p_lunch) /
-  (blank   + p_employ + blank)
+grid_plot <- ( p_troom + p_labs + p_libra) /
+  (p_play + p_lunch + blank) /
+  (p_class   + p_employ + blank)
 
 final <- grid_plot + plot_annotation(
   #title = "Event-study: infrastructure / staff outcomes",
@@ -1084,9 +1084,9 @@ p_employ <- event_style_plot(est_employ,"Funcionários")   #Employee
 
 blank <- ggplot() + theme_void()
 
-grid_plot <- (p_class + p_troom + p_labs) /
-  (p_libra + p_play + p_lunch) /
-  (blank   + p_employ + blank)
+grid_plot <- ( p_troom + p_labs + p_libra) /
+  (p_play + p_lunch + blank) /
+  (p_class   + p_employ + blank)
 
 final <- grid_plot + plot_annotation(
   #title = "Event-study: infrastructure / staff outcomes",
@@ -1360,9 +1360,10 @@ p_employ <- win_lose_plot(est_employ,"Funcionários")   #Employee
 
 blank <- ggplot() + theme_void()
 
-grid_plot <- (p_class + p_troom + p_labs) /
-  (p_libra + p_play + p_lunch) /
-  (blank   + p_employ + blank)
+grid_plot <- ( p_troom + p_labs + p_libra) /
+  (p_play + p_lunch + blank) /
+  (p_class   + p_employ + blank)
+
 
 final <- grid_plot + plot_annotation(
   #title = "Event-study: infrastructure / staff outcomes",
@@ -1374,8 +1375,8 @@ final
 ggsave( #Saving image
   filename = paste0("winlose_school_structure_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/",
-  width = 800/96, height = 620/96, dpi = 300
+  path = "Z:/Tuffy/Paper - Educ/Reports/Fundeb_Infantil/v2_fig/ES/Robust", #Saving directly to the report
+  width = 1500/96, height = 620/96, dpi = 300
 )
 
 rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libra,
@@ -1447,9 +1448,9 @@ p_employ <- win_lose_plot(est_employ,"Funcionários")   #Employee
 
 blank <- ggplot() + theme_void()
 
-grid_plot <- (p_class + p_troom + p_labs) /
-  (p_libra + p_play + p_lunch) /
-  (blank   + p_employ + blank)
+grid_plot <- ( p_troom + p_labs + p_libra) /
+  (p_play + p_lunch + blank) /
+  (p_class   + p_employ + blank)
 
 final <- grid_plot + plot_annotation(
   #title = "Event-study: infrastructure / staff outcomes",
@@ -1461,8 +1462,8 @@ final
 ggsave( #Saving image
   filename = paste0("winlose_school_structure_aluno_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/",
-  width = 800/96, height = 620/96, dpi = 300
+  path = "Z:/Tuffy/Paper - Educ/Reports/Fundeb_Infantil/v2_fig/ES/Robust", #Saving directly to the report
+  width = 1500/96, height = 620/96, dpi = 300
 )
 
 rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libra,
@@ -1532,7 +1533,7 @@ final
 ggsave( #Saving image
   filename = paste0("winlose_school_course_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/",
+  path = "Z:/Tuffy/Paper - Educ/Reports/Fundeb_Infantil/v2_fig/ES/Robust", #Saving directly to the report
   width = 800/96, height = 620/96, dpi = 300
 )
 
@@ -1548,7 +1549,7 @@ est_kinder <- feols( exp_psch ~ abs(aluno_dosage) : i(k, grupo, ref = -1) +
                      data = df_comb,
                      vcov = "hetero")
 #Elementary
-est_elem <- feols( exp_elem ~ abs(aluno_dosage) : i(k, grupo ref = -1) +
+est_elem <- feols( exp_elem ~ abs(aluno_dosage) : i(k, grupo, ref = -1) +
                      PIBpc |
                      codmun + ano + uf^ano,
                    data = df_comb,
@@ -1590,7 +1591,7 @@ final
 ggsave( #Saving image
   filename = paste0("winlose_school_course_aluno_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/",
+  path = "Z:/Tuffy/Paper - Educ/Reports/Fundeb_Infantil/v2_fig/ES/Robust", #Saving directly to the report
   width = 800/96, height = 620/96, dpi = 300
 )
 
@@ -2323,7 +2324,7 @@ df <- df_saeb %>%
          
          post_treat = ifelse(ano > 2007, 1, 0),
          
-         nasc_post  = ifelse(ano_nasc >= 2003, 1, 0),
+         nasc_post  = ifelse(ano_nasc >= 2002, 1, 0),
          
          rob_winner_dummy = ifelse(dosage > 0, 1, 0),
          
@@ -2362,14 +2363,14 @@ df_w9 <- df %>% filter(grade == 9) %>% select(peso, peso_mt, peso_lp)  #9th grad
 
 ### 7.1.1 Years exp ----
 
-main_mat <- feols(as.numeric(profic_mat) ~ abs(dosage) : i(ano_nasc, grupo, ref = 2003)
+main_mat <- feols(as.numeric(profic_mat) ~ abs(dosage) : i(ano_nasc, grupo, ref = 2002)
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
                   data = df %>% filter(grade == 5) , #Only 5h grade
                   weights = df_w5$peso_mt,
                   vcov = "hetero")
 
-main_pot <- feols(as.numeric(profic_port) ~ abs(dosage) : i(ano_nasc, grupo, ref = 2003)
+main_pot <- feols(as.numeric(profic_port) ~ abs(dosage) : i(ano_nasc, grupo, ref = 2002)
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
                   data = df %>% filter(grade == 5), #Only 5h grade
@@ -2427,14 +2428,14 @@ event_df <- event_df %>%
     event_df %>%
       distinct(grupo) %>%
       mutate(
-        term = paste0(as.character(grupo),"ano_nasc:2003"),     
+        term = paste0(as.character(grupo),"ano_nasc:2002"),     
         estimate = 0,
         std.error = 0,
         statistic = 0,
         p.value = 1,
         conf.low = 0,
         conf.high = 0,
-        k = 2003
+        k = 2002
       )
   ) %>% 
   filter(!grupo %in% c("PIBpc", "mae_educ", "raca", "sexo", "idade"))
@@ -2443,7 +2444,7 @@ ggplot(event_df, aes(x = k, y = estimate, group = grupo)) +
   # shaded standard error area
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
   geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
-  geom_vline(xintercept = 2003, color = "black") +
+  geom_vline(xintercept = 2002, color = "black") +
   geom_point(aes(color = grupo), shape = 15, size = 2) +
   geom_line(aes(color = grupo)) +
   labs(
@@ -2476,14 +2477,18 @@ rm(main_mat, main_pot, sec_mat, sec_pot)
 ### 7.1.2 Roberto Spec -----
 # ------------------------------ #
 
-main_mat <- feols(as.numeric(profic_mat) ~ rob_winner_dummy : i(ano_nasc, ref = 2003)
+
+
+
+
+main_mat <- feols(as.numeric(profic_mat) ~ rob_winner_dummy : i(ano_nasc, ref = 2002)
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
                   data = df %>% filter(grade == 5) , #Only 5h grade
                   weights = df_w5$peso_mt,
                   vcov = "hetero")
 
-main_pot <- feols(as.numeric(profic_port) ~ rob_winner_dummy : i(ano_nasc, ref = 2003)
+main_pot <- feols(as.numeric(profic_port) ~ rob_winner_dummy : i(ano_nasc, ref = 2002)
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
                   data = df %>% filter(grade == 5), #Only 5h grade
@@ -2510,21 +2515,80 @@ rm(main_mat, main_pot, sec_mat, sec_pot)
 #### 7.1.2.1 Roberto Simples ----
 # ------------------------------- #
 
+####### Data ------------------------ #
+#Combining both dataframes
+df_simples <- df_saeb %>% 
+  left_join(df_reg %>%
+              filter(ano %in% c(2005:2017)) %>% #Excluding 2005
+              mutate(codigo_ibge = as.character(codigo_ibge)),
+            by = c("codmun" = "codigo_ibge", "ano" = "ano")) %>% 
+  mutate(
+    sexo = as.numeric(sexo),
+    raca = as.numeric(raca),
+    mae_educ = as.numeric(mae_educ)
+  ) %>% 
+  mutate(age_exp = ifelse(treat_exp > 1, 1, treat_exp), #Based on Carrillo
+         
+         anos_exp = ano - 2007,
+         anos_exp = ifelse(grade == 9, anos_exp - 2, anos_exp), #Adjsutment for the 9th grade
+         
+         ano_nasc = ano - (idade), #Birth year as reference
+         
+         peso = as.numeric(peso), #Weights
+         
+         age_late = case_when(
+           grade == 5 & idade > 10 ~ 1, #Is older than the ideal age
+           grade == 9 & idade > 14 ~ 1,  #Is older than the ideal age
+           TRUE ~ 0
+         ),
+         age_dist = ifelse(idade_aux == 0, 1, 0), #Age distortion
+         
+         post_treat = ifelse(ano > 2007, 1, 0),
+         
+         nasc_post  = ifelse(ano_nasc >= 2002, 1, 0),
+         
+         rob_winner_dummy = ifelse(dosage > 0, 1, 0),
+         
+         #Separating the Brazilian Regions
+         region = case_when(
+           as.numeric(codmun) %/% 100000 == 1 ~ "Norte",        #North
+           as.numeric(codmun) %/% 100000 == 2 ~ "Nordeste",     #Northeast
+           as.numeric(codmun) %/% 100000 == 3 ~ "Sudeste",      #Southeast
+           as.numeric(codmun) %/% 100000 == 4 ~ "Sul",          #South
+           as.numeric(codmun) %/% 100000 == 5 ~ "Centro-Oeste", #Central-West
+           TRUE ~ NA
+         )
+  ) %>% 
+  mutate(grupo = case_when(
+    dosage > 0 ~ "Winner",   # net beneficiary
+    dosage < 0 ~ "Loser",   # net contributer
+    TRUE ~ NA_character_),
+    
+    grupo = factor(grupo, levels = c("Loser", "Winner")) #Beneficiary dumm
+  ) %>% 
+  #filter(as.numeric(ano_nasc) < 2008) %>% # This remove younger than expected people in 2017  -> ideal age = 10.
+  mutate(ano_nasc = as.factor(ano_nasc))
+
+#Weights dataframes
+df2_w5 <- df_simples %>% filter(grade == 5) %>% select(peso, peso_mt, peso_lp)  #5th grade
+df2_w9 <- df_simples %>% filter(grade == 9) %>% select(peso, peso_mt, peso_lp)  #9th grade
 
 
 
+
+# Regressions --
 main_mat <- feols(as.numeric(profic_mat) ~ rob_winner_dummy * nasc_post
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
-                  data = df %>% filter(grade == 5) , #Only 5h grade
-                  weights = df_w5$peso_mt,
+                  data = df_simples %>% filter(grade == 5) , #Only 5h grade
+                  weights = df2_w5$peso_mt,
                   vcov = "hetero")
 
 main_pot <- feols(as.numeric(profic_port) ~ rob_winner_dummy * nasc_post
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
-                  data = df %>% filter(grade == 5), #Only 5h grade
-                  weights = df_w5$peso_lp,
+                  data = df_simples %>% filter(grade == 5), #Only 5h grade
+                  weights = df2_w5$peso_lp,
                   vcov = "hetero")
 
 
@@ -2540,10 +2604,7 @@ etable(main_mat, main_pot,
        file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage/roberto_v2_nvl_ind_nasc.tex", replace = TRUE)
 
 
-
-
-
-rm(main_mat, main_pot, sec_mat, sec_pot)
+rm(main_mat, main_pot, sec_mat, sec_pot, df_simples, df2_w5, df2_w9)
 
 
 
@@ -2554,14 +2615,14 @@ rm(main_mat, main_pot, sec_mat, sec_pot)
 # ----------------- #
 ### 7.2.1 *Years exp ----
 
-main_mat <- feols(as.numeric(profic_mat) ~ abs(aluno_dosage) : i(ano_nasc, grupo, ref = 2003)
+main_mat <- feols(as.numeric(profic_mat) ~ abs(aluno_dosage) : i(ano_nasc, grupo, ref = 2002)
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
                   data = df %>% filter(grade == 5) , #Only 5h grade
                   weights = df_w5$peso_mt,
                   vcov = "hetero")
 
-main_pot <- feols(as.numeric(profic_port) ~ abs(aluno_dosage) : i(ano_nasc, grupo, ref = 2003)
+main_pot <- feols(as.numeric(profic_port) ~ abs(aluno_dosage) : i(ano_nasc, grupo, ref = 2002)
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
                   data = df %>% filter(grade == 5), #Only 5h grade
@@ -3486,7 +3547,7 @@ rm(df_reg)
 ### ------------------ #
 ### 10.2.1 Regression ----
 ### ------------------ #
-#### 10.2.1.1 Students ----
+#### 10.2.1.1 Time to Treat ----
 #### ------------------ #
 
 #Total number of students
@@ -3496,95 +3557,31 @@ est <- feols(total_students_mpes ~ i(time_to_treat, ref = 0) |
              vcov = "hetero")
 
 
-# est2 <- feols(total_students_mpes ~ i(time_to_treat, ref = 0) |
-#                 codmun,
-#               data = df_filter,
-#               weights = df_filter$schools, #Schools as weights
-#               vcov = "hetero")
-
-etable(est)
-etable(est,
-       vcov = "hetero",
-       headers = list(":_:" = list("N° Alunos" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_alunos.tex", replace = TRUE)
-
-
-#Dosage interaction
-est <- feols(total_students_mpes ~ i(time_to_treat, ref = 0) |
-               codmun,
-             data = df_filter,
-             vcov = "hetero")
-
-
-est2 <- feols(total_students_mpes ~ i(time_to_treat, grupo, ref = 0) |
+est2 <- feols(schools ~ i(time_to_treat, ref = 0) |
                 codmun,
               data = df_filter,
               vcov = "hetero")
 
-est3 <- feols(total_students_mpes ~ abs(dosage): i(time_to_treat, grupo, ref = 0) |
-                codmun,
-              data = df_filter,
-              vcov = "hetero")
-
-etable(est, est2, est3)
-
-
+etable(est, est2)
 etable(est, est2,
        vcov = "hetero",
-       headers = list(":_:" = list("N° Alunos" = 1, "N° Alunos" = 1, "N° Alunos")),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_alunos_dosage.tex", replace = TRUE)
+       headers = list(":_:" = list("N° Alunos" = 1, "N° Escolas" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_time_to_treat.tex", replace = TRUE)
 
 
-#### 10.2.1.2 Schools ----
+### ------------------ #
+#### 10.2.1.2 Winner vs. Loser ----
 #### ------------------ #
 
-est <- feols(schools ~ i(time_to_treat, ref = 0) |
-               codmun,
-             data = df_filter,
-             vcov = "hetero")
 
-
+est <- feols(total_students_mpes ~ i(time_to_treat, grupo, ref = 0) |
+                codmun,
+              data = df_filter,
+              vcov = "hetero")
 
 est2 <- feols(schools ~ i(time_to_treat, grupo, ref = 0) |
                 codmun,
               data = df_filter,
-              #weights = df_filter$total_students_mpes,
-              vcov = "hetero")
-
-
-
-est3 <- feols(schools ~ abs(dosage):i(time_to_treat, grupo, ref = 0) |
-                codmun,
-              data = df_filter,
-              #weights = df_filter$total_students_mpes,
-              vcov = "hetero")
-
-etable(est, 
-       est2,
-       est3)
-
-etable(est, est2, est3,
-       vcov = "hetero",
-       headers = list(":_:" = list("N° Escolas" = 1, "N° Escolas" = 1, "N° Escolas" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_schools.tex", replace = TRUE)
-
-
-
-# ------------------------------ #
-### 10.2.1.3 Aluno Dosage ----
-# ------------------------------ #
-
-#Dosage interaction
-est <- feols(schools ~ abs(aluno_dosage):i(time_to_treat, grupo, ref = 0) |
-               codmun,
-             data = df_filter,
-             vcov = "hetero")
-
-
-est2 <- feols(total_students_mpes ~ abs(aluno_dosage):i(time_to_treat, grupo, ref = 0) |
-                codmun,
-              data = df_filter,
-              weights = df_filter$total_students, #Students as weights
               vcov = "hetero")
 
 etable(est, est2)
@@ -3592,10 +3589,64 @@ etable(est, est2)
 
 etable(est, est2,
        vcov = "hetero",
-       headers = list(":_:" = list("N° Escolas" = 1, "N° Alunos" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/aluno_num_school_adosage.tex", replace = TRUE)
+       headers = list(":_:" = list("N° Alunos" = 1, "N° Escolas" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_win_lose.tex", replace = TRUE)
+
+
+### ------------------ #
+#### 10.2.1.3 Winner vs. Loser DOSAGE ----
+#### ------------------ #
+
+est <- feols(total_students_mpes ~ abs(dosage):i(time_to_treat, grupo, ref = 0) |
+                codmun,
+              data = df_filter,
+              #weights = df_filter$total_students_mpes,
+              vcov = "hetero")
+
+est2 <- feols(schools ~ abs(dosage):i(time_to_treat, grupo, ref = 0) |
+                codmun,
+              data = df_filter,
+              #weights = df_filter$total_students_mpes,
+              vcov = "hetero")
+
+etable(est, 
+       est2)
+
+etable(est, est2,
+       vcov = "hetero",
+       headers = list(":_:" = list("N° Alunos" = 1, "N° Escolas" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_win_lose_dosage.tex", replace = TRUE)
+
+
+
+
+### ------------------ #
+#### 10.2.1.4 Winner vs. Loser ALUNO DOSAGE ----
+#### ------------------ #
+
+est <- feols(total_students_mpes ~ abs(aluno_dosage):i(time_to_treat, grupo, ref = 0) |
+               codmun,
+             data = df_filter,
+             #weights = df_filter$total_students_mpes,
+             vcov = "hetero")
+
+est2 <- feols(schools ~ abs(aluno_dosage):i(time_to_treat, grupo, ref = 0) |
+                codmun,
+              data = df_filter,
+              #weights = df_filter$total_students_mpes,
+              vcov = "hetero")
+
+etable(est, 
+       est2)
+
+etable(est, est2,
+       vcov = "hetero",
+       headers = list(":_:" = list("N° Alunos" = 1, "N° Escolas" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Desc/num_win_lose_aluno_dosage.tex", replace = TRUE)
+
 
 
 
 
 rm(list = ls())
+
