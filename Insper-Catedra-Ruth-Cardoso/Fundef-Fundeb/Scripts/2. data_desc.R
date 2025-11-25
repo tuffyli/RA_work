@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 21/10/2025
+# Date: 25/11/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1596,3 +1596,96 @@ message("Saved LaTeX table to: ", out_path)
 
 
 rm(latex_table, positive)
+
+# ---------------------------------------------------------------------------- #
+# 8. Maps ----
+# ---------------------------------------------------------------------------- #
+
+library(sf)
+library(geobr)
+
+#' I will create two maps regarding Brazil's municipality exposure to the FUNDEB
+#' using [color-coding] for most affected municipalities in Brazil.
+
+df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>% # FROM 3.regressions_v2 file
+  select(codigo_ibge, ano, dosage, aluno_dosage) %>% 
+  filter(ano == 2007)
+
+mun <- read_municipality(code_muni = "all", year = 2007) %>% #Downloading shapefile
+  mutate(code_muni = code_muni %/% 10)
+
+
+#Combining dataframes
+df_mun <- df_reg %>% 
+  left_join(mun, by = c("codigo_ibge" = "code_muni"))
+
+
+rm(df_reg, mun)
+
+
+# 3. Create the two maps
+## ---- 8.1 Map 1: dosage ----
+
+minv <- min(df_mun$dosage, na.rm = TRUE)   # e.g. -0.27
+maxv <- max(df_mun$dosage, na.rm = TRUE)   # e.g.  1
+p <- function(x) (x - minv) / (maxv - minv) # helper to convert values to 0..1
+
+# Make a color ramp that changes very quickly between 0 and minv
+cols <- c("#a50026", "#fbb4b9", "white", "#c7e9c0", "#41ab5d", "#006d2c")
+vals <- p(c(minv, minv * 0.08, 0, maxv * 0.03, maxv * 0.10, maxv * 0.35, maxv))  # small gap near zero on negative side
+
+map_dosage <- ggplot(df_mun) +
+  geom_sf(aes(fill = dosage, geometry = geom), color = NA) +
+  scale_fill_gradientn(
+    colours = cols,
+    values = vals,
+    limits = c(minv, maxv),
+    oob = scales::squish,
+    name = "Dosage",
+    guide = guide_colorbar(barwidth = unit(6, "cm"), barheight = unit(0.5, "cm"))
+  ) +
+  coord_sf(expand = FALSE) +
+  theme_minimal() +
+  #labs(title = "Dosage per Municipality") +
+  theme(legend.position = "bottom")
+
+map_dosage
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/Mapa/map_dosage.png"),plot = map_dosage ,
+       device = "png", dpi = 300)
+
+
+
+
+## 8.2 Map 2: aluno_dosage ----
+
+minv <- min(df_mun$aluno_dosage, na.rm = TRUE)   # e.g. -0.27
+maxv <- max(df_mun$aluno_dosage, na.rm = TRUE)   # e.g.  1
+p <- function(x) (x - minv) / (maxv - minv) # helper to convert values to 0..1
+
+# Make a color ramp that changes very quickly between 0 and minv
+cols <- c("#a50026", "#fbb4b9", "white", "#c7e9c0", "#41ab5d", "#006d2c")
+vals <- p(c(minv, minv * 0.08, 0, maxv * 0.01, maxv * 0.10, maxv * 0.35, maxv))  # small gap near zero on negative side
+
+map_aluno <- ggplot(df_mun) +
+  geom_sf(aes(fill = aluno_dosage, geometry = geom), color = NA) +
+  scale_fill_gradientn(
+    colours = cols,
+    values = vals,
+    limits = c(minv, maxv),
+    oob = scales::squish,
+    name = "Aluno",
+    guide = guide_colorbar(barwidth = unit(6, "cm"), barheight = unit(0.5, "cm"))
+  ) +
+  coord_sf(expand = FALSE) +
+  theme_minimal() +
+  #labs(title = "Dosage per Municipality") +
+  theme(legend.position = "bottom")
+
+map_aluno
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/Mapa/map_aluno_dosage.png"), plot = map_aluno,
+       device = "png", dpi = 300)
+
+
+

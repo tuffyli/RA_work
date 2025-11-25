@@ -2352,6 +2352,35 @@ df <- df_saeb %>%
 df_w5 <- df %>% filter(grade == 5) %>% select(peso, peso_mt, peso_lp)  #5th grade
 df_w9 <- df %>% filter(grade == 9) %>% select(peso, peso_mt, peso_lp)  #9th grade
 
+
+# ------------------------- #
+#' Additional tweaks for better reproduction of Roberto's regression
+
+#1. Extracting the municipalities in 2007
+df_uf <- df_reg %>% 
+  filter(ano == 2007)
+
+#2. Cutoff variable in the top tercile
+#' In the paper the authors specify the top tercile for each state.
+
+df_uf <- df_uf %>%
+  group_by(uf) %>%
+  mutate(
+    cutoff_dos = quantile(dosage, probs = 0.7, na.rm = T),
+    cutoff_ald = quantile(aluno_dosage, probs = 0.7, na.rm = T),
+    top_tercile_dos = ifelse(!is.na(dosage) & dosage >= cutoff_dos, 1, 0),
+    top_tercile_ald = ifelse(!is.na(aluno_dosage) & aluno_dosage >= cutoff_ald, 1, 0)
+  ) %>%
+  ungroup() %>% 
+  select(codigo_ibge, uf, top_tercile_dos, top_tercile_ald)
+
+#3. combining the last variables
+df <- df %>% 
+  left_join(df_uf, by = c("codmun" = "codigo_ibge"))
+
+
+rm(df_uf, uf_list)
+
 # ---------------------------------------------------------------------------- #
 # 7. Main Regression ----
 # ---------------------------------------------------------------------------- #
