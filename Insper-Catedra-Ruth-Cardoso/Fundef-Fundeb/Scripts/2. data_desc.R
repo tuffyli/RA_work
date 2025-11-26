@@ -1631,8 +1631,8 @@ maxv <- max(df_mun$dosage, na.rm = TRUE)   # e.g.  1
 p <- function(x) (x - minv) / (maxv - minv) # helper to convert values to 0..1
 
 # Make a color ramp that changes very quickly between 0 and minv
-cols <- c("#a50026", "#fbb4b9", "white", "#c7e9c0", "#41ab5d", "#006d2c")
-vals <- p(c(minv, minv * 0.08, 0, maxv * 0.03, maxv * 0.10, maxv * 0.35, maxv))  # small gap near zero on negative side
+cols <- c("#a50026", "#fbb4b9", "white", "#41ab5d", "#006d2c", "blue")
+vals <- p(c(minv, minv * 0.08, 0, maxv * 0.03, maxv * 0.10, maxv * 0.9, maxv))  # small gap near zero on negative side
 
 map_dosage <- ggplot(df_mun) +
   geom_sf(aes(fill = dosage, geometry = geom), color = NA) +
@@ -1664,8 +1664,8 @@ maxv <- max(df_mun$aluno_dosage, na.rm = TRUE)   # e.g.  1
 p <- function(x) (x - minv) / (maxv - minv) # helper to convert values to 0..1
 
 # Make a color ramp that changes very quickly between 0 and minv
-cols <- c("#a50026", "#fbb4b9", "white", "#c7e9c0", "#41ab5d", "#006d2c")
-vals <- p(c(minv, minv * 0.08, 0, maxv * 0.01, maxv * 0.10, maxv * 0.35, maxv))  # small gap near zero on negative side
+cols <- c("#a50026", "#fbb4b9", "white", "#41ab5d", "#006d2c", "blue")
+vals <- p(c(minv, minv * 0.08, 0, maxv * 0.01, maxv * 0.10, maxv * 0.9, maxv))  # small gap near zero on negative side
 
 map_aluno <- ggplot(df_mun) +
   geom_sf(aes(fill = aluno_dosage, geometry = geom), color = NA) +

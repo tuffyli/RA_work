@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions
 # Last edited by: Tuffy Licciardi Issa
-# Date: 19/11/2025
+# Date: 26/11/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -811,7 +811,8 @@ df_school <- df_school %>%
     
     #numeral variables
     class     = total_enroll / sum(classroom, na.rm = T),
-    employee  = total_enroll / sum(employee, na.rm = T),
+    n_employee = sum(employee, na.rm = T),                 #New contracts
+    employee  = total_enroll / n_employee,
     schools   = n(),
     
     
@@ -823,10 +824,10 @@ df_school <- df_school %>%
     exp_lunch = sum(enroll*lunch, na.rm = T)     /total_enroll,
     
     #Courses Student Exposure
-    exp_psch  = sum(enroll*kinder, na.rm = T)    /total_enroll,
-    exp_elem  = sum(enroll*elementary, na.rm = T)/total_enroll,
-    exp_high  = sum(enroll*high, na.rm = T)      /total_enroll,
-    exp_inc   = sum(enroll*inclusion, na.rm = T) /total_enroll,
+    exp_psch  = sum((pre_tot + day_tot)*kinder, na.rm = T)    /total_enroll,
+    exp_elem  = sum(ef_tot*elementary, na.rm = T)/total_enroll,
+    exp_high  = sum(em_tot*high, na.rm = T)      /total_enroll,
+    exp_inc   = sum(esp_tot*inclusion, na.rm = T) /total_enroll,
     
     #Childhood exp
     child_psch = sum(pre_tot*preschool, na.rm = T),
@@ -927,14 +928,21 @@ est_lunch <- feols(exp_lunch ~ dosage * i(k, ref = -1)
                    data = df_comb,
                    vcov = "hetero")
 
-#Employee 
+#Student/Employee 
 est_employ <- feols(employee ~ dosage * i(k, ref = -1)
                     + PIBpc |
                       codmun + ano + uf^ano,
                     data = df_comb,
                     vcov = "hetero")
 
-etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_employ)
+#Total employees
+est_n_employ <- feols(n_employee ~ dosage * i(k, ref = -1)
+                      + PIBpc |
+                        codmun + ano + uf^ano,
+                      data = df_comb,
+                      vcov = "hetero")
+
+etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_employ, est_n_employ)
 
 
 ##### 3.2.1.1.1 Graph ----
@@ -994,12 +1002,12 @@ p_libra <- event_style_plot(est_libra, "Biblioteca")      #Library
 p_play  <- event_style_plot(est_play,  "Quadras/Parque")  #Play Area
 p_lunch <- event_style_plot(est_lunch, "Merenda")         #Lunch
 p_employ <- event_style_plot(est_employ,"Funcionários")   #Employee
-
+p_nemploy <- event_style_plot(est_employ,"N° Funcionários") #N Employee
 blank <- ggplot() + theme_void()
 
 grid_plot <- ( p_troom + p_labs + p_libra) /
   (p_play + p_lunch + blank) /
-  (p_class   + p_employ + blank)
+  (p_class   + p_employ + p_nemploy)
 
 final <- grid_plot + plot_annotation(
   #title = "Event-study: infrastructure / staff outcomes",
@@ -1067,7 +1075,15 @@ est_employ <- feols(employee ~ aluno_dosage * i(k, ref = -1)
                     data = df_comb,
                     vcov = "hetero")
 
-etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_employ)
+#Total employees
+est_n_employ <- feols(n_employee ~ aluno_dosage * i(k, ref = -1)
+                      + PIBpc |
+                        codmun + ano + uf^ano,
+                      data = df_comb,
+                      vcov = "hetero")
+
+
+etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_employ, est_n_employ)
 
 
 ##### 3.2.1.2.1 Graph ----
@@ -1081,12 +1097,14 @@ p_libra <- event_style_plot(est_libra, "Biblioteca")      #Library
 p_play  <- event_style_plot(est_play,  "Quadras/Parque")  #Play Area
 p_lunch <- event_style_plot(est_lunch, "Merenda")         #Lunch
 p_employ <- event_style_plot(est_employ,"Funcionários")   #Employee
+p_nemploy <- event_style_plot(est_n_employ, "N° Funcionários")
+
 
 blank <- ggplot() + theme_void()
 
 grid_plot <- ( p_troom + p_labs + p_libra) /
   (p_play + p_lunch + blank) /
-  (p_class   + p_employ + blank)
+  (p_class   + p_employ + p_nemploy)
 
 final <- grid_plot + plot_annotation(
   #title = "Event-study: infrastructure / staff outcomes",
@@ -1102,8 +1120,8 @@ ggsave( #Saving image
   width = 800/96, height = 620/96, dpi = 300
 )
 
-rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libra,
-   final, est_class, est_employ, est_labs, est_libra, est_lunch, est_play,
+rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libra, p_nemploy,
+   final, est_class, est_employ, est_labs, est_libra, est_lunch, est_play, est_n_employ,
    est_troom)
 
 
@@ -1149,9 +1167,9 @@ est_high <- feols(exp_high ~ dosage * i(k, ref = -1)
 
 
 ##### 3.2.2.1.1 Graph ----
-p_kinder <- event_style_plot(est_kinder, "E. Infantil")  #Preschool
-p_elem <- event_style_plot(est_elem, "E. Fundamental")   #Elementary
-p_high  <- event_style_plot(est_high,  "E. Médio")       #HighSchool
+p_kinder <- event_style_plot(est_kinder, "Fração Alunos E. Infantil")  #Preschool
+p_elem <- event_style_plot(est_elem, "Fração Alunos E. Fundamental")   #Elementary
+p_high  <- event_style_plot(est_high,  "Fração Alunos E. Médio")       #HighSchool
 #p_inclu <- event_style_plot(est_inclu, "E. Especial")    #Speical Education
 
 blank <- ggplot() + theme_void()
@@ -1207,9 +1225,9 @@ est_high <- feols(exp_high ~ aluno_dosage * i(k, ref = -1)
 
 
 ##### 3.2.2.2.1 Graph ----
-p_kinder <- event_style_plot(est_kinder, "E. Infantil")  #Preschool
-p_elem <- event_style_plot(est_elem, "E. Fundamental")   #Elementary
-p_high  <- event_style_plot(est_high,  "E. Médio")       #HighSchool
+p_kinder <- event_style_plot(est_kinder, "Fração Alunos E. Infantil")  #Preschool
+p_elem <- event_style_plot(est_elem, "Fração Alunos E. Fundamental")   #Elementary
+p_high  <- event_style_plot(est_high,  "Fração Alunos E. Médio")       #HighSchool
 # p_inclu <- event_style_plot(est_inclu, "E. Especial")    #Speical Education
 
 blank <- ggplot() + theme_void()
@@ -1344,7 +1362,14 @@ est_employ <- feols(employee ~ abs(dosage) : i(k, grupo, ref = -1)
                     data = df_comb,
                     vcov = "hetero")
 
-etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_employ)
+
+est_n_employ <- feols(n_employee ~ abs(dosage) : i(k, grupo, ref = -1)
+                      + PIBpc |
+                        codmun + ano + uf^ano,
+                      data = df_comb,
+                      vcov = "hetero")
+
+etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_employ, est_n_employ)
 
 
 #### 3.3.1.1 Graph ----
@@ -1357,12 +1382,13 @@ p_libra <- win_lose_plot(est_libra, "Biblioteca")      #Library
 p_play  <- win_lose_plot(est_play,  "Quadras/Parque")  #Play Area
 p_lunch <- win_lose_plot(est_lunch, "Merenda")         #Lunch
 p_employ <- win_lose_plot(est_employ,"Funcionários")   #Employee
+p_nemploy <- win_lose_plot(est_n_employ, "N° Funcionários") #N° Employee
 
 blank <- ggplot() + theme_void()
 
 grid_plot <- ( p_troom + p_labs + p_libra) /
   (p_play + p_lunch + blank) /
-  (p_class   + p_employ + blank)
+  (p_class   + p_employ + p_nemploy)
 
 
 final <- grid_plot + plot_annotation(
@@ -1375,7 +1401,7 @@ final
 ggsave( #Saving image
   filename = paste0("winlose_school_structure_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Reports/Fundeb_Infantil/v2_fig/ES/Robust", #Saving directly to the report
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/", #Saving directly to the report
   width = 1500/96, height = 620/96, dpi = 300
 )
 
@@ -1462,7 +1488,7 @@ final
 ggsave( #Saving image
   filename = paste0("winlose_school_structure_aluno_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Reports/Fundeb_Infantil/v2_fig/ES/Robust", #Saving directly to the report
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/", #Saving directly to the report
   width = 1500/96, height = 620/96, dpi = 300
 )
 
@@ -1513,9 +1539,9 @@ est_high <- feols(exp_high ~ abs(dosage) : i(k, grupo, ref = -1)
 
 
 ##### 3.3.3.1.1 Graph ----
-p_kinder <- win_lose_plot(est_kinder, "Exp. Infantil")  #Preschool
-p_elem <- win_lose_plot(est_elem, "Exp. Fundamental")   #Elementary
-p_high  <- win_lose_plot(est_high,  "Exp. Médio")       #HighSchool
+p_kinder <- win_lose_plot(est_kinder, "Fração Alunos E. Infantil")  #Preschool
+p_elem <- win_lose_plot(est_elem, "Fração Alunos E. Fundamental")   #Elementary
+p_high  <- win_lose_plot(est_high,  "Fração Alunos E. Médio")       #HighSchool
 #p_inclu <- event_style_plot(est_inclu, "E. Especial")    #Speical Education
 
 blank <- ggplot() + theme_void()
@@ -1533,7 +1559,7 @@ final
 ggsave( #Saving image
   filename = paste0("winlose_school_course_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Reports/Fundeb_Infantil/v2_fig/ES/Robust", #Saving directly to the report
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/", #Saving directly to the report
   width = 800/96, height = 620/96, dpi = 300
 )
 
@@ -1571,9 +1597,9 @@ est_high <- feols(exp_high ~ abs(aluno_dosage) : i(k, grupo, ref = -1)
 
 
 ##### 3.3.3.2.1 Graph ----
-p_kinder <- win_lose_plot(est_kinder, "Exp. Infantil")  #Preschool
-p_elem <- win_lose_plot(est_elem, "Exp. Fundamental")   #Elementary
-p_high  <- win_lose_plot(est_high,  "Exp. Médio")       #HighSchool
+p_kinder <- win_lose_plot(est_kinder, "Fração Alunos E. Infantil")  #Preschool
+p_elem <- win_lose_plot(est_elem, "Fração Alunos E. Fundamental")   #Elementary
+p_high  <- win_lose_plot(est_high,  "Fração Alunos E. Médio")       #HighSchool
 # p_inclu <- event_style_plot(est_inclu, "E. Especial")    #Speical Education
 
 blank <- ggplot() + theme_void()
@@ -1591,7 +1617,7 @@ final
 ggsave( #Saving image
   filename = paste0("winlose_school_course_aluno_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Reports/Fundeb_Infantil/v2_fig/ES/Robust", #Saving directly to the report
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/ES/Robust/", #Saving directly to the report
   width = 800/96, height = 620/96, dpi = 300
 )
 
@@ -2372,14 +2398,14 @@ df_uf <- df_uf %>%
     top_tercile_ald = ifelse(!is.na(aluno_dosage) & aluno_dosage >= cutoff_ald, 1, 0)
   ) %>%
   ungroup() %>% 
-  select(codigo_ibge, uf, top_tercile_dos, top_tercile_ald)
+  select(codigo_ibge, top_tercile_dos, top_tercile_ald)
 
 #3. combining the last variables
 df <- df %>% 
   left_join(df_uf, by = c("codmun" = "codigo_ibge"))
 
 
-rm(df_uf, uf_list)
+rm(df_uf)
 
 # ---------------------------------------------------------------------------- #
 # 7. Main Regression ----
@@ -2548,7 +2574,7 @@ rm(main_mat, main_pot, sec_mat, sec_pot)
 #Combining both dataframes
 df_simples <- df_saeb %>% 
   left_join(df_reg %>%
-              filter(ano %in% c(2005:2017)) %>% #Excluding 2005
+              filter(ano %in% c(2005:2017)) %>% 
               mutate(codigo_ibge = as.character(codigo_ibge)),
             by = c("codmun" = "codigo_ibge", "ano" = "ano")) %>% 
   mutate(
