@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions - Version 3
 # Last edited by: Tuffy Licciardi Issa
-# Date: 28/11/2025
+# Date: 02/12/2025
 # ---------------------------------------------------------------------------- #
 
 #' ** ----------------------------------------------------------------------- **
@@ -141,7 +141,13 @@ temp <- temp %>%
 
 temp <- temp %>% 
   left_join((df_fib %>% select(-c(uf))), by = c("codigo_ibge", "ano")) %>% 
-  mutate(des_edu_pc = educacao/populacao,
+  mutate(des_edu = educacao,            
+         des_fund = ensino_fundamental, #Spensings
+         des_med = ensino_medio,
+         des_inf = educacao_infantil,
+         
+         #Spending per-capita
+         des_edu_pc = educacao/populacao,
          des_fund_pc = ensino_fundamental/populacao,
          des_med_pc = ensino_medio/populacao,
          des_inf_pc = educacao_infantil/populacao) %>% 
@@ -208,10 +214,10 @@ attr(df_reg$aluno_dosage, "label") <- "Diferença de receita (2007) por aluno (2
 saveRDS(df_reg, "Z:/Tuffy/Paper - Educ/Dados/regdf.rds")
 
 teste <- df_reg %>% 
-  select(2:5, 52, 53, 56, 58, 59, 61, 62, 65, 60, 77, 78, 81:85) %>% 
+  #select(2:5, 52, 53, 56, 58, 59, 61, 62, 65, 60, 77, 78, 81:85) %>% 
   select(-ano) %>% 
   distinct() %>% 
-  select(1:3, dif_coef_pp, dif_rs_aluno, dif_rs_aluno_100,
+  select(2:4, dif_coef_pp, dif_rs_aluno, dif_rs_aluno_100,
          dosage, aluno_dosage, shr_inf, everything())
 
 
@@ -420,11 +426,20 @@ rm(df_trn, df_sim, df_pesosaeb, df_fib)
 ## 2.2 Dosage Aluno ----
 
 # Dosage Student
-mod_edu <- feols(des_edu_pc ~ aluno_dosage * i(k, ref = 0)
+mod_edu <- feols(des_edu ~ aluno_dosage * i(k, ref = 0)
                  + PIBpc
                  | codigo_ibge + ano + uf^ano,
                  data = df_spend,
                  vcov = "hetero")
+
+
+
+mod_inf <- feols(des_inf ~ aluno_dosage * i(k, ref = 0)
+                 + PIBpc
+                 | codigo_ibge + ano + uf^ano,
+                 data = df_spend,
+                 vcov = "hetero")
+
 
 
 # mod_fund <- feols(des_fund_pc ~ aluno_dosage * i(k, ref = 0)
@@ -438,12 +453,6 @@ mod_edu <- feols(des_edu_pc ~ aluno_dosage * i(k, ref = 0)
 #                  | codigo_ibge + ano + uf^ano,
 #                  data = df_spend,
 #                  vcov = "hetero")
-
-mod_inf <- feols(des_inf_pc ~ aluno_dosage * i(k, ref = 0)
-                 + PIBpc
-                 | codigo_ibge + ano + uf^ano,
-                 data = df_spend,
-                 vcov = "hetero")
 
 
 
@@ -670,7 +679,184 @@ for (model_name in names(models_list)) {
 
 
 
+# ---------------------------------------------------------------------------- #
+## 2.4 Winners spending ----
+# ---------------------------------------------------------------------------- #
 
+#' The objective of this part is to understantd how the FUNDEB policy affected
+#' the municipality spending.
+
+
+# ------------------ #
+### 2.4.1 Overall ----
+# ------------------ #
+
+test1 <- feols(des_edu ~ i(k, ref = 0)
+               + PIBpc
+               | codigo_ibge + uf,
+               data = df_spend,
+               vcov = "hetero")
+
+test2 <- feols(des_inf ~ i(k, ref = 0)
+               + PIBpc
+               | codigo_ibge + uf,
+               data = df_spend,
+               vcov = "hetero")
+
+etable(test1,test2)
+
+# ----------------------------------- #
+### 2.4.2 Top winners ----
+#### 2.4.2.1 Dataframes ----
+
+#Top municipalities
+df_topw <- df_spend %>% 
+  filter(dosage == 1)
+
+
+#medium municipalities
+cutoff <- quantile(df_spend$dosage, 0.5, na.rm = TRUE)
+dp     <- sd(df_spend$dosage, na.rm = TRUE)
+
+df_midw <- df_spend %>%
+  filter(dosage >= cutoff - dp*0.01,
+         dosage <= cutoff + dp*0.01)
+
+
+#High loss
+cutoff <- quantile(df_spend$dosage, 0.25, na.rm = TRUE)
+
+df_loww <- df_spend %>%
+  filter(dosage >= cutoff - dp*0.01,
+         dosage <= cutoff + dp*0.01)
+
+
+# ------------------------------- #
+#### 2.4.2.2 Radom selection ----
+# ------------------------------- #
+
+#Selection of 5 municipalities from each group
+
+set.seed(123)  # for reproducibility
+
+
+df_topw_sample <- df_topw %>%
+  distinct(codigo_ibge, .keep_all = TRUE) %>%
+  slice_sample(n = 5) 
+
+df_midw_sample <- df_midw %>%
+  distinct(codigo_ibge, .keep_all = TRUE) %>%
+  slice_sample(n = 5) %>% 
+  mutate( grupo = "Medium")
+
+df_loww_sample <- df_loww %>%
+  distinct(codigo_ibge, .keep_all = TRUE) %>%
+  slice_sample(n = 5) %>% 
+  mutate( grupo = "Low")
+
+
+#Filtering the dataframes
+df_topw <- df_topw %>% 
+  filter(codigo_ibge %in% df_topw_sample$codigo_ibge) %>% 
+  mutate( grupo = "High" ) #Group Indicator for segmentation
+
+
+df_midw <- df_midw %>% 
+  filter(codigo_ibge %in% df_midw_sample$codigo_ibge) %>% 
+  mutate( grupo = "Medium" ) #Group Indicator for segmentation
+
+
+df_loww <- df_loww %>% 
+  filter(codigo_ibge %in% df_loww_sample$codigo_ibge) %>% 
+  mutate( grupo = "Low" ) #Group Indicator for segmentation
+
+
+# ------------------------------- #
+#### 2.4.2.2 Final Data ----
+# ------------------------------- #
+
+df_sample <- rbind(df_topw,
+                   df_midw,
+                   df_loww
+                   ) %>% 
+  mutate( grupo = as.factor(grupo))
+
+
+rm(df_loww, df_midw, df_topw, cutoff, dp)
+
+
+
+# ------------------------------- #
+### 2.4.3 Regression OLS ----
+# ------------------------------- #
+
+
+est_edu <- feols( des_edu ~ i(k, grupo, ref = 0),
+                  data = df_sample,
+                  vcov = "hetero"
+                  )
+
+est_inf <- feols( des_inf ~ i(k, grupo, ref = 0),
+                  data = df_sample,
+                  vcov = "hetero")
+
+
+etable(est_edu, est_inf)
+
+
+# ------------------------------- #
+### 2.4.4 Graph (NO OLS) ----
+# ------------------------------- #
+
+
+summary_df <- df_sample %>%
+  group_by(grupo, ano) %>%
+  summarise(
+    mean_des = mean(des_edu, na.rm = TRUE),
+    sd_des   = sd(des_edu, na.rm = TRUE),
+    n        = sum(!is.na(des_edu)),
+    se_des   = ifelse(n>1, sd_des / sqrt(n), NA_real_),
+    .groups = "drop"
+  )
+
+
+ggplot() +
+  # individual municipality trends (faint)
+  geom_line(data = df_sample,
+            aes(x = ano, y = des_edu, group = codigo_ibge, color = grupo),
+            alpha = 0.15, size = 0.4, show.legend = FALSE) +
+  # mean line per group
+  geom_ribbon(data = summary_df,
+              aes(x = ano, ymin = mean_des - se_des, ymax = mean_des + se_des, fill = grupo),
+              alpha = 0.25, inherit.aes = FALSE, show.legend = FALSE) +
+  geom_line(data = summary_df,
+            aes(x = ano, y = mean_des, color = grupo),
+            size = 1.1) +
+  geom_vline(xintercept = 2007, linetype = "dashed", color = "black") +
+  facet_wrap(~ grupo, scales = "free_y") +               # or scales="fixed" if you want same y axis
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(x = "Ano", y = "des_edu", title = "des_edu through years by group",
+       subtitle = "Thin lines = municipalities; bold = group mean ± SE; vertical = 2007") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+
+ggplot(df_sample, aes(x = ano, y = des_edu, group = codigo_ibge, color = grupo)) +
+  geom_line(size = 0.7) +
+  geom_point(size = 0.6) +                     # optional points on years
+  geom_vline(xintercept = 2007, linetype = "dashed", color = "black") +
+  facet_wrap(~ codigo_ibge, ncol = 5, scales = "free_y") +  # 3 rows x 5 cols = 15 plots
+  scale_x_continuous(breaks = pretty_breaks(n = 6)) +
+  scale_color_brewer(palette = "Dark2") +     # nice palette; replace if you prefer
+  labs(x = "Ano", y = "des_edu", color = "Grupo",
+       title = "des_edu por município (cada painel = 1 município)",
+       subtitle = "Vertical dashed line = 2007") +
+  theme_minimal(base_size = 11) +
+  theme(
+    legend.position = "bottom",
+    strip.text = element_text(size = 9),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
 
 # ---------------------------------------------------------------------------- #
 #3. School Data ----
@@ -916,7 +1102,7 @@ ggsave( #Saving image
   filename = paste0("school_structure_aluno_dosage.png"),
   plot = final,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/",
-  width = 800/96, height = 620/96, dpi = 300
+  width = 1100/96, height = 620/96, dpi = 300
 )
 
 rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libra, p_nemploy,
@@ -1116,19 +1302,19 @@ etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_emplo
 
 
 # 3) Apply helper to each ggiplot object
-p_class <- win_lose_plot(est_class, "Salas de aula")   #Classroom
-p_troom <- win_lose_plot(est_troom, "Sala dos Prof.")  #Teacher's Room
-p_labs  <- win_lose_plot(est_labs,  "Laboratórios")    #Laboratory
-p_libra <- win_lose_plot(est_libra, "Biblioteca")      #Library
-p_play  <- win_lose_plot(est_play,  "Quadras/Parque")  #Play Area
-p_lunch <- win_lose_plot(est_lunch, "Merenda")         #Lunch
-p_employ <- win_lose_plot(est_employ,"Funcionários")   #Employee
-
+p_class <- win_lose_plot(est_class, "Aluno/Salas de aula")   #Classroom
+p_troom <- win_lose_plot(est_troom, "Exp. Sala dos Prof.")  #Teacher's Room
+p_labs  <- win_lose_plot(est_labs,  "Exp. Laboratórios")    #Laboratory
+p_libra <- win_lose_plot(est_libra, "Exp. Biblioteca")      #Library
+p_play  <- win_lose_plot(est_play,  "Exp. Quadras/Parque")  #Play Area
+p_lunch <- win_lose_plot(est_lunch, "Exp. Merenda")         #Lunch
+p_employ <- win_lose_plot(est_employ,"Aluno/Funcionários")   #Employee
+p_nemploy <- win_lose_plot(est_n_employ, "N° Funcionários")
 blank <- ggplot() + theme_void()
 
 grid_plot <- ( p_troom + p_labs + p_libra) /
   (p_play + p_lunch + blank) /
-  (p_class   + p_employ + blank)
+  (p_class   + p_employ + p_nemploy)
 
 final <- grid_plot + plot_annotation(
   #title = "Event-study: infrastructure / staff outcomes",
@@ -1141,7 +1327,7 @@ ggsave( #Saving image
   filename = paste0("winlose_school_structure_aluno_dosage.png"),
   plot = final,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/", #Saving directly to the report
-  width = 1500/96, height = 620/96, dpi = 300
+  width = 1300/96, height = 620/96, dpi = 300
 )
 
 rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libra,
@@ -1816,15 +2002,15 @@ etable(main_mat, main_pot,
 #### 7.2.1 Data ----
 #Removing the observations before the first treatment
 
-df_birth <- df %>%filter(ano %in% c(2005:2017))  #Excluding 2005
+df_birth <- df %>% filter(ano %in% c(2005:2017))  #Excluding 2005
   
 #Weights dataframes
 dfb_w5 <- df_birth %>% filter(grade == 5) %>% select(peso, peso_mt, peso_lp)  #5th grade
 dfb_w9 <- df_birth %>% filter(grade == 9) %>% select(peso, peso_mt, peso_lp)  #9th grade
 
 
-
-
+# ---------------------------- #
+### 7.2.2 Regression ----
 main_mat <- feols(as.numeric(profic_mat) ~ rob_winner_dummy : i(ano_nasc, ref = 2000)
                   + sexo + raca + mae_educ + idade + PIBpc #Controls
                   | codmun + ano + uf^ano, #FE
@@ -1866,7 +2052,7 @@ test <- feols(as.numeric(profic_port) ~ rob_winner_dummy : i(treatment_expo, ref
 
 etable(test)
 # -------------- #
-### 7.2.1 Graph ----
+### 7.2.3 Graph ----
 # -------------- #
 
 event_style_plot <- function(est_obj, title = NULL, ylim = NULL) {
@@ -1911,7 +2097,7 @@ event_style_plot <- function(est_obj, title = NULL, ylim = NULL) {
       panel.grid = element_blank(),
       axis.title = element_text(size = 11)
     ) + 
-    scale_x_continuous(breaks = seq(1992, 2009, 2))
+    scale_x_continuous(breaks = seq(1986, 2009, 2))
   
 }
 
@@ -1965,7 +2151,7 @@ new_plot_func <- function(est_obj, title = NULL, ylim = NULL) {
       panel.grid = element_blank(),
       axis.title = element_text(size = 11)
     ) + 
-    scale_x_continuous(breaks = seq(1992, 2007, 2))
+    scale_x_continuous(breaks = seq(1986, 2007, 2))
   
 }
 
@@ -1984,7 +2170,7 @@ ggsave(
   filename = paste0("grafico_SAEB.png"),
   plot = grid_plot,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/",
-  width = 1200/96, height = 600/96, dpi = 110
+  width = 1400/96, height = 600/96, dpi = 110
 )
 
 rm(main_mat, main_pot, sec_mat, sec_pot)
