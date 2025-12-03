@@ -1,5 +1,13 @@
-# Library----
+# ---------------------------------------------------------------------------- #
+# Data Description
+# DataBase adjustment
+# Last edited by: Tuffy Licciardi Issa
+# Date: 03/12/2025
+# ---------------------------------------------------------------------------- #
 
+# ---------------------------------------------------------------------------- #
+# Libraries -----
+# ---------------------------------------------------------------------------- #
 
 library(tidyverse)
 library(readxl)
@@ -1342,4 +1350,208 @@ rm(df_fundo, estaduais, lista_ufs, mat_2006_munic, mat_2006, mat_cd, mat_ind,
    totais_estado2, arquivos, FD_eja, FD_esp, FD_ind, FD1, FD1_int, FD1_r,
    FD1_u, FD2, FD2_r, FD2_u, FD3_p, FD3_r, FD3_u, FDC, FDI, file, pasta, df, df_fnde,
    df_fundeb_munic)
+
+
+rm(list = ls())
+gc()
+# ---------------------------------------------------------------------------- #
+# 6. Regression data ----
+# ---------------------------------------------------------------------------- #
+
+#Openeing all databases to join them
+
+df_trn <- read.csv2("Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/painel_notas_transferencias_2000_2024.csv")
+
+df_pesosaeb <- readRDS("Z:/Tuffy/Paper - Educ/Dados/pesos_saeb3.rds")
+
+#df_gio <- readRDS("Z:/Tuffy/Paper - Educ/Dados/Gio_df.rds")
+
+df_sim <- readRDS("Z:/Tuffy/Paper - Educ/Dados/simulacao_const.rds") #%>% 
+
+#sim_gio <- readRDS(("Z:/Tuffy/Paper - Educ/Dados/Gio_sim.rds"))
+
+df_fib <- read.csv2("Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/Gastos municipais/FINBRA/Despesas/FINBRA_EDU_05_21.csv")
+
+
+#Deflating:
+df_ipca <- read_excel("Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/IPCA_acumulado_ano.xlsx", skip = 3)
+colnames(df_ipca) = c("ano", "ipca")
+
+df_ipca <- df_ipca %>% 
+  mutate(ano = as.numeric(ano)) %>% 
+  filter(ano %in% 2000:2021) %>%
+  arrange(ano)
+
+
+df_ipca <- df_ipca %>% 
+  mutate(
+    ipca = as.numeric(gsub(",",".",ipca)),
+    indice = cumprod(1 + as.numeric(ipca)/100)) %>% 
+  mutate(indice = indice / indice[ano == 2007]) #Reference year 2007
+
+##6.1 Weights & GDP ----
+df_pesosaeb <- df_pesosaeb %>% 
+  rename(
+    peso_5 = ano_5,
+    peso_9 = ano_9
+  )
+
+df_trn <- df_trn %>% 
+  left_join(df_pesosaeb,
+            by = c("codigo_ibge" = "CO_MUNICIPIO", "ano" = "NU_ANO_CENSO"))
+
+
+# null <- anti_join(sim_gio, df_sim)
+# null <- anti_join(df_gio, df_trn)
+# 
+# all.equal(df_gio, df_trn)
+# 
+# summary(df_trn)
+# summary(df_sim)
+# summary(df_fib)
+# 
+
+pib <- read_excel("Z:/Tuffy/Paper - Educ/Dados/PIB dos Municípios - base de dados 2002-2009.xls") %>% 
+  filter(Ano >= 2005) %>% 
+  select(1, 7, 8, 40)
+
+
+pib2 <- read_excel("Z:/Tuffy/Paper - Educ/Dados/PIB dos Municípios - base de dados 2010-2021.xlsx") %>% 
+  select(1, 7, 8, 40)
+
+
+
+## 6.2 Incluindo as variáveis principais ----
+#[English: Including Major Variables]
+
+### 6.2.1 Incluindo dif_per_coef nas notas: ----
+#[English: Including dif_per_coef in exam scores]
+temp <- df_trn %>% 
+  left_join(df_sim %>% select(c(codigo_ibge, coef_est_fnde:receita_real, dif_rs_aluno,
+                                rs_por_aluno_fundeb, rs_por_aluno_sim, shr_inf,
+                                tot_matri, total_alunos_2006, total_fundo_d_real)),
+            by = "codigo_ibge") %>% 
+  filter(!is.na(coef_est_fnde)) %>%
+  mutate(k = ano - 2007) %>%    # 2007 é o ano base [English: 2007 is the base year]
+  # filter(ano %% 2 != 0) %>% 
+  mutate(uf = as.factor(uf)) %>% 
+  #Joining the deflation index
+  left_join(df_ipca %>% rename(indice_ipca_07 = indice) %>% select(ano, indice_ipca_07),
+            by = "ano")
+
+# Escolha dos parâmetros:
+# [English: Choosing parameters]
+rede_reg <- "Pública"           #Public
+# rede_reg <- "Estadual"        #State
+# rede_reg <- "Municipal"       #Municipal
+# rede_reg <- "Federal"         #Federal
+
+
+temp <- temp %>% 
+  filter(
+    case_when(
+      ano >= 2005 & ano %% 2 != 0 ~ rede == rede_reg, # case_when: condição ~ valor se verdadeiro
+      TRUE ~ TRUE                                      # TRUE ~TRUE é basicamente um else ~ valor padrão
+    )
+  ) %>%
+  mutate(codigo_ibge = as.numeric(str_sub(as.character(codigo_ibge), 1, -2))) 
+
+
+
+temp <- temp %>% 
+  left_join((df_fib %>% select(-c(uf))), by = c("codigo_ibge", "ano")) %>% 
+  mutate(#des_edu = educacao,             
+         #des_fund = ensino_fundamental, #Spendings
+         #des_med = ensino_medio,
+         #des_inf = educacao_infantil,
+         
+         real_des_edu =  educacao / indice_ipca_07,            
+         real_des_fund = ensino_fundamental / indice_ipca_07, #Spendings
+         real_des_med = ensino_medio / indice_ipca_07,
+         real_des_inf = educacao_infantil / indice_ipca_07,
+         
+         #Spending per-capita
+         des_edu_pc = real_des_edu/populacao,
+         des_fund_pc = real_des_fund/populacao,
+         des_med_pc = real_des_med/populacao,
+         des_inf_pc = real_des_inf/populacao) %>% 
+  filter(ano < 2013 | (ano >= 2013 & coluna == "Despesas Empenhadas")) %>% 
+  relocate(despesas_totais, .after= "nome") %>%
+  relocate(educacao, .after = "despesas_totais") %>% 
+  relocate(populacao, .after = "educacao") %>% 
+  relocate(des_fund_pc, .after = "populacao") %>% 
+  relocate(des_med_pc, .after = "populacao") %>% 
+  relocate(des_inf_pc, .after = "populacao") %>% 
+  
+  
+  group_by(codigo_ibge) %>%
+  mutate(ed_spending_2006 = if_else(ano == 2006, educacao, NA_real_)) %>%
+  fill(ed_spending_2006, .direction = "downup") %>% # Propaga o valor para todas as linhas do grupo
+  ungroup()                                         # [English: reproducing the values through groups]
+
+
+
+
+colnames(pib) <- c("ano", "codigo_ibge", "nom", "PIBpc")
+colnames(pib2) <- c("ano", "codigo_ibge", "nom", "PIBpc")
+
+
+pib <- bind_rows( # [English: Combining the PIB per-capita from different years]
+  pib,
+  pib2) %>% 
+  mutate(codigo_ibge = as.numeric(str_sub(as.character(codigo_ibge), 1, -2)))
+
+temp <- left_join(
+  temp,
+  pib,
+  by = c("codigo_ibge" , "ano")
+) %>% 
+  relocate(PIBpc, .after = "nome")
+
+rm(pib2)
+
+df_reg <- temp %>%
+  filter (codigo_ibge > 10) %>% 
+  mutate(dif_rs_aluno_100 = dif_rs_aluno / 100) %>%  # R$ PER STUDENT DOSAGE, em centenas
+
+  # SPENDING DOSAGE:  ------------------------------------- #
+  
+  mutate(#spending_dosage_gio = dif_rs_aluno/ed_spending_2006,
+  #spending_dos = receita_real/ed_spending_2006,
+  #del_spending_dos = (receita_real - receita_simulada)/ed_spending_2006,
+  
+  dosage = (receita_real - receita_simulada)/receita_real,            #Prefered
+  
+  #dosage_perc = del_spending_dos *100,
+  
+  aluno_dosage = (receita_real - receita_simulada)/total_alunos_2006) #Prefered
+
+
+
+colnames(df_reg)
+
+#Label
+attr(df_reg$dosage, "label") <- "Parcela da diferença de receita pelo FUNDEB (2007)"
+attr(df_reg$aluno_dosage, "label") <- "Diferença de receita (2007) por aluno (2006)"
+
+
+
+#saving database with dosage
+saveRDS(df_reg, "Z:/Tuffy/Paper - Educ/Dados/regdf.rds")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
