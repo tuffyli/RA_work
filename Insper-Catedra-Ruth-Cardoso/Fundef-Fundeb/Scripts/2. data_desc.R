@@ -1688,4 +1688,449 @@ ggsave(filename = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Figuras/Mapa/map_a
        device = "png", dpi = 300)
 
 
+rm(list = ls())
+gc()
+
+# ---------------------------------------------------------------------------- #
+# 9. Spending ----
+# ---------------------------------------------------------------------------- #
+
+
+#Dataframe
+df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds")
+
+df_spend <- df_reg %>% 
+  filter(tipo == "Municipal") %>% 
+  select(
+    -c(vl_nota_5_matematica, vl_nota_5_portugues, vl_nota_5_media, vl_nota_9_matematica,
+       vl_nota_9_media, vl_nota_9_portugues, vl_nota_em_matematica, vl_nota_em_portugues,
+       vl_nota_em_media, tx_aprovacao_iniciais, tx_aprovacao_1, tx_aprovacao_2,
+       tx_aprovacao_3, tx_aprovacao_4, tx_aprovacao_5, tx_aprovacao_finais, tx_aprovacao_6,
+       tx_aprovacao_7, tx_aprovacao_8, tx_aprovacao_9, tx_aprovacao_em, tx_aprovacao_1em,
+       tx_aprovacao_2em, tx_aprovacao_3em, tx_aprovacao_4em, rede, X.x, X.y, peso_5, peso_9)
+  ) %>%
+  mutate(dif_rs_aluno_100 = dif_rs_aluno / 100,
+         region = case_when(
+           as.numeric(codigo_ibge) %/% 100000 == 1 ~ "Norte",        #North
+           as.numeric(codigo_ibge) %/% 100000 == 2 ~ "Nordeste",     #Northeast
+           as.numeric(codigo_ibge) %/% 100000 == 3 ~ "Sudeste",      #Southeast
+           as.numeric(codigo_ibge) %/% 100000 == 4 ~ "Sul",          #South
+           as.numeric(codigo_ibge) %/% 100000 == 5 ~ "Centro-Oeste", #Central-West
+           TRUE ~ NA
+         )
+  ) %>%
+  #Groups
+  mutate(grupo = case_when(
+    dosage > 0 ~ "Winner",   # net beneficiary
+    dosage < 0 ~ "Loser",   # net contributer
+    TRUE ~ NA_character_
+  )
+  ) %>% 
+  filter(tipo == "Municipal")
+
+rm(df_reg)
+
+#' Created the Dataframe I will repeat the graphs estimations utilizing the 
+#' *spending levels* and present the results.
+
+
+# ---------------------------------------------------------------------------- #
+## 9.2 Winners spending (Lvl) ----
+# ---------------------------------------------------------------------------- #
+
+#' The objective of this part is to understantd how the FUNDEB policy affected
+#' the municipality spending.
+
+# ------------------ #
+### 9.2.1 Time Spending ----
+# ------------------ #
+
+test1 <- feols(real_des_edu ~ i(k, ref = -1),
+               data = df_spend,
+               vcov = "hetero")
+
+test2 <- feols(real_des_inf ~  i(k, ref = -1),
+               data = df_spend,
+               vcov = "hetero")
+
+
+test3 <- feols(des_edu_pc ~ i(k, ref = -1),
+               data = df_spend,
+               vcov = "hetero")
+
+test4 <- feols(des_inf_pc ~ i(k, ref = -1),
+               data = df_spend,
+               vcov = "hetero")
+
+
+
+etable(test1, test2, test3, test4,
+       vcov = "hetero",
+       headers = list(":_:" = list("Total" = 1, "Infantil" = 1,
+                                   #"Fundamental" = 1, "Médio" = 1,
+                                   "Total" = 1, "Infantil" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/time_real_spending.tex",
+       replace = TRUE)
+
+
+
+# ----------------------------------- #
+## 9.3 Top winners ----
+# ----------------------------------- #
+### 9.3.1  Dataframes ----
+
+#Top municipalities
+df_topw <- df_spend %>% 
+  filter(dosage == 1)
+
+
+#medium municipalities
+cutoff <- quantile(df_spend$dosage, 0.5, na.rm = TRUE)
+dp     <- sd(df_spend$dosage, na.rm = TRUE)
+
+df_midw <- df_spend %>%
+  filter(dosage >= cutoff - dp*0.01,
+         dosage <= cutoff + dp*0.01)
+
+
+#High loss
+cutoff <- quantile(df_spend$dosage, 0.1, na.rm = TRUE)
+
+df_loww <- df_spend %>%
+  filter(dosage >= cutoff - dp*0.01,
+         dosage <= cutoff + dp*0.01)
+
+
+# ------------------------------- #
+#### 9.3.1.1 Radom selection ----
+# ------------------------------- #
+
+#Selection of 5 municipalities from each group
+
+set.seed(123)  # for reproducibility
+
+
+df_topw_sample <- df_topw %>%
+  distinct(codigo_ibge, .keep_all = TRUE) %>%
+  slice_sample(n = 5) 
+
+df_midw_sample <- df_midw %>%
+  distinct(codigo_ibge, .keep_all = TRUE) %>%
+  slice_sample(n = 5) %>% 
+  mutate( grupo = "Medium")
+
+df_loww_sample <- df_loww %>%
+  distinct(codigo_ibge, .keep_all = TRUE) %>%
+  slice_sample(n = 5) %>% 
+  mutate( grupo = "Low")
+
+
+#Filtering the dataframes
+df_topw <- df_topw %>% 
+  filter(codigo_ibge %in% df_topw_sample$codigo_ibge) %>% 
+  mutate( grupo = "High" ) #Group Indicator for segmentation
+
+
+df_midw <- df_midw %>% 
+  filter(codigo_ibge %in% df_midw_sample$codigo_ibge) %>% 
+  mutate( grupo = "Medium" ) #Group Indicator for segmentation
+
+
+df_loww <- df_loww %>% 
+  filter(codigo_ibge %in% df_loww_sample$codigo_ibge) %>% 
+  mutate( grupo = "Low" ) #Group Indicator for segmentation
+
+
+# ------------------------------- #
+#### 9.3.1.2 Final Data ----
+# ------------------------------- #
+
+df_sample <- rbind(df_topw,
+                   df_midw,
+                   df_loww
+) %>% 
+  mutate( grupo = as.factor(grupo))
+
+
+rm(df_loww, df_midw, df_topw, cutoff, dp)
+
+
+# ----------------------------------- #
+### 9.3.2 Level ----
+# ----------------------------------- #
+
+# ------------------------------- #
+#### 9.3.2.1 Regression OLS ----
+# ------------------------------- #
+
+
+est_edu <- feols( real_des_edu ~ i(k, grupo, ref = 0),
+                  data = df_sample,
+                  vcov = "hetero"
+)
+
+est_inf <- feols( real_des_inf ~ i(k, grupo, ref = 0),
+                  data = df_sample,
+                  vcov = "hetero")
+
+
+etable(est_edu, est_inf)
+
+
+# ------------------------------- #
+#### 9.3.2.3 Graph (NO OLS) ----
+# ------------------------------- #
+
+
+summary_df <- df_sample %>%
+  group_by(grupo, ano) %>%
+  summarise(
+    mean_des = mean(real_des_edu, na.rm = TRUE),
+    sd_des   = sd(real_des_edu, na.rm = TRUE),
+    n        = sum(!is.na(real_des_edu)),
+    se_des   = ifelse(n>1, sd_des / sqrt(n), NA_real_),
+    .groups = "drop"
+  )
+
+
+p <- ggplot() +
+  # individual municipality trends (faint)
+  geom_line(data = df_sample,
+            aes(x = ano, y = real_des_edu, group = codigo_ibge, color = grupo),
+            alpha = 0.35, size = 0.4, show.legend = FALSE) +
+  # mean line per group
+  geom_ribbon(data = summary_df,
+              aes(x = ano, ymin = mean_des - se_des, ymax = mean_des + se_des, fill = grupo),
+              alpha = 0.25, inherit.aes = FALSE, show.legend = FALSE) +
+  geom_line(data = summary_df,
+            aes(x = ano, y = mean_des, color = grupo),
+            size = 1.1) +
+  geom_vline(xintercept = 2007, linetype = "dashed", color = "black") +
+  facet_wrap(~ grupo, scales = "free_y") +               # or scales="fixed" if you want same y axis
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(x = "Ano", y = "real_des_edu", title = "Despesas Reais Educação",
+       subtitle = "Thin lines = municipalities; bold = group mean ± SE; vertical = 2007") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+
+ggsave(
+  filename = paste0("grafico_despesas_reais.png"),
+  plot = p,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Dosage_aluno",
+  width = 1200/96, height = 420/96, dpi = 110
+)
+
+
+# ggplot(df_sample, aes(x = ano, y = real_des_edu, group = codigo_ibge, color = grupo)) +
+#   geom_line(size = 0.7) +
+#   geom_point(size = 0.6) +                     # optional points on years
+#   geom_vline(xintercept = 2007, linetype = "dashed", color = "black") +
+#   facet_wrap(~ codigo_ibge, ncol = 5, scales = "free_y") +  # 3 rows x 5 cols = 15 plots
+#   scale_x_continuous(breaks = pretty_breaks(n = 6)) +
+#   scale_color_brewer(palette = "Dark2") +     # nice palette; replace if you prefer
+#   labs(x = "Ano", y = "des_edu", color = "Grupo",
+#        title = "des_edu por município (cada painel = 1 município)",
+#        subtitle = "Vertical dashed line = 2007") +
+#   theme_minimal(base_size = 11) +
+#   theme(
+#     legend.position = "bottom",
+#     strip.text = element_text(size = 9),
+#     axis.text.x = element_text(angle = 45, hjust = 1)
+#   )
+
+# ------------------------------- #
+#### 9.3.2.4 Winner Loser ----
+# ------------------------------- #
+
+
+mod_edu_ab <- feols(
+  real_des_edu ~ aluno_dosage * i(k, grupo, ref = -1) + PIBpc |
+    codigo_ibge + ano + uf^ano,
+  data = df_spend,
+  vcov = "hetero"
+)
+
+
+mod_inf_ab <- feols(
+  real_des_inf ~ aluno_dosage * i(k, grupo, ref = -1) + PIBpc |
+    codigo_ibge + ano + uf^ano,
+  data = df_spend,
+  vcov = "hetero"
+)
+
+
+etable(mod_edu_ab, mod_inf_ab,
+       vcov = "hetero",
+       headers = list(":_:" = list("Total"=1, "Infantil"=1)))
+
+
+
+##### 9.3.2.4.1 Graph ----
+
+models_list <- list(
+  edu  = mod_edu_ab,
+  inf  = mod_inf_ab
+)
+
+
+
+for (model_name in names(models_list)) {
+  
+  
+  current_model <- models_list[[model_name]]
+  temp <- broom::tidy(current_model, conf.int = TRUE) %>% 
+    slice((which(term == "PIBpc") + 1):n()) %>%
+    mutate(
+      time_to_treat = str_extract(term, "(?<=k::)-?\\d+"),
+      time_to_treat = as.numeric(time_to_treat),
+      grupo = str_extract(term, "(?<=grupo::)\\w+"),
+      grupo = as.factor(grupo))
+  
+  
+  
+  temp_edu <- temp %>%
+    distinct(grupo) %>%             # one row per group (Above / Below)
+    mutate(
+      term = "time_to_treat:-1",     # or another label that fits your pattern
+      estimate = 0,
+      std.error = 0,
+      statistic = 0,
+      p.value = 1,
+      conf.low = 0,
+      conf.high = 0,
+      time_to_treat = -1
+    )
+  
+  # combine with your main dataframe
+  temp <- bind_rows(temp, temp_edu) %>%
+    arrange(grupo, time_to_treat) %>% 
+    bind_rows(
+      temp_edu %>%
+        distinct(grupo) %>%
+        mutate(
+          time_to_treat = -1,
+          estimate = 0,
+          conf.low = 0,
+          conf.high = 0
+        )
+    ) %>%
+    arrange(grupo, time_to_treat)
+  
+  
+  p <- ggplot(temp, aes(x = time_to_treat, y = estimate, group = grupo)) +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+    geom_vline(xintercept = -1, color = "black") +
+    geom_point(aes(color = grupo), shape = 15, size = 2) +
+    geom_line(aes(color = grupo)) +
+    #facet_wrap(~ grupo, ncol = 1) +     # <--- separate plot per group
+    labs(x = "Time to Treat", y = "R$ per capita",
+         color = NULL, fill = NULL) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11),
+      legend.position = c(0.95, 0.95),
+      legend.justification = c("right", "top") # anchor legend box
+    ) + # anchor legend box
+    scale_x_continuous(
+      breaks = seq(min(temp$time_to_treat, na.rm = TRUE),
+                   max(temp$time_to_treat, na.rm = TRUE),
+                   by = 2)
+    )
+  
+  
+  if (model_name == "inf"){
+    p <- p +
+      theme(
+        axis.line = element_line(color = "grey70"),
+        panel.grid = element_blank(),
+        axis.title = element_text(size = 11),
+        legend.position = c(0.95, 0.17),
+        legend.justification = c("right", "top") # anchor legend box
+      ) + # anchor legend box
+      scale_x_continuous(
+        breaks = seq(min(temp$time_to_treat, na.rm = TRUE),
+                     max(temp$time_to_treat, na.rm = TRUE),
+                     by = 2))
+  }
+  
+  print(p)
+  
+  ggsave(
+    filename = paste0("lvl_grafico_", model_name, "_Dos_aluno_AB.png"),
+    plot = p,
+    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Dosage_aluno",
+    width = 600/96, height = 420/96, dpi = 110
+  )
+  rm(temp_edu)
+}
+
+# ----------------------------------- #
+### 9.3.3 Per-capita ----
+# ----------------------------------- #
+
+# ------------------------------- #
+#### 9.3.2.1 Regression OLS ----
+# ------------------------------- #
+
+
+est_edu <- feols( des_edu_pc ~ i(k, grupo, ref = 0),
+                  data = df_sample,
+                  vcov = "hetero"
+)
+
+est_inf <- feols( des_inf_pc ~ i(k, grupo, ref = 0),
+                  data = df_sample,
+                  vcov = "hetero")
+
+
+etable(est_edu, est_inf)
+
+
+# ------------------------------- #
+#### 9.3.2.3 Graph (NO OLS) ----
+# ------------------------------- #
+
+
+summary_df <- df_sample %>%
+  group_by(grupo, ano) %>%
+  summarise(
+    mean_des = mean(des_edu_pc, na.rm = TRUE),
+    sd_des   = sd(des_edu_pc, na.rm = TRUE),
+    n        = sum(!is.na(des_edu_pc)),
+    se_des   = ifelse(n>1, sd_des / sqrt(n), NA_real_),
+    .groups = "drop"
+  )
+
+
+p <- ggplot() +
+  # individual municipality trends (faint)
+  geom_line(data = df_sample,
+            aes(x = ano, y = des_edu_pc, group = codigo_ibge, color = grupo),
+            alpha = 0.35, size = 0.4, show.legend = FALSE) +
+  # mean line per group
+  geom_ribbon(data = summary_df,
+              aes(x = ano, ymin = mean_des - se_des, ymax = mean_des + se_des, fill = grupo),
+              alpha = 0.25, inherit.aes = FALSE, show.legend = FALSE) +
+  geom_line(data = summary_df,
+            aes(x = ano, y = mean_des, color = grupo),
+            size = 1.1) +
+  geom_vline(xintercept = 2007, linetype = "dashed", color = "black") +
+  facet_wrap(~ grupo, scales = "fixed") +               # or scales="fixed" if you want same y axis
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(x = "Ano", y = "des_edu_pc", title = "Despesas Reais Educação per-capita",
+       subtitle = "Thin lines = municipalities; bold = group mean ± SE; vertical = 2007") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+
+ggsave(
+  filename = paste0("grafico_despesas_reais_pc.png"),
+  plot = p,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Dosage_aluno",
+  width = 1200/96, height = 420/96, dpi = 110
+)
 
