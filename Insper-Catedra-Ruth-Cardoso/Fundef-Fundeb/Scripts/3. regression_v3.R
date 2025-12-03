@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions - Version 3
 # Last edited by: Tuffy Licciardi Issa
-# Date: 02/12/2025
+# Date: 03/12/2025
 # ---------------------------------------------------------------------------- #
 
 #' ** ----------------------------------------------------------------------- **
@@ -60,158 +60,11 @@ options(scipen = 999)
 # 1. Regression ----
 # --------------------------------------------------------------------------- #
 
-df_trn <- read.csv2("Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/painel_notas_transferencias_2000_2024.csv")
-
-df_pesosaeb <- readRDS("Z:/Tuffy/Paper - Educ/Dados/pesos_saeb3.rds")
-
-#df_gio <- readRDS("Z:/Tuffy/Paper - Educ/Dados/Gio_df.rds")
-
-df_sim <- readRDS("Z:/Tuffy/Paper - Educ/Dados/simulacao_const.rds") #%>% 
-
-#sim_gio <- readRDS(("Z:/Tuffy/Paper - Educ/Dados/Gio_sim.rds"))
-
-df_fib <- read.csv2("Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/Gastos municipais/FINBRA/Despesas/FINBRA_EDU_05_21.csv")
-
-
-#1.0 Weights & GDP ----
-df_pesosaeb <- df_pesosaeb %>% 
-  rename(
-    peso_5 = ano_5,
-    peso_9 = ano_9
-  )
-
-df_trn <- df_trn %>% 
-  left_join(df_pesosaeb,
-            by = c("codigo_ibge" = "CO_MUNICIPIO", "ano" = "NU_ANO_CENSO"))
-
-
-# null <- anti_join(sim_gio, df_sim)
-# null <- anti_join(df_gio, df_trn)
-# 
-# all.equal(df_gio, df_trn)
-# 
-# summary(df_trn)
-# summary(df_sim)
-# summary(df_fib)
-# 
-
-pib <- read_excel("Z:/Tuffy/Paper - Educ/Dados/PIB dos Municípios - base de dados 2002-2009.xls") %>% 
-  filter(Ano >= 2005) %>% 
-  select(1, 7, 8, 40)
-
-
-pib2 <- read_excel("Z:/Tuffy/Paper - Educ/Dados/PIB dos Municípios - base de dados 2010-2021.xlsx") %>% 
-  select(1, 7, 8, 40)
-
-
-
-## 1.1 Incluindo as variáveis principais ----
-#[English: Including Major Variables]
-
-### 1.1.1 Incluindo dif_per_coef nas notas: ----
-#[English: Including dif_per_coef in exam scores]
-temp <- df_trn %>% 
-  left_join(df_sim %>% select(c(codigo_ibge, coef_est_fnde:receita_real, dif_rs_aluno,
-                                rs_por_aluno_fundeb, rs_por_aluno_sim, shr_inf,
-                                tot_matri, total_alunos_2006)),
-            by = "codigo_ibge") %>% 
-  filter(!is.na(coef_est_fnde)) %>%
-  mutate(k = ano - 2007) %>%    # 2007 é o ano base [English: 2007 is the base year]
-  # filter(ano %% 2 != 0) %>% 
-  mutate(uf = as.factor(uf))
-
-# Escolha dos parâmetros:
-# [English: Choosing parameters]
-rede_reg <- "Pública"           #Public
-# rede_reg <- "Estadual"        #State
-# rede_reg <- "Municipal"       #Municipal
-# rede_reg <- "Federal"         #Federal
-
-
-temp <- temp %>% 
-  filter(
-    case_when(
-      ano >= 2005 & ano %% 2 != 0 ~ rede == rede_reg, # case_when: condição ~ valor se verdadeiro
-      TRUE ~ TRUE                                      # TRUE ~TRUE é basicamente um else ~ valor padrão
-    )
-  ) %>%
-  mutate(codigo_ibge = as.numeric(str_sub(as.character(codigo_ibge), 1, -2))) 
-
-
-
-temp <- temp %>% 
-  left_join((df_fib %>% select(-c(uf))), by = c("codigo_ibge", "ano")) %>% 
-  mutate(des_edu = educacao,            
-         des_fund = ensino_fundamental, #Spensings
-         des_med = ensino_medio,
-         des_inf = educacao_infantil,
-         
-         #Spending per-capita
-         des_edu_pc = educacao/populacao,
-         des_fund_pc = ensino_fundamental/populacao,
-         des_med_pc = ensino_medio/populacao,
-         des_inf_pc = educacao_infantil/populacao) %>% 
-  filter(ano < 2013 | (ano >= 2013 & coluna == "Despesas Empenhadas")) %>% 
-  relocate(despesas_totais, .after= "nome") %>%
-  relocate(educacao, .after = "despesas_totais") %>% 
-  relocate(populacao, .after = "educacao") %>% 
-  relocate(des_fund_pc, .after = "populacao") %>% 
-  relocate(des_med_pc, .after = "populacao") %>% 
-  relocate(des_inf_pc, .after = "populacao") %>% 
-  
-  
-  group_by(codigo_ibge) %>%
-  mutate(ed_spending_2006 = if_else(ano == 2006, educacao, NA_real_)) %>%
-  fill(ed_spending_2006, .direction = "downup") %>% # Propaga o valor para todas as linhas do grupo
-  ungroup()                                         # [English: reproducing the values through groups]
-
-
-
-
-colnames(pib) <- c("ano", "codigo_ibge", "nom", "PIBpc")
-colnames(pib2) <- c("ano", "codigo_ibge", "nom", "PIBpc")
-
-
-pib <- bind_rows( # [English: Combining the PIB per-capita from different years]
-  pib,
-  pib2) %>% 
-  mutate(codigo_ibge = as.numeric(str_sub(as.character(codigo_ibge), 1, -2)))
-
-temp <- left_join(
-  temp,
-  pib,
-  by = c("codigo_ibge" , "ano")
-) %>% 
-  relocate(PIBpc, .after = "nome")
-
-rm(pib2)
-
-df_reg <- temp %>%
-  filter (codigo_ibge > 10) %>% 
-  mutate(dif_rs_aluno_100 = dif_rs_aluno / 100) %>%  # R$ PER STUDENT DOSAGE, em centenas
-  
-  ##### SPENDING DOSAGE: ----
-mutate(#spending_dosage_gio = dif_rs_aluno/ed_spending_2006,
-  #spending_dos = receita_real/ed_spending_2006,
-  #del_spending_dos = (receita_real - receita_simulada)/ed_spending_2006,
-  
-  dosage = (receita_real - receita_simulada)/receita_real,            #Prefered
-  
-  #dosage_perc = del_spending_dos *100,
-  
-  aluno_dosage = (receita_real - receita_simulada)/total_alunos_2006) #Prefered
-
-
-colnames(df_reg)
-
-#Label
-attr(df_reg$dosage, "label") <- "Parcela da diferença de receita pelo FUNDEB (2007)"
-attr(df_reg$aluno_dosage, "label") <- "Diferença de receita (2007) por aluno (2006)"
 
 
 
 #saving database with dosage
-saveRDS(df_reg, "Z:/Tuffy/Paper - Educ/Dados/regdf.rds")
+df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds")
 
 teste <- df_reg %>% 
   #select(2:5, 52, 53, 56, 58, 59, 61, 62, 65, 60, 77, 78, 81:85) %>% 
@@ -411,6 +264,7 @@ df_spend <- df_reg %>%
            TRUE ~ NA
            )
          ) %>%
+  #Groups
   mutate(grupo = case_when(
     dosage > 0 ~ "Winner",   # net beneficiary
     dosage < 0 ~ "Loser",   # net contributer
@@ -420,13 +274,12 @@ df_spend <- df_reg %>%
   filter(tipo == "Municipal")
 
 
-rm(df_trn, df_sim, df_pesosaeb, df_fib)
 
 
-## 2.2 Dosage Aluno ----
+## 2.2 Dosage Aluno (PC) ----
 
 # Dosage Student
-mod_edu <- feols(des_edu ~ aluno_dosage * i(k, ref = 0)
+mod_edu <- feols(des_edu_pc ~ aluno_dosage * i(k, ref = 0)
                  + PIBpc
                  | codigo_ibge + ano + uf^ano,
                  data = df_spend,
@@ -434,7 +287,7 @@ mod_edu <- feols(des_edu ~ aluno_dosage * i(k, ref = 0)
 
 
 
-mod_inf <- feols(des_inf ~ aluno_dosage * i(k, ref = 0)
+mod_inf <- feols(des_inf_pc ~ aluno_dosage * i(k, ref = 0)
                  + PIBpc
                  | codigo_ibge + ano + uf^ano,
                  data = df_spend,
@@ -454,27 +307,18 @@ mod_inf <- feols(des_inf ~ aluno_dosage * i(k, ref = 0)
 #                  data = df_spend,
 #                  vcov = "hetero")
 
+etable(mod_edu, mod_inf)
 
-
-etable(mod_edu, mod_inf,
-       #mod_fund, mod_med, 
-       vcov = "hetero", 
-       headers = list(":_:" = list("Total" = 1,
-                                   #"Fundamental" = 1, "Médio" = 1,
-                                   "Infantil" = 1)))
-
-
-
-# Exportar:
-
-etable(mod_edu, mod_inf,
-       #mod_fund, mod_med,
-
+etable(mod_edu, mod_inf, #mod_fund, mod_med,
        vcov = "hetero",
        headers = list(":_:" = list("Total" = 1,
                                    #"Fundamental" = 1, "Médio" = 1,
                                    "Infantil" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/reg_dif_aluno_dosage.tex", replace = TRUE)
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/reg_dif_aluno_dosage.tex",
+       replace = TRUE)
+
+
+
 
 ### 2.3.1 ES ----
 
@@ -549,10 +393,10 @@ rm(mod_edu, mod_fund, mod_inf, mod_med, event_df, current_model, models_list)
 
 
 # -------------------- #
-##2.3 Win. vs. Lose ----
+##2.3 Win. vs. Lose (PC) ----
 
 mod_edu_ab <- feols(
-  des_edu_pc ~ aluno_dosage * i(k, grupo, ref = 0) + PIBpc |
+  des_edu_pc ~ aluno_dosage * i(k, grupo, ref = -1) + PIBpc |
     codigo_ibge + ano + uf^ano,
   data = df_spend,
   vcov = "hetero"
@@ -560,7 +404,7 @@ mod_edu_ab <- feols(
 
 
 mod_inf_ab <- feols(
-  des_inf_pc ~ aluno_dosage * i(k, grupo, ref = 0) + PIBpc |
+  des_inf_pc ~ aluno_dosage * i(k, grupo, ref = -1) + PIBpc |
     codigo_ibge + ano + uf^ano,
   data = df_spend,
   vcov = "hetero"
@@ -601,14 +445,14 @@ for (model_name in names(models_list)) {
   temp_edu <- temp %>%
     distinct(grupo) %>%             # one row per group (Above / Below)
     mutate(
-      term = "time_to_treat:0",     # or another label that fits your pattern
+      term = "time_to_treat:-1",     # or another label that fits your pattern
       estimate = 0,
       std.error = 0,
       statistic = 0,
       p.value = 1,
       conf.low = 0,
       conf.high = 0,
-      time_to_treat = 0
+      time_to_treat = -1
     )
   
   # combine with your main dataframe
@@ -618,7 +462,7 @@ for (model_name in names(models_list)) {
       temp_edu %>%
         distinct(grupo) %>%
         mutate(
-          time_to_treat = 0,
+          time_to_treat = -1,
           estimate = 0,
           conf.low = 0,
           conf.high = 0
@@ -630,7 +474,7 @@ for (model_name in names(models_list)) {
   p <- ggplot(temp, aes(x = time_to_treat, y = estimate, group = grupo)) +
     geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
     geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
-    geom_vline(xintercept = 0, color = "black") +
+    geom_vline(xintercept = -1, color = "black") +
     geom_point(aes(color = grupo), shape = 15, size = 2) +
     geom_line(aes(color = grupo)) +
     #facet_wrap(~ grupo, ncol = 1) +     # <--- separate plot per group
@@ -651,7 +495,7 @@ for (model_name in names(models_list)) {
     )
   
   
-  if (model_name == "inf"){
+  #if (model_name == "inf"){
     p <- p +
       theme(
         axis.line = element_line(color = "grey70"),
@@ -664,7 +508,7 @@ for (model_name in names(models_list)) {
         breaks = seq(min(temp$time_to_treat, na.rm = TRUE),
                      max(temp$time_to_treat, na.rm = TRUE),
                      by = 2))
-  }
+  #}
   
   print(p)
   
@@ -679,184 +523,6 @@ for (model_name in names(models_list)) {
 
 
 
-# ---------------------------------------------------------------------------- #
-## 2.4 Winners spending ----
-# ---------------------------------------------------------------------------- #
-
-#' The objective of this part is to understantd how the FUNDEB policy affected
-#' the municipality spending.
-
-
-# ------------------ #
-### 2.4.1 Overall ----
-# ------------------ #
-
-test1 <- feols(des_edu ~ i(k, ref = 0)
-               + PIBpc
-               | codigo_ibge + uf,
-               data = df_spend,
-               vcov = "hetero")
-
-test2 <- feols(des_inf ~ i(k, ref = 0)
-               + PIBpc
-               | codigo_ibge + uf,
-               data = df_spend,
-               vcov = "hetero")
-
-etable(test1,test2)
-
-# ----------------------------------- #
-### 2.4.2 Top winners ----
-#### 2.4.2.1 Dataframes ----
-
-#Top municipalities
-df_topw <- df_spend %>% 
-  filter(dosage == 1)
-
-
-#medium municipalities
-cutoff <- quantile(df_spend$dosage, 0.5, na.rm = TRUE)
-dp     <- sd(df_spend$dosage, na.rm = TRUE)
-
-df_midw <- df_spend %>%
-  filter(dosage >= cutoff - dp*0.01,
-         dosage <= cutoff + dp*0.01)
-
-
-#High loss
-cutoff <- quantile(df_spend$dosage, 0.25, na.rm = TRUE)
-
-df_loww <- df_spend %>%
-  filter(dosage >= cutoff - dp*0.01,
-         dosage <= cutoff + dp*0.01)
-
-
-# ------------------------------- #
-#### 2.4.2.2 Radom selection ----
-# ------------------------------- #
-
-#Selection of 5 municipalities from each group
-
-set.seed(123)  # for reproducibility
-
-
-df_topw_sample <- df_topw %>%
-  distinct(codigo_ibge, .keep_all = TRUE) %>%
-  slice_sample(n = 5) 
-
-df_midw_sample <- df_midw %>%
-  distinct(codigo_ibge, .keep_all = TRUE) %>%
-  slice_sample(n = 5) %>% 
-  mutate( grupo = "Medium")
-
-df_loww_sample <- df_loww %>%
-  distinct(codigo_ibge, .keep_all = TRUE) %>%
-  slice_sample(n = 5) %>% 
-  mutate( grupo = "Low")
-
-
-#Filtering the dataframes
-df_topw <- df_topw %>% 
-  filter(codigo_ibge %in% df_topw_sample$codigo_ibge) %>% 
-  mutate( grupo = "High" ) #Group Indicator for segmentation
-
-
-df_midw <- df_midw %>% 
-  filter(codigo_ibge %in% df_midw_sample$codigo_ibge) %>% 
-  mutate( grupo = "Medium" ) #Group Indicator for segmentation
-
-
-df_loww <- df_loww %>% 
-  filter(codigo_ibge %in% df_loww_sample$codigo_ibge) %>% 
-  mutate( grupo = "Low" ) #Group Indicator for segmentation
-
-
-# ------------------------------- #
-#### 2.4.2.2 Final Data ----
-# ------------------------------- #
-
-df_sample <- rbind(df_topw,
-                   df_midw,
-                   df_loww
-                   ) %>% 
-  mutate( grupo = as.factor(grupo))
-
-
-rm(df_loww, df_midw, df_topw, cutoff, dp)
-
-
-
-# ------------------------------- #
-### 2.4.3 Regression OLS ----
-# ------------------------------- #
-
-
-est_edu <- feols( des_edu ~ i(k, grupo, ref = 0),
-                  data = df_sample,
-                  vcov = "hetero"
-                  )
-
-est_inf <- feols( des_inf ~ i(k, grupo, ref = 0),
-                  data = df_sample,
-                  vcov = "hetero")
-
-
-etable(est_edu, est_inf)
-
-
-# ------------------------------- #
-### 2.4.4 Graph (NO OLS) ----
-# ------------------------------- #
-
-
-summary_df <- df_sample %>%
-  group_by(grupo, ano) %>%
-  summarise(
-    mean_des = mean(des_edu, na.rm = TRUE),
-    sd_des   = sd(des_edu, na.rm = TRUE),
-    n        = sum(!is.na(des_edu)),
-    se_des   = ifelse(n>1, sd_des / sqrt(n), NA_real_),
-    .groups = "drop"
-  )
-
-
-ggplot() +
-  # individual municipality trends (faint)
-  geom_line(data = df_sample,
-            aes(x = ano, y = des_edu, group = codigo_ibge, color = grupo),
-            alpha = 0.15, size = 0.4, show.legend = FALSE) +
-  # mean line per group
-  geom_ribbon(data = summary_df,
-              aes(x = ano, ymin = mean_des - se_des, ymax = mean_des + se_des, fill = grupo),
-              alpha = 0.25, inherit.aes = FALSE, show.legend = FALSE) +
-  geom_line(data = summary_df,
-            aes(x = ano, y = mean_des, color = grupo),
-            size = 1.1) +
-  geom_vline(xintercept = 2007, linetype = "dashed", color = "black") +
-  facet_wrap(~ grupo, scales = "free_y") +               # or scales="fixed" if you want same y axis
-  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
-  labs(x = "Ano", y = "des_edu", title = "des_edu through years by group",
-       subtitle = "Thin lines = municipalities; bold = group mean ± SE; vertical = 2007") +
-  theme_minimal() +
-  theme(legend.position = "bottom")
-
-
-ggplot(df_sample, aes(x = ano, y = des_edu, group = codigo_ibge, color = grupo)) +
-  geom_line(size = 0.7) +
-  geom_point(size = 0.6) +                     # optional points on years
-  geom_vline(xintercept = 2007, linetype = "dashed", color = "black") +
-  facet_wrap(~ codigo_ibge, ncol = 5, scales = "free_y") +  # 3 rows x 5 cols = 15 plots
-  scale_x_continuous(breaks = pretty_breaks(n = 6)) +
-  scale_color_brewer(palette = "Dark2") +     # nice palette; replace if you prefer
-  labs(x = "Ano", y = "des_edu", color = "Grupo",
-       title = "des_edu por município (cada painel = 1 município)",
-       subtitle = "Vertical dashed line = 2007") +
-  theme_minimal(base_size = 11) +
-  theme(
-    legend.position = "bottom",
-    strip.text = element_text(size = 9),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
 
 # ---------------------------------------------------------------------------- #
 #3. School Data ----
@@ -1883,7 +1549,7 @@ df <- df_saeb %>%
     
     grupo = factor(grupo, levels = c("Loser", "Winner")) #Beneficiary dumm
   ) %>% 
-  filter(as.numeric(ano_nasc) < 2007) %>% # This remove younger than expected people in 2017  -> ideal age = 10.
+  filter(as.numeric(ano_nasc) < 2008) %>% # This remove younger than expected people in 2017  -> ideal age = 10.
   mutate(ano_nasc = as.factor(ano_nasc))
 
 #Weights dataframes
@@ -2002,7 +1668,8 @@ etable(main_mat, main_pot,
 #### 7.2.1 Data ----
 #Removing the observations before the first treatment
 
-df_birth <- df %>% filter(ano %in% c(2005:2017))  #Excluding 2005
+df_birth <- df %>% filter(ano %in% c(2005:2017) &
+                          ano_nasc %in% c(1992:2008))  #Excluding 2005
   
 #Weights dataframes
 dfb_w5 <- df_birth %>% filter(grade == 5) %>% select(peso, peso_mt, peso_lp)  #5th grade
