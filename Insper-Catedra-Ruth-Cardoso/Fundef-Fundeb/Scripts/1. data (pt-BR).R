@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 03/12/2025
+# Date: 04/12/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1510,8 +1510,30 @@ temp <- left_join(
 
 rm(pib2)
 
+
+#Total students
+mat_mun_2006 <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_2006_filtrado_mun.rds") %>% 
+  filter(DEP == "Municipal") %>% 
+  mutate(mat_reg_fund = mat_reg_in + mat_reg_fin,
+         codigo_ibge = as.numeric(CODMUNIC) %/% 10) %>% #Transforming to the old code
+  group_by(codigo_ibge) %>% 
+  summarise(
+    mat_fun = sum(mat_reg_fund, na.rm = T),
+    mat_inf = sum(mat_tot_inf, na.rm = T),
+    mat_med = sum(mat_tot_em, na.rm = T),
+    mat_esp = sum(mat_tot_esp, na.rm = T),
+    mat_eja = sum(mat_tot_eja, na.rm = T)
+  ) %>% 
+  mutate( total_alunos_2006 = mat_fun + mat_inf + mat_med + mat_esp + mat_eja) %>% 
+  ungroup()
+
+
+
+
 df_reg <- temp %>%
   filter (codigo_ibge > 10) %>% 
+  select(-total_alunos_2006) %>% 
+  left_join(mat_mun_2006, by = c("codigo_ibge")) %>% 
   mutate(dif_rs_aluno_100 = dif_rs_aluno / 100) %>%  # R$ PER STUDENT DOSAGE, em centenas
 
   # SPENDING DOSAGE:  ------------------------------------- #
