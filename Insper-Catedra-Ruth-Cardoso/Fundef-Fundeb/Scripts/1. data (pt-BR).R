@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 04/12/2025
+# Date: 05/12/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1543,6 +1543,8 @@ df_reg <- temp %>%
   #del_spending_dos = (receita_real - receita_simulada)/ed_spending_2006,
   
   dosage = (receita_real - receita_simulada)/receita_real,            #Prefered
+  
+  old_dosage = (receita_real - receita_simulada)/real_des_edu[ano == 2006],
   
   #dosage_perc = del_spending_dos *100,
   
