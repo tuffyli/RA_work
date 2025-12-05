@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 25/11/2025
+# Date: 05/12/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -39,6 +39,8 @@ library(ggtext)
 library(jsonlite)
 library(haven)
 library(ggplot2)
+library(grid)
+library(patchwork)
 
 #Desativando a notação científica
 options(scipen = 999)
@@ -2133,4 +2135,147 @@ ggsave(
   path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Dosage_aluno",
   width = 1200/96, height = 420/96, dpi = 110
 )
+
+
+# ---------------------------------------------------------------------------- #
+# 10. Old Dosage ----
+# ---------------------------------------------------------------------------- #
+
+
+# -------------------------------- #
+## 10.1 Main ----
+# -------------------------------- #
+test1 <- feols(real_des_edu ~ old_dosage : i(k, ref = -1),
+               data = df_spend,
+               vcov = "hetero")
+
+test2 <- feols(real_des_inf ~ old_dosage : i(k, ref = -1),
+               data = df_spend,
+               vcov = "hetero")
+
+
+test3 <- feols(des_edu_pc ~ old_dosage : i(k, ref = -1),
+               data = df_spend,
+               vcov = "hetero")
+
+test4 <- feols(des_inf_pc ~ old_dosage : i(k, ref = -1),
+               data = df_spend,
+               vcov = "hetero")
+
+
+etable(test1, test2, test3, test4
+       )
+
+
+rm(test1, test2, test3, test4)
+
+# --------------------------------- #
+## 10.2 Groups -----
+# --------------------------------- #
+### 10.2.1 Regression ----
+
+est1 <- feols(des_edu_pc ~ abs(old_dosage) : i(k, grupo, ref = -1),
+               data = df_spend,
+               vcov = "hetero")
+
+est2 <- feols(des_inf_pc ~ abs(old_dosage) : i(k, grupo, ref = -1),
+               data = df_spend,
+               vcov = "hetero")
+
+est3 <- feols(des_med_pc ~ abs(old_dosage) : i(k, grupo, ref = -1),
+              data = df_spend,
+              vcov = "hetero")
+
+est4 <- feols(des_fund_pc ~ abs(old_dosage) : i(k, grupo, ref = -1),
+              data = df_spend,
+              vcov = "hetero")
+
+
+etable(est1, est2)
+
+
+# --------------------------------- #
+### 10.2.2 Graph ----
+# --------------------------------- #
+
+win_lose_plot <- function(est_obj, title = NULL, ylim = NULL) {
+  # extract tidy data from fixest::etable or broom::tidy
+  event_df <- broom::tidy(est_obj, conf.int = TRUE) %>% 
+    mutate(
+      k = str_extract(term, "(?<=k::)-?\\d+"),
+      k = as.numeric(k),
+      # Extract group (text after the last colon)
+      grupo = str_extract(term, "[^:]+$"),
+      grupo = as.factor(grupo))
+  
+  
+  event_df <- event_df %>% 
+    bind_rows(
+      event_df %>%
+        distinct(grupo) %>%
+        mutate(
+          term = paste0(as.character(grupo),"k:-1"),     
+          estimate = 0,
+          std.error = 0,
+          statistic = 0,
+          p.value = 1,
+          conf.low = 0,
+          conf.high = 0,
+          k = -1
+        )
+    ) %>% 
+    filter(grupo != "PIBpc",
+           grupo != "(Intercept)")
+  
+  ggplot(event_df, aes(x = k + 2007, y = estimate, group = grupo)) +
+    # shaded standard error area
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+    geom_vline(xintercept = 2006, color = "black") +
+    geom_point(aes(color = grupo), shape = 15, size = 2) +
+    geom_line(aes(color = grupo)) +
+    labs(
+      title = title,
+      x = "Ano"
+    ) +
+    coord_cartesian(ylim = ylim) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11)
+    ) + 
+    scale_x_continuous(breaks = seq(2005, 2018, 2))
+  
+}
+
+#### 10.2.2.1 Plots ----
+
+p_edu_pc <- win_lose_plot(est1, "Gastos Educacionais Per-capita")   #Total Education spending
+p_inf_pc <- win_lose_plot(est2, "Gastos E. Infantil Per-capita")  #Preschool spending
+p_med_pc <- win_lose_plot(est3, "Ensino Médio")
+p_fun_pc <- win_lose_plot(est4, "Fundamental")
+
+grid_plot <- ( p_edu_pc + p_inf_pc ) 
+
+final <- grid_plot + plot_annotation(
+  #title = "Event-study: infrastructure / staff outcomes",
+  caption = "Estimates from feols(...) with i(k, ref = -1)"
+)
+
+final
+
+ggsave( #Saving image
+  filename = paste0("old_dosage_spending.png"),
+  plot = final,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/", #Saving directly to the report
+  width = 1300/96, height = 620/96, dpi = 300
+)
+
+
+
+
+
+
+
 
