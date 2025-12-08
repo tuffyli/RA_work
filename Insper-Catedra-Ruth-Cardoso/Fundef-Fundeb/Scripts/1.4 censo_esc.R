@@ -2,7 +2,7 @@
 # Data Extraction
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 11/11/2025
+# Date: 08/12/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -687,7 +687,7 @@ for (i in c(2005:2018)) {
                DE9F11C:DE9F11G, NE9F11C:NE9F11G,  # EF iniciais (9 anos)
                DEF11G:DEF11J, NEF11G:NEF11J,      # EF finais (8 anos)
                DE9F11H:DE9F11N, NE9F11H:NE9F11N,  # EF finais (9 anos)
-               VEE1431:VEE1437, # Alunos de educação especial do EF por ano de nascimento
+               VEE1431:VEE1437,                   # Alunos de educação especial do EF por ano de nascimento
 
                #ED especial por série:
                VEE1619:VEE1691, VEE1719:VEE1791, VEE1819:VEE1891, VEE1919:VEE1991, # 1ºEF
@@ -740,16 +740,20 @@ for (i in c(2005:2018)) {
         reg_fin = rowSums(across(c(DEF11G:NE9F11N)), na.rm = TRUE),
 
         ef_tot = reg_in + reg_fin,
-        esp_tot = rowSums(across(c(VEE1431:VEE1437)), na.rm = TRUE),
+        esp1 = rowSums(across(c(VEE1431:VEE1437)), na.rm = TRUE),
         em_tot = rowSums(across(c(DEM118:NEM11C)), na.rm = TRUE),
         ed_inf_tot = rowSums(across(c(DPE119:NPE11D)), na.rm = TRUE),
         eja_tot = rowSums(across(c(DES101F:NES101A)), na.rm = TRUE),
         day_tot = rowSums(across(c(NPE119,NPE11D)), na.rm = TRUE),
-        pre_tot = rowSums(across(c(DPE119,DPE11D)), na.rm = TRUE)
+        pre_tot = rowSums(across(c(DPE119,DPE11D)), na.rm = TRUE),
+        esp_iniciais = rowSums(across(c(VEE1619:VEE1994)), na.rm = TRUE),
+        esp_finais = rowSums(across(c(VEE1615:VEE1998)), na.rm = TRUE),
+        esp_soma = esp_iniciais + esp_finais,
+        esp_tot = pmax(esp_soma, esp1) #extracts maximum value between both groups
 
 
       ) %>%
-      select(c(1:9,53:65, ef_tot:pre_tot)) %>%
+      select(c(1:9,53:65, ef_tot:esp_tot)) %>%
       rename(
         ano = ANO,
         school = MASCARA,
