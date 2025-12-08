@@ -271,15 +271,14 @@ df_spend <- df_reg %>%
     TRUE ~ NA_character_
     )
   ) %>% 
-  filter(tipo == "Municipal")
-
+  filter(tipo == "Municipal") 
 
 
 
 ## 2.2 Dosage Aluno (PC) ----
 
 # Dosage Student
-mod_edu <- feols(des_edu_pc ~ aluno_dosage * i(k, ref = 0)
+mod_edu <- feols(des_edu_pc ~ aluno_dosage * i(k, ref = -1)
                  + PIBpc
                  | codigo_ibge + ano + uf^ano,
                  data = df_spend,
@@ -287,7 +286,7 @@ mod_edu <- feols(des_edu_pc ~ aluno_dosage * i(k, ref = 0)
 
 
 
-mod_inf <- feols(des_inf_pc ~ aluno_dosage * i(k, ref = 0)
+mod_inf <- feols(des_inf_pc ~ aluno_dosage * i(k, ref = -1)
                  + PIBpc
                  | codigo_ibge + ano + uf^ano,
                  data = df_spend,
@@ -521,8 +520,284 @@ for (model_name in names(models_list)) {
   rm(temp_edu)
 }
 
+# ---------------------------------------------------------------------------- #
+## 2.4 New Spending -----
+# ---------------------------------------------------------------------------- #
+
+#' In this new spending variable I will apply the difference between the total 
+#' education spending between years, divided by the total enrollments for each
+#' year
+
+df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
+  group_by(codmun, ano) %>% 
+  summarise(
+    mat_fun = sum(ef_tot, na.rm = T),
+    mat_med = sum(em_tot, na.rm = T),
+    mat_inf = sum(day_tot + pre_tot, na.rm = T),
+    mat_esp = sum(esp_tot, na.rm = T),
+    mat_eja = sum(eja_tot, na.rm = T),
+    mat_total = mat_fun + mat_med + mat_inf + mat_eja + mat_esp,
+    .groups = "drop") %>% 
+  mutate(codmun = codmun %/% 10)
 
 
+new_df <- df_spend %>%
+  select(-c(mat_inf, mat_eja, mat_fun, mat_med, mat_esp)) %>% 
+  left_join(df_enroll,
+            by = c("ano" = "ano", "codigo_ibge" = "codmun")) %>% 
+  group_by(codigo_ibge) %>% 
+  mutate(dif_edu_total_pa = (real_des_edu - lag(real_des_edu))/mat_total,
+         dif_inf_pa       = (real_des_inf - lag(real_des_inf))/mat_inf,
+         
+         real_des_edu_pa  = real_des_edu/mat_total,
+         real_des_inf_pa  = real_des_inf/mat_inf)
+
+
+
+# ----------------------- #
+### 2.4.1 Regression ----
+# ----------------------- #
+
+# Dosage Student
+mod_edu <- feols(dif_edu_total_pa ~ aluno_dosage : i(k, ref = -1)
+                 + PIBpc
+                 | codigo_ibge + ano + uf^ano,
+                 data = new_df,
+                 vcov = "hetero")
+
+
+
+mod_inf <- feols(dif_inf_pa ~ aluno_dosage : i(k, ref = -1)
+                 + PIBpc
+                 | codigo_ibge + ano + uf^ano,
+                 data = new_df,
+                 vcov = "hetero")
+
+
+etable(mod_edu, mod_inf)
+
+
+
+# Dosage Student
+mod_edu <- feols(real_des_edu_pa ~ aluno_dosage : i(k, ref = -1)
+                 + PIBpc
+                 | codigo_ibge + ano + uf^ano,
+                 data = new_df,
+                 vcov = "hetero")
+
+
+
+mod_inf <- feols(real_des_inf_pa ~ aluno_dosage : i(k, ref = -1)
+                 + PIBpc
+                 | codigo_ibge + ano + uf^ano,
+                 data = new_df,
+                 vcov = "hetero")
+
+
+
+etable(mod_edu, mod_inf)
+
+# ----------------- #
+#### 2.4.1.1 ES ----
+# ----------------- #
+
+models_list <- list(
+  edu  = mod_edu,
+  #fund = mod_fund,
+  #med  = mod_med,
+  inf  = mod_inf
+)
+
+
+for (model_name in names(models_list)){
+  
+  current_model <- models_list[[model_name]]
+  event_df <- as.data.frame(current_model$coeftable)
+  print(event_df)
+  
+  # Criar coluna com os termos (anos relativos k)
+  event_df$term <- rownames(event_df)
+  event_df <- event_df %>%
+    mutate(
+      k = as.numeric(gsub(".*k::(-?\\d+)$", "\\1", term)), # Extrair o valor de k
+      conf.low = Estimate - 1.96 * `Std. Error`,           # Limite inferior do IC
+      conf.high = Estimate + 1.96 * `Std. Error`           # Limite superior do IC
+    ) %>%
+    add_row(
+      Estimate = 0,
+      `Std. Error` = 0,
+      `t value` = 0,
+      `Pr(>|t|)` = 0,
+      term = "k::0", # Adicionar termo com referência ao modelo
+      k = -1,
+      conf.low = 0,
+      conf.high = 0
+    ) %>% 
+    filter(!is.na(k))
+  
+  # Criar o gráfico de estilo event-study
+  p <- ggplot(event_df, aes(x = k + 2007, y = Estimate)) +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "grey60", alpha = 0.3) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+    geom_vline(xintercept = 2006, color = "black") +
+    geom_point(shape = 15, size = 2, color = "black") +
+    geom_line(color = "black") +
+    labs(
+      # title = paste("Event-Study: ", model_name),
+      x = "Ano", #(relativo a 2007)",
+      y = "R$ por aluno"
+    ) +
+    # ylim(-0.4, 0.4) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11)
+    )
+  
+  # Exibir o gráfico no console
+  print(p)
+  
+  # Salvar o gráfico como arquivo PNG
+  ggsave(
+    filename = paste0("grafico_", model_name, "_desp_pa.png"), # Nome baseado no modelo
+    plot = p,
+    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Dosage_aluno",
+    width = 600/96, height = 420/96, dpi = 110
+  )
+  
+  rm(model_name, p)
+}
+
+rm(mod_edu, mod_fund, mod_inf, mod_med, event_df, current_model, models_list)
+
+
+# ----------------------- #
+### 2.4.2 Win vs Lose ----
+# ----------------------- #
+
+# Dosage Student
+mod_edu_ab <- feols(real_des_edu_pa ~ abs(aluno_dosage) : i(k, grupo, ref = -1)
+                 + PIBpc
+                 | codigo_ibge + ano + uf^ano,
+                 data = new_df,
+                 vcov = "hetero")
+
+
+
+mod_inf_ab <- feols(real_des_inf_pa ~ abs(aluno_dosage) : i(k, grupo, ref = -1)
+                 + PIBpc
+                 | codigo_ibge + ano + uf^ano,
+                 data = new_df,
+                 vcov = "hetero")
+
+
+etable(mod_edu_ab, mod_inf_ab)
+
+
+# ----------------- #
+#### 2.4.2.1 ES ----
+# ----------------- #
+
+models_list <- list(
+  edu  = mod_edu_ab,
+  inf  = mod_inf_ab
+)
+
+
+
+for (model_name in names(models_list)) {
+  
+  
+  current_model <- models_list[[model_name]]
+  temp <- broom::tidy(current_model, conf.int = TRUE) %>% 
+    slice((which(term == "PIBpc") + 1):n()) %>%
+    mutate(
+      time_to_treat = str_extract(term, "(?<=k::)-?\\d+"),
+      time_to_treat = as.numeric(time_to_treat),
+      grupo = str_extract(term, "(?<=grupo::)\\w+"),
+      grupo = as.factor(grupo))
+  
+  
+  
+  temp_edu <- temp %>%
+    distinct(grupo) %>%             # one row per group (Above / Below)
+    mutate(
+      term = "time_to_treat:-1",     # or another label that fits your pattern
+      estimate = 0,
+      std.error = 0,
+      statistic = 0,
+      p.value = 1,
+      conf.low = 0,
+      conf.high = 0,
+      time_to_treat = -1
+    )
+  
+  # combine with your main dataframe
+  temp <- bind_rows(temp, temp_edu) %>%
+    arrange(grupo, time_to_treat) %>% 
+    bind_rows(
+      temp_edu %>%
+        distinct(grupo) %>%
+        mutate(
+          time_to_treat = -1,
+          estimate = 0,
+          conf.low = 0,
+          conf.high = 0
+        )
+    ) %>%
+    arrange(grupo, time_to_treat)
+  
+  
+  p <- ggplot(temp, aes(x = time_to_treat, y = estimate, group = grupo)) +
+    geom_ribbon(aes(ymin = conf.low, ymax = conf.high, fill = grupo), alpha = 0.25, color = NA) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
+    geom_vline(xintercept = -1, color = "black") +
+    geom_point(aes(color = grupo), shape = 15, size = 2) +
+    geom_line(aes(color = grupo)) +
+    #facet_wrap(~ grupo, ncol = 1) +     # <--- separate plot per group
+    labs(x = "Time to Treat", y = "R$ por aluno",
+         color = NULL, fill = NULL) +
+    theme_classic() +
+    theme(
+      axis.line = element_line(color = "grey70"),
+      panel.grid = element_blank(),
+      axis.title = element_text(size = 11),
+      legend.position = c(0.95, 0.95),
+      legend.justification = c("right", "top") # anchor legend box
+    ) + # anchor legend box
+    scale_x_continuous(
+      breaks = seq(min(temp$time_to_treat, na.rm = TRUE),
+                   max(temp$time_to_treat, na.rm = TRUE),
+                   by = 2)
+    )
+  
+  
+  # if (model_name == "inf"){
+  # p <- p +
+  #   theme(
+  #     axis.line = element_line(color = "grey70"),
+  #     panel.grid = element_blank(),
+  #     axis.title = element_text(size = 11),
+  #     legend.position = c(0.95, 0.17),
+  #     legend.justification = c("right", "top") # anchor legend box
+  #   ) + # anchor legend box
+  #   scale_x_continuous(
+  #     breaks = seq(min(temp$time_to_treat, na.rm = TRUE),
+  #                  max(temp$time_to_treat, na.rm = TRUE),
+  #                  by = 2))
+  # }
+  
+  print(p)
+  
+  ggsave(
+    filename = paste0("grafico_", model_name, "_desp_pa_winlose.png"),
+    plot = p,
+    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Dosage_aluno",
+    width = 600/96, height = 420/96, dpi = 110
+  )
+  rm(temp_edu)
+}
 
 # ---------------------------------------------------------------------------- #
 #3. School Data ----
