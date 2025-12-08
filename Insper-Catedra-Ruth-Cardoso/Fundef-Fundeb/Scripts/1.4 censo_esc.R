@@ -740,12 +740,12 @@ for (i in c(2005:2018)) {
         reg_fin = rowSums(across(c(DEF11G:NE9F11N)), na.rm = TRUE),
 
         ef_tot = reg_in + reg_fin,
-        esp1 = rowSums(across(c(VEE1431:VEE1437)), na.rm = TRUE),
         em_tot = rowSums(across(c(DEM118:NEM11C)), na.rm = TRUE),
         ed_inf_tot = rowSums(across(c(DPE119:NPE11D)), na.rm = TRUE),
         eja_tot = rowSums(across(c(DES101F:NES101A)), na.rm = TRUE),
         day_tot = rowSums(across(c(NPE119,NPE11D)), na.rm = TRUE),
         pre_tot = rowSums(across(c(DPE119,DPE11D)), na.rm = TRUE),
+        esp1 = rowSums(across(c(VEE1431:VEE1437)), na.rm = TRUE),
         esp_iniciais = rowSums(across(c(VEE1619:VEE1994)), na.rm = TRUE),
         esp_finais = rowSums(across(c(VEE1615:VEE1998)), na.rm = TRUE),
         esp_soma = esp_iniciais + esp_finais,
@@ -759,7 +759,7 @@ for (i in c(2005:2018)) {
         school = MASCARA,
         codmun = CODMUNIC
       ) %>%
-      select(ano, school, codmun, ef_tot:pre_tot) %>%
+      select(ano, school, codmun, ef_tot:pre_tot, esp_tot) %>%
       mutate( uf = codmun %/% 100000) 
     
     
