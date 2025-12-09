@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 05/12/2025
+# Date: 09/12/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1460,6 +1460,12 @@ temp <- temp %>%
 
 temp <- temp %>% 
   left_join((df_fib %>% select(-c(uf))), by = c("codigo_ibge", "ano")) %>% 
+  #Correcting Missing values
+  mutate(educacao           = ifelse(educacao == 0,           NA, educacao),
+         ensino_fundamental = ifelse(ensino_fundamental == 0, NA, ensino_fundamental),
+         ensino_medio       = ifelse(ensino_medio == 0,       NA, ensino_medio),
+         educacao_infantil  = ifelse(educacao_infantil == 0,  NA, educacao_infantil)
+         ) %>% 
   mutate(#des_edu = educacao,             
          #des_fund = ensino_fundamental, #Spendings
          #des_med = ensino_medio,
@@ -1564,11 +1570,88 @@ attr(df_reg$aluno_dosage, "label") <- "Diferença de receita (2007) por aluno (2
 saveRDS(df_reg, "Z:/Tuffy/Paper - Educ/Dados/regdf.rds")
 
 
+gc()
+rm(list = ls())
+
+# ---------------------------------------------------------------------------- #
+# 7. Data Cleaning and observation ----
+# ---------------------------------------------------------------------------- #
+
+data <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>% 
+  select(-c(X.x, total_politica_d, total_coun_d, tx_aprovacao_iniciais,
+            tx_aprovacao_1, tx_aprovacao_2, tx_aprovacao_3, tx_aprovacao_4,
+            tx_aprovacao_5, tx_aprovacao_6, tx_aprovacao_7, tx_aprovacao_9,
+            tx_aprovacao_9, tx_aprovacao_em, tx_aprovacao_1em, tx_aprovacao_2em,
+            tx_aprovacao_3em, tx_aprovacao_4em, codigo_ibge_n, coef_simulado, dif_per_coef,
+            dif_coef_pp, ipca, X.y, coluna)) %>% 
+  rename(mat_fun_aux = mat_fun,
+         mat_med_aux = mat_med,
+         mat_inf_aux = mat_inf,
+         mat_esp_aux = mat_esp,
+         mat_eja_aux = mat_eja)
+  
 
 
+#Total enrollments
+df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
+  group_by(codmun, ano) %>% 
+  summarise(
+    mat_fun = sum(ef_tot, na.rm = T),
+    mat_med = sum(em_tot, na.rm = T),
+    mat_inf = sum(day_tot + pre_tot, na.rm = T),
+    mat_esp = sum(esp_tot, na.rm = T),
+    mat_eja = sum(eja_tot, na.rm = T),
+    mat_total = mat_fun + mat_med + mat_inf + mat_eja + mat_esp,
+    .groups = "drop") %>% 
+  mutate(codmun = codmun %/% 10) %>% 
+  rename(codigo_ibge = codmun) %>% 
+  filter(ano != 2006)
+
+#combining the data
+data <- data %>% 
+  left_join(df_enroll,
+            by = c("ano", "codigo_ibge")) %>% 
+  group_by(codigo_ibge) %>% 
+  mutate(mat_fun   = ifelse(ano == 2006, mat_fun_aux, mat_fun),
+         mat_med   = ifelse(ano == 2006, mat_med_aux, mat_med),
+         mat_inf   = ifelse(ano == 2006, mat_inf_aux, mat_inf),
+         mat_esp   = ifelse(ano == 2006, mat_esp_aux, mat_esp),
+         mat_eja   = ifelse(ano == 2006, mat_eja_aux, mat_eja),
+         mat_total = ifelse(ano == 2006, total_alunos_2006, mat_total)) %>% 
+  filter(ano > 2004 & ano < 2020) %>%  # Removing NA values
+  mutate(growth_enroll = ((mat_total - lag(mat_total))/lag(mat_total))*100,
+         growth_spend  = ((real_des_edu - lag(real_des_edu))/lag(real_des_edu))*100)
 
 
+# ---------------------------------------------------------------------------- #
+## 7.1 Flags ----
+# ---------------------------------------------------------------------------- #
 
+data <- data %>% 
+  group_by(codigo_ibge) %>% 
+  mutate(
+    #Enrollment
+    flag_enroll15 = ifelse(any(growth_enroll >= 15, na.rm = T), 1, 0),
+    flag_enroll20 = ifelse(any(growth_enroll >= 20, na.rm = T), 1, 0),
+    flag_enroll25 = ifelse(any(growth_enroll >= 25, na.rm = T), 1, 0),
+    flag_enroll30 = ifelse(any(growth_enroll >= 30, na.rm = T), 1, 0),
+    
+    #Spend
+    flag_spend15 = ifelse(any(growth_spend >= 15, na.rm = T), 1, 0),
+    flag_spend20 = ifelse(any(growth_spend >= 20, na.rm = T), 1, 0),
+    flag_spend25 = ifelse(any(growth_spend >= 25, na.rm = T), 1, 0),
+    flag_spend30 = ifelse(any(growth_spend >= 30, na.rm = T), 1, 0),
+    flag_spend40 = ifelse(any(growth_spend >= 40, na.rm = T), 1, 0),
+    flag_spend50 = ifelse(any(growth_spend >= 50, na.rm = T), 1, 0),
+    flag_spend60 = ifelse(any(growth_spend >= 60, na.rm = T), 1, 0),
+    flag_spend70 = ifelse(any(growth_spend >= 70, na.rm = T), 1, 0),
+    flag_spend80 = ifelse(any(growth_spend >= 80, na.rm = T), 1, 0)
+  )
+
+summary(data %>% select(flag_enroll15, flag_enroll20, flag_enroll25, flag_enroll30,
+                        flag_spend15, flag_spend20, flag_spend25, flag_spend30, 
+                        flag_spend40, flag_spend50, flag_spend60, flag_spend70,
+                        flag_spend80, old_dosage))
 
 
 
