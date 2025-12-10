@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 09/12/2025
+# Date: 10/12/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1620,8 +1620,28 @@ data <- data %>%
          mat_total = ifelse(ano == 2006, total_alunos_2006, mat_total)) %>% 
   filter(ano > 2004 & ano < 2020) %>%  # Removing NA values
   mutate(growth_enroll = ((mat_total - lag(mat_total))/lag(mat_total))*100,
-         growth_spend  = ((real_des_edu - lag(real_des_edu))/lag(real_des_edu))*100)
+         growth_spend  = ((real_des_edu - lag(real_des_edu))/lag(real_des_edu))*100) %>% 
+  ungroup()
 
+
+
+# ggplot(data %>% filter(is.finite(growth_spend)), aes(x = growth_spend)) +
+#   geom_density(fill = "steelblue", alpha = 0.5) +
+#   labs(
+#     title = "Density of Growth in Spending",
+#     x = "Growth (%)",
+#     y = "Density"
+#   ) +
+#   theme_minimal()
+# 
+# ggplot(data %>% filter(is.finite(growth_enroll)), aes(x = growth_spend)) +
+#   geom_density(fill = "steelblue", alpha = 0.5) +
+#   labs(
+#     title = "Density of Growth in Enrollment",
+#     x = "Growth (%)",
+#     y = "Density"
+#   ) +
+#   theme_minimal()
 
 # ---------------------------------------------------------------------------- #
 ## 7.1 Flags ----
@@ -1631,12 +1651,22 @@ data <- data %>%
   group_by(codigo_ibge) %>% 
   mutate(
     #Enrollment
+    #Increas
     flag_enroll15 = ifelse(any(growth_enroll >= 15, na.rm = T), 1, 0),
     flag_enroll20 = ifelse(any(growth_enroll >= 20, na.rm = T), 1, 0),
     flag_enroll25 = ifelse(any(growth_enroll >= 25, na.rm = T), 1, 0),
     flag_enroll30 = ifelse(any(growth_enroll >= 30, na.rm = T), 1, 0),
+    flag_enroll40 = ifelse(any(growth_enroll >= 40, na.rm = T), 1, 0),
+    #Decrease
+    flag_enrollm15 = ifelse(any(growth_enroll <= -15, na.rm = T), 1, 0),
+    flag_enrollm20 = ifelse(any(growth_enroll <= -20, na.rm = T), 1, 0),
+    flag_enrollm25 = ifelse(any(growth_enroll <= -25, na.rm = T), 1, 0),
+    flag_enrollm30 = ifelse(any(growth_enroll <= -30, na.rm = T), 1, 0),
+    flag_enrollm40 = ifelse(any(growth_enroll <= -40, na.rm = T), 1, 0),
+    
     
     #Spend
+    #Increase
     flag_spend15 = ifelse(any(growth_spend >= 15, na.rm = T), 1, 0),
     flag_spend20 = ifelse(any(growth_spend >= 20, na.rm = T), 1, 0),
     flag_spend25 = ifelse(any(growth_spend >= 25, na.rm = T), 1, 0),
@@ -1645,8 +1675,20 @@ data <- data %>%
     flag_spend50 = ifelse(any(growth_spend >= 50, na.rm = T), 1, 0),
     flag_spend60 = ifelse(any(growth_spend >= 60, na.rm = T), 1, 0),
     flag_spend70 = ifelse(any(growth_spend >= 70, na.rm = T), 1, 0),
-    flag_spend80 = ifelse(any(growth_spend >= 80, na.rm = T), 1, 0)
-  )
+    flag_spend80 = ifelse(any(growth_spend >= 80, na.rm = T), 1, 0),
+    #Decrease
+    flag_spendm15 = ifelse(any(growth_spend <= -15, na.rm = T), 1, 0),
+    flag_spendm20 = ifelse(any(growth_spend <= -20, na.rm = T), 1, 0),
+    flag_spendm25 = ifelse(any(growth_spend <= -25, na.rm = T), 1, 0),
+    flag_spendm30 = ifelse(any(growth_spend <= -30, na.rm = T), 1, 0),
+    flag_spendm40 = ifelse(any(growth_spend <= -40, na.rm = T), 1, 0),
+    flag_spendm50 = ifelse(any(growth_spend <= -50, na.rm = T), 1, 0),
+    flag_spendm60 = ifelse(any(growth_spend <= -60, na.rm = T), 1, 0),
+    flag_spendm70 = ifelse(any(growth_spend <= -70, na.rm = T), 1, 0),
+    flag_spendm80 = ifelse(any(growth_spend <= -80, na.rm = T), 1, 0),
+    
+  ) %>% 
+  ungroup()
 
 summary(data %>% select(flag_enroll15, flag_enroll20, flag_enroll25, flag_enroll30,
                         flag_spend15, flag_spend20, flag_spend25, flag_spend30, 
@@ -1654,11 +1696,131 @@ summary(data %>% select(flag_enroll15, flag_enroll20, flag_enroll25, flag_enroll
                         flag_spend80, old_dosage))
 
 
+# ------------------------ #
+### 7.1.1 Graph ----
+# ------------------------ #
+
+
+mean_long <- data %>%
+  summarise(across(c(starts_with("flag_")),
+                   ~ mean(.x, na.rm = TRUE))) %>%
+  pivot_longer(
+    everything(),
+    names_to = "variable",
+    values_to = "mean_value"
+  ) %>% 
+  mutate(
+    color = ifelse(row_number() <= 10, "red", "darkblue"),
+    growth = case_when(
+      color == "red" & row_number() == 1 ~ 15,
+      color == "red" & row_number() == 2 ~ 20,
+      color == "red" & row_number() == 3 ~ 25,
+      color == "red" & row_number() == 4 ~ 30,
+      color == "red" & row_number() == 5 ~ 40,
+      color == "red" & row_number() == 6 ~ -15,
+      color == "red" & row_number() == 7 ~ -20,
+      color == "red" & row_number() == 8 ~ -25,
+      color == "red" & row_number() == 9 ~ -30,
+      color == "red" & row_number() == 10 ~ -40,
+      
+      color == "darkblue" & row_number() == 11 ~ 15,
+      color == "darkblue" & row_number() == 12 ~ 20,
+      color == "darkblue" & row_number() == 13 ~ 25,
+      color == "darkblue" & row_number() == 14 ~ 30,
+      color == "darkblue" & row_number() == 15 ~ 40,
+      color == "darkblue" & row_number() == 16 ~ 50,
+      color == "darkblue" & row_number() == 17 ~ 60,
+      color == "darkblue" & row_number() == 18 ~ 70,
+      color == "darkblue" & row_number() == 19 ~ 80,
+      color == "darkblue" & row_number() == 20 ~ -15,
+      color == "darkblue" & row_number() == 21 ~ -20,
+      color == "darkblue" & row_number() == 22 ~ -25,
+      color == "darkblue" & row_number() == 23 ~ -30,
+      color == "darkblue" & row_number() == 24 ~ -40,
+      color == "darkblue" & row_number() == 25 ~ -50,
+      color == "darkblue" & row_number() == 26 ~ -60,
+      color == "darkblue" & row_number() == 27 ~ -70,
+      color == "darkblue" & row_number() == 28 ~ -80,
+      TRUE ~ NA
+      
+    ),
+    
+    mean_value = round(100 * mean_value, digits = 0)
+  )
+
+mean_long
 
 
 
+# Make a clean group column (more semantic than color names)
+plot_df <- mean_long %>%
+  mutate(group = case_when(
+    color == "red"      ~ "Matriculas",
+    color == "darkblue" ~ "Despesas Educacionais",
+    TRUE ~ "Other"
+  ),
+  # ensure growth categories are ordered numerically on x-axis
+  growth_f = factor(growth, levels = sort(unique(growth)))
+  )
+
+# Choose colors you like
+my_cols <- c("Matriculas" = "lightgreen",    # red
+             "Despesas Educacionais"  = "steelblue1")    # dark blue
+
+# dodge width controls horizontal separation; width controls bar width
+pd <- position_dodge(width = 0.6)
+
+p <- ggplot(plot_df, aes(x = growth_f, y = mean_value, fill = group)) +
+          # 1) draw the Spend bars first (back)
+          geom_col(data = filter(plot_df, group == "Despesas Educacionais"),
+                   width = 0.55, position = pd, alpha = 0.8, color = "black") +
+          # 2) draw the Enroll bars second (front)
+          geom_col(data = filter(plot_df, group == "Matriculas"),
+                   width = 0.55, position = pd, alpha = 0.95, color = "black") +
+          # 3) add labels on top of bars (use same dodge so labels align)
+          geom_text(aes(label = mean_value),
+                    position = position_dodge(width = 0.6),
+                    vjust = -0.5, size = 3.6, color = "black") +
+          scale_fill_manual(values = my_cols, name = "Group") +
+          labs(
+            title = "Crescimento anual Municipal",
+            x = "Threshold de crescimento (%)",
+            y = "Total da amostra (%)"
+          ) +
+          theme_minimal(base_size = 13) +
+          theme(
+            panel.grid.minor = element_blank(),
+            panel.grid.major.x = element_blank(),
+            legend.position = "bottom"
+          ) +
+          # keep x ticks neat — growth are numeric categories so use them directly
+          scale_x_discrete(labels = levels(plot_df$growth_f))
 
 
+unique_growth <- sort(unique(plot_df$growth))     # numeric: c(-80, -70, ..., 80)
 
 
+pos_le_zero <- sum(unique_growth <= 0)          
+
+x_vline_at <- pos_le_zero + 0.5                  # e.g. 4.5
+
+p <- p + geom_vline(xintercept = x_vline_at, color = "black", linewidth = 0.8)
+
+p
+
+ggsave(
+  filename = paste0("dist_crescimento_2019.png"), # Nome baseado no modelo
+  plot = p,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust",
+  width = 600/96, height = 420/96, dpi = 110
+)
+
+
+rm(plot_df, mean_long, mean_df, od, p)
+
+# --------------------------------- #
+## 7.2 Saving DF flags ----
+# --------------------------------- #
+
+saveRDS(data, "Z:/Tuffy/Paper - Educ/Dados/regdf_flags.rds") #saved until 2018
 
