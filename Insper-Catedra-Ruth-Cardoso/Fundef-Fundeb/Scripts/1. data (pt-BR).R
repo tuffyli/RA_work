@@ -1618,10 +1618,16 @@ data <- data %>%
          mat_esp   = ifelse(ano == 2006, mat_esp_aux, mat_esp),
          mat_eja   = ifelse(ano == 2006, mat_eja_aux, mat_eja),
          mat_total = ifelse(ano == 2006, total_alunos_2006, mat_total)) %>% 
-  filter(ano > 2004 & ano < 2020) %>%  # Removing NA values
+  filter(ano > 2004 & ano < 2019) %>%  # Removing NA values
   mutate(growth_enroll = ((mat_total - lag(mat_total))/lag(mat_total))*100,
          growth_spend  = ((real_des_edu - lag(real_des_edu))/lag(real_des_edu))*100) %>% 
-  ungroup()
+  ungroup() %>% group_by(codigo_ibge, ano) %>% 
+  mutate(
+    real_des_edu_pa  = real_des_edu/mat_total,
+    real_des_inf_pa  = real_des_inf/mat_inf
+    ) %>% 
+  ungroup() %>% 
+  select(-c(mat_fun_aux, mat_med_aux, mat_inf_aux, mat_esp_aux, mat_eja_aux))
 
 
 
@@ -1652,40 +1658,40 @@ data <- data %>%
   mutate(
     #Enrollment
     #Increas
-    flag_enroll15 = ifelse(any(growth_enroll >= 15, na.rm = T), 1, 0),
-    flag_enroll20 = ifelse(any(growth_enroll >= 20, na.rm = T), 1, 0),
-    flag_enroll25 = ifelse(any(growth_enroll >= 25, na.rm = T), 1, 0),
-    flag_enroll30 = ifelse(any(growth_enroll >= 30, na.rm = T), 1, 0),
-    flag_enroll40 = ifelse(any(growth_enroll >= 40, na.rm = T), 1, 0),
+    flag_enroll15 = ifelse(any(growth_enroll > 15, na.rm = T), 1, 0),
+    flag_enroll20 = ifelse(any(growth_enroll > 20, na.rm = T), 1, 0),
+    flag_enroll25 = ifelse(any(growth_enroll > 25, na.rm = T), 1, 0),
+    flag_enroll30 = ifelse(any(growth_enroll > 30, na.rm = T), 1, 0),
+    flag_enroll40 = ifelse(any(growth_enroll > 40, na.rm = T), 1, 0),
     #Decrease
-    flag_enrollm15 = ifelse(any(growth_enroll <= -15, na.rm = T), 1, 0),
-    flag_enrollm20 = ifelse(any(growth_enroll <= -20, na.rm = T), 1, 0),
-    flag_enrollm25 = ifelse(any(growth_enroll <= -25, na.rm = T), 1, 0),
-    flag_enrollm30 = ifelse(any(growth_enroll <= -30, na.rm = T), 1, 0),
-    flag_enrollm40 = ifelse(any(growth_enroll <= -40, na.rm = T), 1, 0),
+    flag_enrollm15 = ifelse(any(growth_enroll < -15, na.rm = T), 1, 0),
+    flag_enrollm20 = ifelse(any(growth_enroll < -20, na.rm = T), 1, 0),
+    flag_enrollm25 = ifelse(any(growth_enroll < -25, na.rm = T), 1, 0),
+    flag_enrollm30 = ifelse(any(growth_enroll < -30, na.rm = T), 1, 0),
+    flag_enrollm40 = ifelse(any(growth_enroll < -40, na.rm = T), 1, 0),
     
     
     #Spend
     #Increase
-    flag_spend15 = ifelse(any(growth_spend >= 15, na.rm = T), 1, 0),
-    flag_spend20 = ifelse(any(growth_spend >= 20, na.rm = T), 1, 0),
-    flag_spend25 = ifelse(any(growth_spend >= 25, na.rm = T), 1, 0),
-    flag_spend30 = ifelse(any(growth_spend >= 30, na.rm = T), 1, 0),
-    flag_spend40 = ifelse(any(growth_spend >= 40, na.rm = T), 1, 0),
-    flag_spend50 = ifelse(any(growth_spend >= 50, na.rm = T), 1, 0),
-    flag_spend60 = ifelse(any(growth_spend >= 60, na.rm = T), 1, 0),
-    flag_spend70 = ifelse(any(growth_spend >= 70, na.rm = T), 1, 0),
-    flag_spend80 = ifelse(any(growth_spend >= 80, na.rm = T), 1, 0),
+    flag_spend15 = ifelse(any(growth_spend > 15, na.rm = T), 1, 0),
+    flag_spend20 = ifelse(any(growth_spend > 20, na.rm = T), 1, 0),
+    flag_spend25 = ifelse(any(growth_spend > 25, na.rm = T), 1, 0),
+    flag_spend30 = ifelse(any(growth_spend > 30, na.rm = T), 1, 0),
+    flag_spend40 = ifelse(any(growth_spend > 40, na.rm = T), 1, 0),
+    flag_spend50 = ifelse(any(growth_spend > 50, na.rm = T), 1, 0),
+    flag_spend60 = ifelse(any(growth_spend > 60, na.rm = T), 1, 0),
+    flag_spend70 = ifelse(any(growth_spend > 70, na.rm = T), 1, 0),
+    flag_spend80 = ifelse(any(growth_spend > 80, na.rm = T), 1, 0),
     #Decrease
-    flag_spendm15 = ifelse(any(growth_spend <= -15, na.rm = T), 1, 0),
-    flag_spendm20 = ifelse(any(growth_spend <= -20, na.rm = T), 1, 0),
-    flag_spendm25 = ifelse(any(growth_spend <= -25, na.rm = T), 1, 0),
-    flag_spendm30 = ifelse(any(growth_spend <= -30, na.rm = T), 1, 0),
-    flag_spendm40 = ifelse(any(growth_spend <= -40, na.rm = T), 1, 0),
-    flag_spendm50 = ifelse(any(growth_spend <= -50, na.rm = T), 1, 0),
-    flag_spendm60 = ifelse(any(growth_spend <= -60, na.rm = T), 1, 0),
-    flag_spendm70 = ifelse(any(growth_spend <= -70, na.rm = T), 1, 0),
-    flag_spendm80 = ifelse(any(growth_spend <= -80, na.rm = T), 1, 0),
+    flag_spendm15 = ifelse(any(growth_spend < -15, na.rm = T), 1, 0),
+    flag_spendm20 = ifelse(any(growth_spend < -20, na.rm = T), 1, 0),
+    flag_spendm25 = ifelse(any(growth_spend < -25, na.rm = T), 1, 0),
+    flag_spendm30 = ifelse(any(growth_spend < -30, na.rm = T), 1, 0),
+    flag_spendm40 = ifelse(any(growth_spend < -40, na.rm = T), 1, 0),
+    flag_spendm50 = ifelse(any(growth_spend < -50, na.rm = T), 1, 0),
+    flag_spendm60 = ifelse(any(growth_spend < -60, na.rm = T), 1, 0),
+    flag_spendm70 = ifelse(any(growth_spend < -70, na.rm = T), 1, 0),
+    flag_spendm80 = ifelse(any(growth_spend < -80, na.rm = T), 1, 0),
     
   ) %>% 
   ungroup()
@@ -1809,7 +1815,7 @@ p <- p + geom_vline(xintercept = x_vline_at, color = "black", linewidth = 0.8)
 p
 
 ggsave(
-  filename = paste0("dist_crescimento_2019.png"), # Nome baseado no modelo
+  filename = paste0("dist_crescimento_2018.png"), # Nome baseado no modelo
   plot = p,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust",
   width = 600/96, height = 420/96, dpi = 110
