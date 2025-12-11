@@ -103,7 +103,7 @@ df_spend <- data %>%
 # ---------------------------------------------------------------------------- #
 
 
-est_10 <- feols(des_edu_pc ~ aluno_dosage : i(ano, ref = 2006)
+est_10 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006)
                  | codigo_ibge + uf^ano,
                  data = df_spend %>% group_by (codigo_ibge) %>% 
                    filter(ano < 2011) %>% 
@@ -111,16 +111,25 @@ est_10 <- feols(des_edu_pc ~ aluno_dosage : i(ano, ref = 2006)
                    ungroup(),
                  vcov = "hetero")
 
-est_prof <- feols(des_edu_pc ~ aluno_dosage : i(ano, ref = 2006)
+est_prof <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006)
                   | codigo_ibge + uf^ano,
                   data = df_spend %>% 
                     filter(ano < 2011) %>% 
                     filter(flag_spend70 == 0 & flag_spendm20 == 0),
                   vcov = "hetero")
 
-etable(est_prof, est_10)
+etable(est_prof, est_10
+       )
 
+etable(est_prof, est_10, #mod_fund, mod_med,
+       vcov = "hetero",
+       headers = list(":_:" = list("Professor" = 1,
+                                   #"Fundamental" = 1, "Médio" = 1,
+                                   "Filtro Abrangente" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_prof.tex",
+       replace = TRUE)
 
+rm(est_prof, est_10)
 # ---------------------------------------------------------------------------- #
 ## 2.2 Exausting Filters -----
 # ---------------------------------------------------------------------------- #
@@ -186,7 +195,7 @@ etable(est_prof, est_10)
 uppers <- c(60, 70, 80)
 lowers <- c(20, 25, 30, 40)
 
-my_formula <- des_edu_pc ~ aluno_dosage : i(ano, ref = 2006) + PIBpc | codigo_ibge + ano + uf^ano
+my_formula <- real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc | codigo_ibge + ano + uf^ano
 
 for(i in uppers) {
   up_flag <- paste0("flag_spend", i)
@@ -219,18 +228,116 @@ for(i in uppers) {
   }
   
 
+  models_valid <- models_for_i[!vapply(models_for_i, is.null, logical(1))]
+  
   # produce a file name for each i
   out_file <- paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_table_upper", i, ".tex")
   
   # Write a 4-column table for this i (only non-NULL models will appear)
   do.call(etable, c(models_valid,
                     list(file = out_file,
+                         headers = list(":_:" = list("-20%" = 1,
+                                                     "-25%" = 1,
+                                                     "-30%" = 1,
+                                                     "-40%" = 1)),
                          replace = TRUE,
                          vcov = "hetero",
                          tex = TRUE)))
   
   message("Wrote table for upper = ", i, " -> ", out_file)
+  
+  
+  rm(i, j, jj, up_flag, low_flag, msg)
 }
+  rm(m, models_for_i, models_valid, temp_i, temp_ij,
+     out_file, uppers, lowers, my_formula)
+
+
+# ---------------------------------------------------------------------------- #
+## 2.3 Annual ----
+# ---------------------------------------------------------------------------- #
+### 2.3.1 Strict ----
+# ---------------------------------------------------------------------------- #
+
+#' Tabela 1 Coluna 1 = 60% e -20%
+
+#data
+temp <- df_spend %>% 
+    filter(dosage == 1 | flag_spend60 == 0 & flag_spendm20 == 0) #Upper
+  
+
+  
+#For each year 
+est_10 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                | codigo_ibge + ano + uf^ano,
+                data = temp %>% filter(ano < 2011),
+                vcov = "hetero")
+
+
+est_14 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                  | codigo_ibge + ano + uf^ano,
+                  data = temp %>% filter(ano < 2015),
+                  vcov = "hetero")
+
+
+est_18 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                | codigo_ibge + ano +  uf^ano,
+                data = temp %>% filter(ano < 2019),
+                vcov = "hetero")
+
+
+
+#Saving the results
+etable(est_10, est_14, est_18, #mod_fund, mod_med,
+       vcov = "hetero",
+       headers = list(":_:" = list("2010" = 1,
+                                   "2014" = 1,
+                                   "2018" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_estrita_anos.tex",
+       replace = TRUE)
+
+
+
+rm(temp, est_10, est_14, est_18)
+
+# ---------------------------------------------------------------------------- #
+### 2.3.2 Broad ----
+# ---------------------------------------------------------------------------- #
+
+#Running the regressions
+est_10 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                | codigo_ibge + ano + uf^ano,
+                data = df_spend %>% filter(ano < 2011) %>% group_by(codigo_ibge) %>% 
+                  filter(dosage == 1 | 
+                           all(between(growth_spend, -20, 59), na.rm = TRUE)) %>% ungroup(),
+                vcov = "hetero")
+
+
+est_14 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                | codigo_ibge + ano + uf^ano,
+                data = df_spend %>% filter(ano < 2015) %>% group_by(codigo_ibge) %>% 
+                  filter(dosage == 1 | 
+                           all(between(growth_spend, -20, 59), na.rm = TRUE)) %>% ungroup(),
+                vcov = "hetero")
+
+
+est_18 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                | codigo_ibge + ano +  uf^ano,
+                data = df_spend %>% filter(ano < 2019) %>% group_by(codigo_ibge) %>% 
+                  filter(dosage == 1 | 
+                           all(between(growth_spend, -20, 59), na.rm = TRUE)) %>% ungroup(),
+                vcov = "hetero")
+
+
+
+#Saving the results
+etable(est_10, est_14, est_18, #mod_fund, mod_med,
+       vcov = "hetero",
+       headers = list(":_:" = list("2010" = 1,
+                                   "2014" = 1,
+                                   "2018" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_abrangente_anos.tex",
+       replace = TRUE)
 
 
 
