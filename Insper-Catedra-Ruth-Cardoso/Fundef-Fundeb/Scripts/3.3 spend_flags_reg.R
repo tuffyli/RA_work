@@ -102,12 +102,13 @@ df_spend <- data %>%
 ## 2.1. Reg Prof ----
 # ---------------------------------------------------------------------------- #
 
+#Here the dosage == 1 municipalities are loss through the filters
 
 est_10 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006)
                  | codigo_ibge + uf^ano,
                  data = df_spend %>% group_by (codigo_ibge) %>% 
                    filter(ano < 2011) %>% 
-                   filter(all(between(growth_spend, -20, 70), na.rm = TRUE)) %>%
+                   filter(all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
                    ungroup(),
                  vcov = "hetero")
 
@@ -309,7 +310,7 @@ est_10 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
                 | codigo_ibge + ano + uf^ano,
                 data = df_spend %>% filter(ano < 2011) %>% group_by(codigo_ibge) %>% 
                   filter(dosage == 1 | 
-                           all(between(growth_spend, -20, 59), na.rm = TRUE)) %>% ungroup(),
+                           all(growth_spend > -20 & growth_spend < 60, na.rm = TRUE)) %>% ungroup(),
                 vcov = "hetero")
 
 
@@ -317,7 +318,7 @@ est_14 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
                 | codigo_ibge + ano + uf^ano,
                 data = df_spend %>% filter(ano < 2015) %>% group_by(codigo_ibge) %>% 
                   filter(dosage == 1 | 
-                           all(between(growth_spend, -20, 59), na.rm = TRUE)) %>% ungroup(),
+                           all(growth_spend > -20 & growth_spend < 60, na.rm = TRUE)) %>% ungroup(),
                 vcov = "hetero")
 
 
@@ -325,7 +326,7 @@ est_18 <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
                 | codigo_ibge + ano +  uf^ano,
                 data = df_spend %>% filter(ano < 2019) %>% group_by(codigo_ibge) %>% 
                   filter(dosage == 1 | 
-                           all(between(growth_spend, -20, 59), na.rm = TRUE)) %>% ungroup(),
+                           all(growth_spend > -20 & growth_spend < 60, na.rm = TRUE)) %>% ungroup(),
                 vcov = "hetero")
 
 
@@ -338,6 +339,521 @@ etable(est_10, est_14, est_18, #mod_fund, mod_med,
                                    "2018" = 1)),
        file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_abrangente_anos.tex",
        replace = TRUE)
+
+
+rm(est_10, est_14, est_18)
+
+
+# ---------------------------------------------------------------------------- #
+# 3. Enroll reg ----
+# ---------------------------------------------------------------------------- #
+## 3.1 Enrollment log ----
+# ---------------------------------------------------------------------------- #
+
+df_spend <- df_spend %>% 
+  mutate( log_mat_total = log(mat_total),
+          log_mat_fun   = log(mat_fun),
+          log_mat_med   = log(mat_med),
+          log_mat_inf   = log(mat_inf),
+          log_mat_eja   = log(mat_eja),
+          log_mat_esp   = log(mat_esp))
+
+
+# ---------------------------------------------------------------------------- #
+## 3.2 Regression ----
+# ---------------------------------------------------------------------------- #
+### 3.2.1 Cluster ----
+# ---------------------------------------------------------------------------- #
+#### 3.2.1.1 Strict -----
+# ---------------------------------------------------------------------------- #
+
+
+est_rest_tot_clu <- feols(log_mat_total ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                  | codigo_ibge + ano + uf^ano,
+                  data = df_spend %>% 
+                    filter(ano < 2011) %>% 
+                    filter(dosage == 1 |
+                             flag_spend70 == 0 & flag_spendm20 == 0),
+                  vcov = ~codigo_ibge
+                  )
+
+
+est_rest_inf_clu <- feols(log_mat_inf ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = ~codigo_ibge
+                      )
+
+
+
+est_rest_fun_clu <- feols(log_mat_fun ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = ~codigo_ibge
+                      )
+
+
+
+est_rest_med_clu <- feols(log_mat_med ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = ~codigo_ibge
+                      )
+
+
+etable(est_rest_tot_clu, est_rest_inf_clu, est_rest_fun_clu, est_rest_med_clu
+)
+
+etable(est_rest_tot_clu, est_rest_inf_clu, est_rest_fun_clu, est_rest_med_clu, #mod_fund, mod_med,
+       vcov = ~codigo_ibge,
+       headers = list(":_:" = list("Total" = 1, "Infantil" = 1, "Fundamental" = 1,
+                                   "Médio" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_log_mat_rest_cluster.tex",
+       replace = TRUE)
+
+
+#Extracting the standard deviations
+
+models <- list(
+  Total       = est_rest_tot_clu,
+  Infantil    = est_rest_inf_clu,
+  Fundamental = est_rest_fun_clu,
+  Medio       = est_rest_med_clu
+)
+
+se_df <- map_dfr(names(models), function(name) {
+  
+  m <- models[[name]]
+  Vc <- vcov(m, ~codigo_ibge)          # clustered vcov
+  se_clu <- sqrt(diag(Vc))             # cluster SEs
+  tibble(
+    term = names(se_clu),
+    se_cluster = as.numeric(se_clu),
+    model = name
+  )
+})
+
+
+rm(est_rest_tot, est_rest_inf, est_rest_fun, est_rest_med)
+# ---------------------------------------------------------------------------- #
+#### 3.2.1.2 Broad ----
+# ---------------------------------------------------------------------------- #
+
+est_abra_tot <- feols(log_mat_total ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                  | codigo_ibge + ano + uf^ano,
+                  data = df_spend %>% group_by (codigo_ibge) %>% 
+                    filter(ano < 2011) %>% 
+                    filter(dosage == 1 |
+                             all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                    ungroup(),
+                  vcov = ~codigo_ibge)
+
+est_abra_inf <- feols(log_mat_inf ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = ~codigo_ibge)
+
+
+est_abra_fun <- feols(log_mat_fun ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = ~codigo_ibge)
+
+est_abra_med <- feols(log_mat_med ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano +uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = ~codigo_ibge)
+
+
+etable(est_abra_tot, est_abra_inf, est_abra_fun, est_abra_med
+)
+
+etable(est_abra_tot, est_abra_inf, est_abra_fun, est_abra_med, #mod_fund, mod_med,
+       vcov = ~codigo_ibge,
+       headers = list(":_:" = list("Total" = 1, "Infantil" = 1, "Fundamental" = 1,
+                                   "Médio" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_log_mat_abra_cluster.tex",
+       replace = TRUE)
+
+
+rm(est_abra_tot, est_abra_med, est_abra_fun, est_abra_inf)
+
+# ---------------------------------------------------------------------------- #
+### 3.2.2 Hetero ----
+# ---------------------------------------------------------------------------- #
+#### 3.2.2.1 Strict -----
+# ---------------------------------------------------------------------------- #
+
+
+est_rest_tot <- feols(log_mat_total ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = "hetero")
+
+
+est_rest_inf <- feols(log_mat_inf ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = "hetero")
+
+
+
+est_rest_fun <- feols(log_mat_fun ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = "hetero")
+
+
+
+est_rest_med <- feols(log_mat_med ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = "hetero")
+
+
+etable(est_rest_tot, est_rest_inf, est_rest_fun, est_rest_med
+)
+
+etable(est_rest_tot, est_rest_inf, est_rest_fun, est_rest_med, #mod_fund, mod_med,
+       vcov = "hetero",
+       headers = list(":_:" = list("Total" = 1, "Infantil" = 1, "Fundamental" = 1,
+                                   "Médio" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_log_mat_rest.tex",
+       replace = TRUE)
+
+
+rm(est_rest_tot, est_rest_inf, est_rest_fun, est_rest_med)
+
+
+# ---------------------------------------------------------------------------- #
+#### 3.2.2.2 Broad ----
+# ---------------------------------------------------------------------------- #
+
+est_abra_tot <- feols(log_mat_total ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = "hetero")
+
+est_abra_inf <- feols(log_mat_inf ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = "hetero")
+
+
+est_abra_fun <- feols(log_mat_fun ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = "hetero")
+
+est_abra_med <- feols(log_mat_med ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano +uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = "hetero")
+
+
+etable(est_abra_tot, est_abra_inf, est_abra_fun, est_abra_med
+)
+
+etable(est_abra_tot, est_abra_inf, est_abra_fun, est_abra_med, #mod_fund, mod_med,
+       vcov = "hetero",
+       headers = list(":_:" = list("Total" = 1, "Infantil" = 1, "Fundamental" = 1,
+                                   "Médio" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_log_mat_abra.tex",
+       replace = TRUE)
+
+
+rm(est_abra_tot, est_abra_med, est_abra_fun, est_abra_inf)
+
+
+
+
+# ---------------------------------------------------------------------------- #
+# 4. Other spendings ----
+# ---------------------------------------------------------------------------- #
+
+#Repeating teh estimations from the previous section but for the different courses
+
+## 4.1 Regression ----
+# ---------------------------------------------------------------------------- #
+### 4.1.1 Cluster ----
+# ---------------------------------------------------------------------------- #
+#### 4.1.1.1 Strict -----
+# ---------------------------------------------------------------------------- #
+
+
+est_rest_tot <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = ~codigo_ibge)
+
+
+est_rest_inf <- feols(real_des_inf_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = ~codigo_ibge)
+
+
+
+est_rest_fun <- feols(real_des_fun_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = ~codigo_ibge)
+
+
+
+est_rest_med <- feols(real_des_med_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = ~codigo_ibge)
+
+
+etable(est_rest_tot, est_rest_inf, est_rest_fun, est_rest_med
+)
+
+etable(est_rest_tot, est_rest_inf, est_rest_fun, est_rest_med, #mod_fund, mod_med,
+       vcov = ~codigo_ibge,
+       headers = list(":_:" = list("Total" = 1, "Infantil" = 1, "Fundamental" = 1,
+                                   "Médio" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_other_spend_cluster_rest.tex",
+       replace = TRUE)
+
+
+rm(est_rest_tot, est_rest_inf, est_rest_fun, est_rest_med)
+# ---------------------------------------------------------------------------- #
+#### 4.1.1.2 Broad ----
+# ---------------------------------------------------------------------------- #
+
+est_abra_tot <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = ~codigo_ibge)
+
+est_abra_inf <- feols(real_des_inf_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = ~codigo_ibge)
+
+
+est_abra_fun <- feols(real_des_fun_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = ~codigo_ibge)
+
+est_abra_med <- feols(real_des_med_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano +uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = ~codigo_ibge)
+
+
+etable(est_abra_tot, est_abra_inf, est_abra_fun, est_abra_med
+)
+
+etable(est_abra_tot, est_abra_inf, est_abra_fun, est_abra_med, #mod_fund, mod_med,
+       vcov = ~codigo_ibge,
+       headers = list(":_:" = list("Total" = 1, "Infantil" = 1, "Fundamental" = 1,
+                                   "Médio" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_other_spend_cluster_abra.tex",
+       replace = TRUE)
+
+
+rm(est_abra_tot, est_abra_med, est_abra_fun, est_abra_inf)
+
+# ---------------------------------------------------------------------------- #
+### 4.1.2 Hetero ----
+# ---------------------------------------------------------------------------- #
+#### 4.1.2.1 Strict -----
+# ---------------------------------------------------------------------------- #
+
+
+
+est_rest_tot <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = "hetero")
+
+
+est_rest_inf <- feols(real_des_inf_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = "hetero")
+
+
+
+est_rest_fun <- feols(real_des_fun_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = "hetero")
+
+
+
+est_rest_med <- feols(real_des_med_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 flag_spend70 == 0 & flag_spendm20 == 0),
+                      vcov = "hetero")
+
+
+etable(est_rest_tot, est_rest_inf, est_rest_fun, est_rest_med
+)
+
+etable(est_rest_tot, est_rest_inf, est_rest_fun, est_rest_med, #mod_fund, mod_med,
+       vcov = "hetero",
+       headers = list(":_:" = list("Total" = 1, "Infantil" = 1, "Fundamental" = 1,
+                                   "Médio" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_other_spend_rest.tex",
+       replace = TRUE)
+
+
+rm(est_rest_tot, est_rest_inf, est_rest_fun, est_rest_med)
+# ---------------------------------------------------------------------------- #
+#### 4.1.2.2 Broad ----
+# ---------------------------------------------------------------------------- #
+
+est_abra_tot <- feols(real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = "hetero")
+
+est_abra_inf <- feols(real_des_inf_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = "hetero")
+
+
+est_abra_fun <- feols(real_des_fun_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = "hetero")
+
+est_abra_med <- feols(real_des_med_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                      | codigo_ibge + ano +uf^ano,
+                      data = df_spend %>% group_by (codigo_ibge) %>% 
+                        filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = "hetero")
+
+
+etable(est_abra_tot, est_abra_inf, est_abra_fun, est_abra_med
+)
+
+etable(est_abra_tot, est_abra_inf, est_abra_fun, est_abra_med, #mod_fund, mod_med,
+       vcov = "hetero",
+       headers = list(":_:" = list("Total" = 1, "Infantil" = 1, "Fundamental" = 1,
+                                   "Médio" = 1)),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_other_spend_abra.tex",
+       replace = TRUE)
+
+
+rm(est_abra_tot, est_abra_med, est_abra_fun, est_abra_inf)
+
+
+
+# ---------------------------------------------------------------------------- #
+#5. Union test ----
+# ----------------------------------------------------------------------------#
+
 
 
 
