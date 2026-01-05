@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 05/12/2025
+# Date: 05/01/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -2271,6 +2271,106 @@ ggsave( #Saving image
   path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/", #Saving directly to the report
   width = 1300/96, height = 620/96, dpi = 300
 )
+
+
+
+rm(list = ls())
+gc()
+
+# ---------------------------------------------------------------------------- #
+# 11. Students numbers ----
+# ---------------------------------------------------------------------------- #
+## 11.1 Data ----
+# ---------------------------------------------------------------------------- #
+
+#' Opening the dataset with the enrollments for each year and each education level.
+
+df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
+  group_by(codmun, ano) %>% 
+  summarise(
+    mat_fun = sum(ef_tot, na.rm = T),
+    mat_med = sum(em_tot, na.rm = T),
+    mat_inf = sum(day_tot + pre_tot, na.rm = T),
+    mat_esp = sum(esp_tot, na.rm = T),
+    mat_eja = sum(eja_tot, na.rm = T),
+    mat_total = mat_fun + mat_med + mat_inf + mat_eja + mat_esp,
+    .groups = "drop") %>% 
+  mutate(codmun = codmun %/% 10) %>% 
+  rename(codigo_ibge = codmun)
+
+# Main data
+df_main <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>% 
+  filter(ano == 2007) %>% 
+  #Groups
+  mutate(grupo = case_when(
+    dosage > 0 ~ "Winner",   # net beneficiary
+    dosage < 0 ~ "Loser",   # net contributer
+    TRUE ~ NA_character_
+    )) %>%  
+  select(codigo_ibge, grupo)
+
+#creatng the filter variable list
+
+data <- df_enroll %>% 
+  left_join(df_main, by = c("codigo_ibge"))
+
+
+rm(df_main, df_enroll)
+
+
+# ---------------------------------------------------------------------------- #
+## 11.2 N students ----
+# ---------------------------------------------------------------------------- #
+#' For the number of students per education level I will sum the total number of
+#' them, combining per municipality
+
+df_new <- data %>% 
+  group_by(ano, grupo) %>% 
+  summarise(mat_fun = sum(mat_fun, na.rm = T),
+            mat_med = sum(mat_med, na.rm = T),
+            mat_inf = sum(mat_inf, na.rm = T),
+            mat_esp = sum(mat_esp, na.rm = T),
+            mat_eja = sum(mat_eja, na.rm = T),
+            mat_total = sum(mat_total, na.rm = T),
+            .groups = "drop") %>% 
+  filter(!is.na(grupo))
+
+# ---------------------------------------------------------------------------- #
+### 11.2.1 Saving ----
+# ---------------------------------------------------------------------------- #
+
+
+edu <- c("mat_fun", "mat_med", "mat_inf", "mat_esp", "mat_eja", "mat_total")
+
+for(i in edu) {
+  
+  message("Starting... ",i,":")
+  #Graph creation 
+  plot <- ggplot(df_win %>% filter(!is.na(grupo)),
+                 aes(x = ano, y = .data[[i]], color = grupo, group = grupo)) +
+    geom_line(size = 1) +
+    geom_point(size = 2) +
+    theme_classic() +
+    labs(
+      x = "Ano",
+      y = "Matrículas Totais",
+      color = "Grupo"
+    )
+  
+  print(plot)
+  #saving plot
+  ggsave(
+    filename = paste0("num_",i,".png"),
+    plot = plot,
+    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Mat/",
+    width = 1200/96, height = 420/96, dpi = 110
+  )
+  
+  
+  message("saving ",i,":")
+  rm(i, plot)
+  
+}
 
 
 
