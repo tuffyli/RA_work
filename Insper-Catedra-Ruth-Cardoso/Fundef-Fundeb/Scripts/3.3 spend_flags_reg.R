@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions - Spending + Flags
 # Last edited by: Tuffy Licciardi Issa
-# Date: 17/12/2025
+# Date: 05/01/2026
 # ---------------------------------------------------------------------------- #
 
 
@@ -1480,7 +1480,18 @@ filter_list[["rest"]] <- unique(df_rest$codigo_ibge) #strict
 
 filter_list[["abra"]] <- unique(df_abra$codigo_ibge) #broad
 
-rm(df_rest, df_abra)
+
+#5) Now adding the enrollment filter
+
+df_enro <- df_spend %>% 
+  group_by(codigo_ibge) %>% 
+  filter(dosage == 1 | all(growth_enroll < 10 | growth_enroll > -10))
+
+
+filter_list[["enro"]] <- unique(df_enro$codigo_ibge)
+
+
+rm(df_rest, df_abra, df_enro)
 
 #----------------------------------------------------------------------------- #
 # 7. School Infra ----
@@ -2394,19 +2405,30 @@ rm(final, grid_plot, plots, p_school, p_schoola, p_studen, p_studena,
 # ---------------------------------------------------------------------------- #
 ## 8.3 Grade ----
 # ---------------------------------------------------------------------------- #
-### 8.3.1 Regressions ----
-# ---------------------------------------------------------------------------- #
-#### 8.3.1.1 No Filter ----
+###8.3.0 Weights ----
 # ---------------------------------------------------------------------------- #
 #Weights dataframes
 df_w5 <- df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% select(peso, peso_mt, peso_lp)  #5th grade
-df_w9 <- df %>% filter(grade == 9) %>% select(peso, peso_mt, peso_lp)  #9th grade
 
-
+#filtered weights
 df_w2 <- df %>% 
   filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
   filter(codmun %in% filter_list[["abra"]]) %>% select(peso, peso_mt, peso_lp)
 
+#filtered weigjtes + enrollment weights
+df_ww <- df %>% 
+  filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+  filter(codmun %in% filter_list[["abra"]] &
+           codmun %in% filter_list[["enro"]]) %>% #Enrollment within |10|%
+  select(peso, peso_mt, peso_lp)
+
+
+
+#----------------------------------------------------------------------------- #
+### 8.3.1 Regressions ----
+# ---------------------------------------------------------------------------- #
+#### 8.3.1.1 No Filter ----
+# ---------------------------------------------------------------------------- #
 
 main_mat_f <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(ano, grupo, ref = 2007)
                   + PIBpc #Controls
@@ -2426,7 +2448,7 @@ main_pot_f <- feols(as.numeric(profic_port) ~ aluno_dosage : i(ano, grupo, ref =
 etable(main_mat_f, main_pot_f)
 
 # ---------------------------------------------------------------------------- #
-#### 8.3.1.3 Broad ----
+#### 8.3.1.2 Broad ----
 # ---------------------------------------------------------------------------- #
 
 main_mat_a <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(ano, grupo, ref = 2007)
@@ -2448,8 +2470,37 @@ main_pot_a <- feols(as.numeric(profic_port) ~ aluno_dosage : i(ano, grupo, ref =
 
 etable(main_mat_a, main_pot_a)
 
+
 # ---------------------------------------------------------------------------- #
-#### 8.3.1.2 Graph ----
+#### 8.3.1.3 Enroll Filter ----
+# ---------------------------------------------------------------------------- #
+
+
+
+main_mat_e <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(ano, grupo, ref = 2007)
+                    + PIBpc #Controls
+                    | codmun + ano + uf^ano, #FE
+                    data = df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+                      filter(codmun %in% filter_list[["abra"]] &
+                               codmun %in% filter_list[["enro"]]), 
+                    weights = df_ww$peso_mt,
+                    vcov = "hetero")
+
+main_pot_e <- feols(as.numeric(profic_port) ~ aluno_dosage : i(ano, grupo, ref = 2007)
+                    + PIBpc #Controls
+                    | codmun + ano + uf^ano, #FE
+                    data = df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+                      filter(codmun %in% filter_list[["abra"]] &
+                               codmun %in% filter_list[["enro"]]),
+                    weights = df_ww$peso_lp,
+                    vcov = "hetero")
+
+
+etable(main_mat_e, main_pot_e)
+
+
+# ---------------------------------------------------------------------------- #
+#### 8.3.1.4 Graph ----
 # ---------------------------------------------------------------------------- #
 
 win_lose_plot <- function(est_obj, title = NULL, ylim = NULL) {
@@ -2504,11 +2555,14 @@ win_lose_plot <- function(est_obj, title = NULL, ylim = NULL) {
 }
 
 
-p_mat_f <- win_lose_plot(main_mat_f, "Matemática")   #Classroom
-p_pot_f <- win_lose_plot(main_pot_f, "Português")  #Teacher's Room
+p_mat_f <- win_lose_plot(main_mat_f, "Matemática")   #Math
+p_pot_f <- win_lose_plot(main_pot_f, "Português")    #Language
 
-p_mat_a <- win_lose_plot(main_mat_a, "Matemática")   #Classroom
-p_pot_a <- win_lose_plot(main_pot_a, "Português")  #Teacher's Room
+p_mat_a <- win_lose_plot(main_mat_a, "Matemática")   #Math
+p_pot_a <- win_lose_plot(main_pot_a, "Português")    #Language
+
+p_mat_e <- win_lose_plot(main_mat_e, "Matemática")   #Math
+p_pot_e <- win_lose_plot(main_pot_e, "Português")    #Language
 
 
 # helper that returns a tiny ggplot containing the vertical label text
@@ -2527,12 +2581,15 @@ label_row <- function(text, size_pt = 10) {
 
 
 # Create the right column with vertical labels (one per row)
-labels_col <- label_row("Abrangente",     size_pt = 6) /   # top row
-  label_row("Sem Filtro", size_pt = 6) 
+labels_col <- 
+  label_row("Abra. + Mat.", size_pt = 6) /
+  label_row("Abrangente", size_pt = 6) /   # top row
+  label_row("Sem Filtro", size_pt = 6)
 
 # put the 12 plots in the exact left-to-right, top-to-bottom order
-plots <- list(
-p_mat_a, p_pot_a, p_mat_f, p_pot_f
+plots <- list(p_mat_e, p_pot_e, #Double filter
+p_mat_a, p_pot_a, #Filter
+p_mat_f, p_pot_f #No filter
 )
 
 # normalize per-plot margins so they don't force reflow
@@ -2542,7 +2599,7 @@ normalize_margin <- function(p) {
 plots <- lapply(plots, normalize_margin)
 
 # Force a 4 columns x 3 rows layout
-grid_plot <- patchwork::wrap_plots(plots, ncol = 2, nrow = 2) +
+grid_plot <- patchwork::wrap_plots(plots, ncol = 2, nrow = 3) +
   plot_layout(guides = "collect", widths = rep(1, 2), heights = rep(1,2))
 
 # Now combine with the label column (already defined earlier as labels_col)
@@ -2559,8 +2616,44 @@ ggsave( #Saving image
   width = 1000/96, height = 620/96, dpi = 300
 )
 
+# ---------------------------------------------------------------------------- #
+#### 8.3.1.5 Table ----
+# ---------------------------------------------------------------------------- #
+##### 8.3.1.5.1 Math ----
+# ---------------------------------------------------------------------------- #
+
+
+#Saving all the math estimations
+etable(main_mat_f, main_mat_a, main_mat_e,
+       vcov = "hetero",
+       headers = list(":_:" = list("Matemática" = 1,
+                                   "Matemática - Filtro" = 1,
+                                   "Matemática - Filtro + Mat." = 1),
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/saeb_grades_math.tex",
+       replace = TRUE))
+
+
+# ---------------------------------------------------------------------------- #
+##### 8.3.1.5.1 Language ----
+# ---------------------------------------------------------------------------- #
+
+#Saving all the language estimations
+etable(main_pot_f, main_pot_a, main_pot_e,
+       vcov = "hetero",
+       headers = list(":_:" = list("Português" = 1,
+                                   "Português - Filtro" = 1,
+                                   "Português - Filtro + Mat." = 1),
+                      file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/saeb_grades_lang.tex",
+                      replace = TRUE))
+
+
+
+
+
+#Cleaning the now unwanted objects
 rm(plots, labels_col, p_mat_a, p_mat_f, p_pot_a, p_pot_f, main_mat_a, final,
-   main_mat_f, main_pot_a, main_pot_f, df_w2, df_w5, df_w9)
+   main_mat_f, main_pot_a, main_pot_f, df_w2, df_w5, df_w9, p_mat_e, p_pot_e,
+   main_mat_e, main_pot_e)
 
 #----------------------------------------------------------------------------- #
 ### 8.3.2 Regression Comb ----
@@ -2627,6 +2720,12 @@ etable(main_mat_f, main_mat_a, main_pot_f, main_pot_a,
 
 
 
+
+
+# ---------------------------------------------------------------------------- #
+##8.4 Other filter ----
+# ---------------------------------------------------------------------------- #
+#' In addition to the already stablished filters I will input
 
 
 
