@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions - Spending + Flags
 # Last edited by: Tuffy Licciardi Issa
-# Date: 05/01/2026
+# Date: 06/01/2026
 # ---------------------------------------------------------------------------- #
 
 
@@ -1485,7 +1485,8 @@ filter_list[["abra"]] <- unique(df_abra$codigo_ibge) #broad
 
 df_enro <- df_spend %>% 
   group_by(codigo_ibge) %>% 
-  filter(dosage == 1 | all(growth_enroll < 10 | growth_enroll > -10))
+  filter(dosage == 1 | all(growth_enroll < 15 #| growth_enroll > -10
+                           ))
 
 
 filter_list[["enro"]] <- unique(df_enro$codigo_ibge)
@@ -2628,9 +2629,9 @@ etable(main_mat_f, main_mat_a, main_mat_e,
        vcov = "hetero",
        headers = list(":_:" = list("Matemática" = 1,
                                    "Matemática - Filtro" = 1,
-                                   "Matemática - Filtro + Mat." = 1),
+                                   "Matemática - Filtro + Mat." = 1)),
        file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/saeb_grades_math.tex",
-       replace = TRUE))
+       replace = TRUE)
 
 
 # ---------------------------------------------------------------------------- #
@@ -2642,9 +2643,9 @@ etable(main_pot_f, main_pot_a, main_pot_e,
        vcov = "hetero",
        headers = list(":_:" = list("Português" = 1,
                                    "Português - Filtro" = 1,
-                                   "Português - Filtro + Mat." = 1),
+                                   "Português - Filtro + Mat." = 1)),
                       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/saeb_grades_lang.tex",
-                      replace = TRUE))
+                      replace = TRUE)
 
 
 
@@ -2720,12 +2721,92 @@ etable(main_mat_f, main_mat_a, main_pot_f, main_pot_a,
 
 
 
+rm(df_ww, df_saeb, df_mun_school)
+# ---------------------------------------------------------------------------- #
+#9. Aluno Dosage (2005) ----
+# ---------------------------------------------------------------------------- #
+#' I will create a new student dosage variable utilizing the number of enrollments
+#' in the year of 2005.
 
 
 # ---------------------------------------------------------------------------- #
-##8.4 Other filter ----
+## 9.1 Enroll data ----
 # ---------------------------------------------------------------------------- #
-#' In addition to the already stablished filters I will input
+
+df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
+  group_by(codmun, ano) %>% 
+  summarise(
+    mat_fun = sum(ef_tot, na.rm = T),
+    mat_med = sum(em_tot, na.rm = T),
+    mat_inf = sum(day_tot + pre_tot, na.rm = T),
+    mat_esp = sum(esp_tot, na.rm = T),
+    mat_eja = sum(eja_tot, na.rm = T),
+    mat_total = mat_fun + mat_med + mat_inf + mat_eja + mat_esp,
+    .groups = "drop") %>% 
+  mutate(codmun = codmun %/% 10) %>% 
+  ungroup() %>% 
+  rename(codigo_ibge = codmun) %>% 
+  filter(ano == 2005) %>% 
+  select(codigo_ibge, mat_total) %>% 
+  rename(mat_total_05 = mat_total)
+
+#Now joining both dataframes:
+
+df_spend <- df_spend %>% 
+  left_join(df_enroll, by = c("codigo_ibge"))
+
+
+# ---------------------------------------------------------------------------- #
+### 9.1.1 New Variable ----
+# ---------------------------------------------------------------------------- #
+
+#Creating the new variable
+df_spend <- df_spend %>% 
+  group_by(codigo_ibge) %>% 
+  mutate(
+    adosage_05 = (receita_real - receita_simulada)/mat_total_05
+  ) %>% 
+  ungroup()
+
+
+# ---------------------------------------------------------------------------- #
+## 9.2 Regression ----
+# ---------------------------------------------------------------------------- #
+
+
+#Here the dosage == 1 municipalities are loss through the filters
+
+est_10 <- feols(real_des_edu_pa ~ adosage_05 : i(ano, ref = 2006) + PIBpc
+                | codigo_ibge + ano + uf^ano,
+                data = df_spend %>% group_by (codigo_ibge) %>% 
+                  #filter(ano < 2011) %>% 
+                  #filter(all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                  ungroup(),
+                vcov = "hetero")
+
+est_prof <- feols(real_des_edu_pa ~ adosage_05 : i(ano, ref = 2006) + PIBpc
+                  | codigo_ibge + ano + uf^ano,
+                  data = df_spend %>% 
+                    #filter(ano < 2011) %>% 
+                    filter(dosage == 1 | flag_spend70 == 0 & flag_spendm20 == 0),
+                  vcov = "hetero")
+
+etable(est_10, est_prof
+)
+
+etable( est_10, est_prof, #mod_fund, mod_med,
+        vcov = "hetero",
+        headers = list(":_:" = list("Sem Filtro" = 1,
+                                    #"Fundamental" = 1, "Médio" = 1,
+                                    "Filtro +70 -20" = 1)),
+        file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_prof_05.tex",
+        replace = TRUE)
+
+rm(est_prof, est_10, df_enroll)
+
+
+
+
 
 
 
