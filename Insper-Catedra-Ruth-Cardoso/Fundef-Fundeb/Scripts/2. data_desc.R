@@ -2346,11 +2346,11 @@ for(i in edu) {
   
   message("Starting... ",i,":")
   #Graph creation 
-  plot <- ggplot(df_win %>% filter(!is.na(grupo)),
+  plot <- ggplot(df_new %>% filter(!is.na(grupo)),
                  aes(x = ano, y = .data[[i]], color = grupo, group = grupo)) +
     geom_line(size = 1) +
     geom_point(size = 2) +
-    theme_classic() +
+    theme_classic(base_size = 27) +   # <- increase all text
     labs(
       x = "Ano",
       y = "Matrículas Totais",
@@ -2363,7 +2363,7 @@ for(i in edu) {
     filename = paste0("num_",i,".png"),
     plot = plot,
     path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Mat/",
-    width = 1200/96, height = 420/96, dpi = 110
+    width = 1000/96, height = 420/96, dpi = 110
   )
   
   
