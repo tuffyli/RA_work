@@ -1,8 +1,6 @@
 # ---------------------------------------------------------------------------- #
-# Data Description
-# DataBase adjustment
-# Last edited by: Tuffy Licciardi Issa
-# Date: 11/07/2025
+# Descrição da base de dados + Anexo
+# Library -----
 # ---------------------------------------------------------------------------- #
 
 library(tidyverse)
@@ -15,7 +13,7 @@ library(fastDummies)
 library(janitor)
 library(xtable)
 library(viridis)
-library(rdd)
+library(rdrobust)
 library(readstata13)
 library(stringr)
 library(RColorBrewer)
@@ -274,4 +272,96 @@ print.xtable(
   },
   only.contents = T
 )
+
+
+rm(list = ls())
+gc()
+# ---------------------------------------------------------------------------- #
+# Migração ----
+# ---------------------------------------------------------------------------- #
+
+
+
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/Bases/No_age_filt/base_nota_2019.RDS")) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
+  setDT()
+
+
+base <- base %>% 
+  mutate(
+    
+    escm = case_when(
+      esc_mae %in% c("D","E","F") ~ 0,
+      esc_mae %in% c("A","B","C") ~ 1,
+      .default = NA),
+    
+    mae_trab_man = case_when(
+      emp_mae %in% c("A","B","C") ~ 1,
+      emp_mae %in% c("D","E","F") ~ 0,
+      .default = NA
+    ),
+    
+    pai_trab_man = case_when(
+      emp_pai %in% c("A","B","C") ~ 1,
+      emp_pai %in% c("D","E","F") ~ 0,
+      .default = NA
+    )
+  ) %>%
+  mutate(
+    old = ifelse(
+      idade > 18 & conclusao == 2, 1,
+      ifelse( idade %in% c(17, 18), 0, NA))
+  ) %>% 
+  mutate(
+    mig_dummy = ifelse(
+      !is.na(mun_prova) & !is.na(mun_res) & mun_prova != mun_res, 1,
+      ifelse(!is.na(mun_prova) & !is.na(mun_res), 0 , NA)
+    )
+  ) %>% filter(conclusao == 2)
+
+
+# ---------------------------------------------------------------------------- #
+## Desc ----
+# ---------------------------------------------------------------------------- #
+
+base_desc <- base %>% 
+  filter(priv0 == 1) %>% 
+  group_by(ano) %>% 
+  rename(Year = ano) %>% 
+  summarise(
+    `Total Students` = n(),
+    Migration = sum(mig_dummy, na.rm = T),
+    `Group 1 (None)` = sum(nonmig1, na.rm = T),
+    `Group 2 (School)`  = sum(nonmig2, na.rm = T),
+    `Group 3 (Exam)`  = sum(nonmig3, na.rm = T),
+    `Group 4 (Residency)`  = sum(nonmig4, na.rm = T),
+    
+    .groups = "drop"
+  )
+
+
+#Transposing it
+df_tidy <- base_desc %>%
+  pivot_longer(-Year, names_to = "variable", values_to = "value") %>%
+  pivot_wider(names_from = Year, values_from = value) %>% 
+  column_to_rownames("variable")
+
+
+
+# ---------------------------------------------------------------------------- #
+## Saving ----
+# ---------------------------------------------------------------------------- #
+
+latex_table <- knitr::kable(
+  df_tidy,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/migration_desc.tex")
+
+
 
