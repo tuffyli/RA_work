@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------- #
-# Data Description
-# DataBase adjustment
+# Regressions
+# Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 26/08/2025
+# Date: 08/01/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -22,7 +22,7 @@ library(fastDummies)
 library(janitor)
 library(xtable)
 library(viridis)
-library(rdd)
+library(rdrobust)
 library(readstata13)
 library(stringr)
 library(RColorBrewer)
@@ -120,6 +120,10 @@ list[[as.character(paste0(2019,"-",2018,"C|NF"))]] <- rdrobust(
 #Extração da banda ótima
 bw_main_a  <- list[["2019-2018C|NF"]]$bws[1]
 bw_bias_a  <- list[["2019-2018C|NF"]]$bws[2]
+
+#Salvando a banda principal
+save(bw_main_a, bw_bias_a,
+     file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_NF.RData")
 # ---------------------------------------------------------------------------- #
 #rm(ef,list,base_a)
 
@@ -6857,7 +6861,9 @@ rm( covs, plot_covs)
 # 17.6 Match ----
 # ---------------------------------------------------------------------------- #
 
-##17.6 MAPA ----
+# ---------------------------------------------------------------------------- #
+## BW Map ----
+# ---------------------------------------------------------------------------- #
 line <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/line.RDS")
 base <- base_inpe %>%
   filter(ano == 2019) %>% 
@@ -6866,10 +6872,6 @@ base <- base_inpe %>%
   mutate(amostra = 1)
 
 
-
-mun_enem <- base_a %>% 
-  filter(ano == 2019) %>% 
-  select(mun_prova)
 
 
 mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/mun_hv.RDS") %>%
@@ -6934,8 +6936,7 @@ map <- ggplot(mun_hv) +
 
 map
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/map_band.png"),plot = map,device = "png", dpi = 300)
-
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band.png"),plot = map,device = "png", dpi = 300)
 
 
 ### Balance -----
