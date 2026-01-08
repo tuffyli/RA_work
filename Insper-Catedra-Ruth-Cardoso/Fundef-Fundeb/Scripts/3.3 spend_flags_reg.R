@@ -1485,7 +1485,7 @@ filter_list[["abra"]] <- unique(df_abra$codigo_ibge) #broad
 
 df_enro <- df_spend %>% 
   group_by(codigo_ibge) %>% 
-  filter(dosage == 1 | all(growth_enroll < 15 #| growth_enroll > -10
+  filter(dosage == 1 | all(abs(growth_enroll) < 15 #| growth_enroll > -10
                            ))
 
 
@@ -2091,6 +2091,193 @@ rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libr
    est_troom)
 
 
+# ---------------------------------------------------------------------------- #
+## 7.4 Child Infra ----
+# ---------------------------------------------------------------------------- #
+
+#' Here I will analyze the effects on the infraestruture of schools that have 
+#' students enrolled in the kinder garden.
+
+
+#Starting with the scholl data
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
+  mutate(codmun = as.character(codmun %/% 10),
+         new_psc = ifelse(pre_tot > 0, 1, 0),
+         new_day = ifelse(day_tot > 0, 1, 0)
+  )
+
+#We will calculate the municipal exposure, weighted by the enrollment numbers
+df_school <- df_school %>% 
+  filter(new_psc == 1 | new_day == 1) %>%  #Filter for schools with preschool
+  group_by(codmun, ano) %>% 
+  summarise(
+    total_enroll = sum(enroll, na.rm = T),
+    total_presch = sum(pre_tot, na.rm = T),
+    total_daycar = sum(day_tot, na.rm = T),
+    
+    #numeral variables
+    class     = total_enroll / sum(classroom, na.rm = T),
+    n_employee = sum(employee, na.rm = T),                 #New contracts
+    employee  = total_enroll / n_employee,
+    schools   = n(),
+    
+    
+    #School characteristics
+    exp_troom = sum(enroll*teach_room, na.rm = T)/total_enroll,
+    exp_lab   = sum(enroll*lab_dummy, na.rm = T) /total_enroll,
+    exp_lib   = sum(enroll*lib_dummy, na.rm = T) /total_enroll,
+    exp_play  = sum(enroll*play_area, na.rm = T) /total_enroll,
+    exp_lunch = sum(enroll*lunch, na.rm = T)     /total_enroll,
+    
+    #Courses Student Exposure
+    exp_psch  = sum((pre_tot + day_tot)*kinder, na.rm = T)    /total_enroll,
+    exp_elem  = sum(ef_tot*elementary, na.rm = T)/total_enroll,
+    exp_high  = sum(em_tot*high, na.rm = T)      /total_enroll,
+    exp_inc   = sum(esp_tot*inclusion, na.rm = T) /total_enroll,
+    
+    #Childhood exp
+    child_psch = sum(pre_tot*preschool, na.rm = T),
+    child_dayc = sum(day_tot*daycare, na.rm = T),
+    
+    new_child_psch = sum(pre_tot, na.rm = T),
+    new_child_dayc = sum(day_tot, na.rm = T),
+    
+    #Numb. Schools
+    n_daycare = sum(daycare, na.rm = T),
+    n_preschl = sum(preschool, na.rm = T),
+    
+    new_n_daycare = sum(new_day, na.rm = T),
+    new_n_preschl = sum(new_psc, na.rm = T),
+    
+    .groups = "drop"
+  ) %>% 
+  mutate(k = ano - 2007)
+
+
+#Main regression dataframe
+df_reg <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf_flags.rds") %>% 
+  select(codigo_ibge, ano, uf, nome, dosage, aluno_dosage, PIBpc,
+         des_edu_pc, des_fund_pc, des_med_pc, des_inf_pc) %>% 
+  mutate(across(c(codigo_ibge, uf), as.character))
+
+
+#Combining both databases
+df_comb <- df_school %>% 
+  left_join(df_reg %>%
+              filter(ano %in% c(2005:2018)) %>%
+              mutate(codigo_ibge = as.character(codigo_ibge)),
+            by = c("codmun" = "codigo_ibge", "ano" = "ano")) %>% 
+  
+  #Separating for Winner and Loser
+  mutate(grupo = case_when(
+    dosage > 0 ~ "Winner",
+    dosage < 0 ~ "Loser",
+    TRUE ~ NA
+  ),
+  grupo = factor(grupo))
+
+
+# ---------------------------------------------------------------------------- #
+### 7.4.1 Infra reg ----
+# ---------------------------------------------------------------------------- #
+#### 7.4.1.1 Broad ----
+# ---------------------------------------------------------------------------- #
+
+#Classroom
+est_class <- feols( class ~ aluno_dosage : i(ano, grupo, ref = 2006) +
+                      PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                    vcov = "hetero")
+#Teacher room
+est_troom <- feols( exp_troom ~ aluno_dosage : i(ano, grupo, ref = 2006) +
+                      PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                    vcov = "hetero")
+#Laboratory
+est_labs <- feols(exp_lab ~ aluno_dosage : i(ano, grupo, ref = 2006)
+                  + PIBpc |
+                    codmun + ano + uf^ano,
+                  data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                  vcov = "hetero")
+
+#Library
+est_libra <- feols(exp_lib ~ aluno_dosage : i(ano, grupo, ref = 2006)
+                   + PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                   vcov = "hetero")
+
+#Play Area
+est_play <- feols(exp_play ~ aluno_dosage : i(ano, grupo, ref = 2006)
+                  + PIBpc |
+                    codmun + ano + uf^ano,
+                  data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                  vcov = "hetero")
+
+#Lunch
+est_lunch <- feols(exp_lunch ~ aluno_dosage : i(ano, grupo, ref = 2006)
+                   + PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                   vcov = "hetero")
+
+#Employee 
+est_employ <- feols(employee ~ aluno_dosage : i(ano, grupo, ref = 2006)
+                    + PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                    vcov = "hetero")
+
+
+est_n_employ <- feols(n_employee ~ aluno_dosage : i(ano, grupo, ref = 2006)
+                      + PIBpc |
+                        codmun + ano + uf^ano,
+                      data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                      vcov = "hetero")
+
+etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_employ, est_n_employ)
+
+# --------------------------------- #
+##### 7.4.1.1.1 Graph ----
+# --------------------------------- #
+
+# 3) Apply helper to each ggiplot object
+p_class <- win_lose_plot(est_class, "Aluno/Salas de aula")   #Classroom
+p_troom <- win_lose_plot(est_troom, "Exp. Sala dos Prof.")  #Teacher's Room
+p_labs  <- win_lose_plot(est_labs,  "Exp. Laboratórios")    #Laboratory
+p_libra <- win_lose_plot(est_libra, "Exp. Biblioteca")      #Library
+p_play  <- win_lose_plot(est_play,  "Exp. Quadras/Parque")  #Play Area
+p_lunch <- win_lose_plot(est_lunch, "Exp. Merenda")         #Lunch
+p_employ <- win_lose_plot(est_employ,"Aluno/Funcionários")   #Employee
+p_nemploy <- win_lose_plot(est_n_employ, "N° Funcionários")
+blank <- ggplot() + theme_void()
+
+grid_plot <- ( p_troom + p_labs + p_libra) /
+  (p_play + p_lunch + blank) /
+  (p_class   + p_employ + p_nemploy)
+
+final <- grid_plot + plot_annotation(
+  #title = "Event-study: infrastructure / staff outcomes",
+  caption = "Estimates from feols(...) with i(k, ref = -1)"
+)
+
+final
+
+ggsave( #Saving image
+  filename = paste0("winlose_school_infra_abra_preschool.png"),
+  plot = final,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Filter/", #Saving directly to the report
+  width = 1300/96, height = 720/96, dpi = 300
+)
+
+rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libra,
+   final, est_class, est_employ, est_labs, est_libra, est_lunch, est_play, win_lose_plot,
+   est_troom)
+
+
+
 rm(df_comb, df_reg, df_school, df_spend, est_n_employ, p_nemploy, data)
 # ---------------------------------------------------------------------------- #
 # 8. SAEB ----
@@ -2216,6 +2403,7 @@ df_mun_school <- df %>%
 filter_saeb <- list()
 filter_saeb[["in_saeb"]] <- as.character(unique(df_mun_school$codmun)) #List of municipalities present in all SAEB
 filter_saeb[["win"]]     <- unique((df %>% filter(grupo == "Winner"))$codmun)
+
 
 
 df_mun_school <- df_mun_school %>% 
