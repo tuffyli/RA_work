@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 08/01/2026
+# Date: 09/01/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -502,10 +502,11 @@ fig <- rdplot(y = yv$vd,
               #binselect = "esmv",
               kernel = "triangular",
               h = bw_main_a,
+              nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
               subset = temp$subset == 1,
-              hide = F,
+              hide = T,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
 )
@@ -539,24 +540,24 @@ xtips <- seq(-4*10^5,4*10^5,10^5)
 fig_gg <- ggplot() +
   geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
              alpha = 0.5, size = 2, show.legend = FALSE) + 
-  geom_vline(xintercept = 0, linetype = "dashed") + 
+  geom_vline(xintercept = 0, linewidth = 1) + 
   scale_color_brewer(palette = "Set1") + 
-  geom_segment(aes(x = x_l_sta, 
-                   xend = x_l_end, 
-                   y = y_l_sta, 
-                   yend = y_l_end),
-               size = 1.5, color = "#E41A4C") + 
-  geom_segment(aes(x = x_r_sta, 
-                   xend = x_r_end, 
-                   y = y_r_sta, 
-                   yend = y_r_end), 
-               size = 1.5, color = "#377EB8") + 
+  # geom_segment(aes(x = x_l_sta,
+  #                  xend = x_l_end,
+  #                  y = y_l_sta,
+  #                  yend = y_l_end),
+  #              size = 1.5, color = "#E41A4C") +
+  # geom_segment(aes(x = x_r_sta,
+  #                  xend = x_r_end,
+  #                  y = y_r_sta,
+  #                  yend = y_r_end),
+  #              size = 1.5, color = "#377EB8") +
   labs(x = "Distance to DST Border (km)",
        y = "Overall ENEM \n average") + 
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-15,15) + 
+  ylim(-20,20) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
@@ -565,186 +566,187 @@ fig_gg <- ggplot() +
 
 fig_gg
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1918_v2.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1918_v2.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
-#### 2.1.2 19-17 ----
-
-
-base_temp <- base %>%
-  select(-old) %>%
-  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2017.RDS"))) %>%
-  setDT() %>%
-  filter(conclusao == 2)
-
-##### 2.1.2.1 opt bw -----
-base_b <- base_temp[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
-                    by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>%
-  filter(as.numeric(ano) %in% c(2017,2019)) %>%
-  arrange(mun_prova,ano) %>%
-  group_by(mun_prova) %>%
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    v1_nota = ifelse(ano == 2017, media, NA),
-    v2_nota = max(v1_nota, na.rm = T),
-    d.media = media - v2_nota
-  ) %>%
-  ungroup() %>%
-  filter(dup2 == 2) %>%
-  select(-c(dup2, dup1, v1_nota, v2_nota))
-
-
-ef <- dummy_cols(base_b$seg[base_b$ano == 2017])
-ef <- ef %>% select(-1,-2)
-
-list <- list()
-
-list[[as.character(paste0(2019,"-",2017,"C|NF"))]] <- rdrobust(
-  y = base_b$d.media[base_b$ano == 2019],
-  x = base_b$dist_hv_border[base_b$ano == 2017],
-  c = 0,
-  cluster = base_b$seg[base_b$ano == 2017],
-  weights = base_b$obs[base_b$ano == 2017],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_b$lat[base_b$ano == 2017],
-    base_b$lon[base_b$ano == 2017]
-  )
-)
-
-# ---------------------------------------------------------------------------- #
-#Extração da banda ótima
-bw_main_b  <- list[["2019-2017C|NF"]]$bws[1]
-bw_bias_b  <- list[["2019-2017C|NF"]]$bws[2]
-# ---------------------------------------------------------------------------- #
-
-rm(list, ef)
-##### 2.1.2.2. graph -----
-fig <- list()
-
-temp <- base_b %>%
-  mutate(subset = case_when(
-    abs(dist_hv_border) < bw_main_b ~ 1,
-    .default = 0
-  )
-  ) %>%
-  filter(
-    !is.na(d.media),
-    subset == 1
-  )
-
-# Dependent variable
-yv <- temp %>%
-  filter(ano == 2019) %>%
-  select(d.media) %>%
-  rename(vd = 1)
-
-#45696
-# Running variable
-xv <- temp %>%
-  filter(ano == 2017) %>%
-  select(dist_hv_border)
-
-# Clusters
-clu <- temp %>%
-  filter(ano == 2017) %>%
-  select(seg)
-
-# Latitude
-latv <- temp %>%
-  filter(ano == 2017) %>%
-  select(lat)
-
-# Longitude
-lonv <- temp %>%
-  filter(ano == 2017) %>%
-  select(lon)
-
-ef <- dummy_cols(clu$seg)
-ef <- ef %>% select(-1,-2)
-
-# Estimando parâmetros do gráfico
-fig <- rdplot(y = yv$vd,
-              x = xv$dist_hv_border,
-              c = 0,
-              p = 1,
-              #binselect = "esmv",
-              kernel = "triangular",
-              h = bw_main_b,
-              weights = temp$obs[temp$ano == 2017],
-              subset = temp$subset == 1,
-              hide = F,
-              masspoints= "adjust",
-              covs = cbind(ef,latv,lonv)
-)
-
-rm(yv, xv, clu, latv, lonv, ef, temp)
-
-
-
-# Vetores e valores auxiliares
-fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
-fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-x_r_sta <- 0
-x_r_end <- max(fig$vars_poly$rdplot_x)
-y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2],
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
-x_l_sta <- min(fig$vars_poly$rdplot_x)
-x_l_end <- 0
-
-y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
-y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
-xtips <- seq(-4*10^5,4*10^5,10^5)
-
-# Gráfico
-fig_gg <- ggplot() +
-  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-             alpha = 0.5, size = 2, show.legend = FALSE) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  scale_color_brewer(palette = "Set1") +
-  geom_segment(aes(x = x_l_sta,
-                   xend = x_l_end,
-                   y = y_l_sta,
-                   yend = y_l_end),
-               size = 1.5, color = "#E41A4C") +
-  geom_segment(aes(x = x_r_sta,
-                   xend = x_r_end,
-                   y = y_r_sta,
-                   yend = y_r_end),
-               size = 1.5, color = "#377EB8") +
-  labs(x = "Distance to DST Border (km)",
-       y = "Overall ENEM \n average") +
-  theme_bw() +
-  scale_x_continuous(breaks = xtips,
-                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-5,25) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
-
-
-fig_gg
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
-rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
-
-
-# ---------------------------------------------------------------------------- #
+# #### 2.1.2 19-17 ----
+# 
+# 
+# base_temp <- base %>%
+#   select(-old) %>%
+#   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2017.RDS"))) %>%
+#   setDT() %>%
+#   filter(conclusao == 2)
+# 
+# ##### 2.1.2.1 opt bw -----
+# base_b <- base_temp[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+#                     by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>%
+#   filter(as.numeric(ano) %in% c(2017,2019)) %>%
+#   arrange(mun_prova,ano) %>%
+#   group_by(mun_prova) %>%
+#   mutate(
+#     dup1 = 1,
+#     dup2 = sum(dup1),
+#     v1_nota = ifelse(ano == 2017, media, NA),
+#     v2_nota = max(v1_nota, na.rm = T),
+#     d.media = media - v2_nota
+#   ) %>%
+#   ungroup() %>%
+#   filter(dup2 == 2) %>%
+#   select(-c(dup2, dup1, v1_nota, v2_nota))
+# 
+# 
+# ef <- dummy_cols(base_b$seg[base_b$ano == 2017])
+# ef <- ef %>% select(-1,-2)
+# 
+# list <- list()
+# 
+# list[[as.character(paste0(2019,"-",2017,"C|NF"))]] <- rdrobust(
+#   y = base_b$d.media[base_b$ano == 2019],
+#   x = base_b$dist_hv_border[base_b$ano == 2017],
+#   c = 0,
+#   cluster = base_b$seg[base_b$ano == 2017],
+#   weights = base_b$obs[base_b$ano == 2017],
+#   vce = "hc0",
+#   covs = cbind(
+#     ef,
+#     base_b$lat[base_b$ano == 2017],
+#     base_b$lon[base_b$ano == 2017]
+#   )
+# )
+# 
+# # ---------------------------------------------------------------------------- #
+# #Extração da banda ótima
+# bw_main_b  <- list[["2019-2017C|NF"]]$bws[1]
+# bw_bias_b  <- list[["2019-2017C|NF"]]$bws[2]
+# # ---------------------------------------------------------------------------- #
+# 
+# rm(list, ef)
+# ##### 2.1.2.2. graph -----
+# fig <- list()
+# 
+# temp <- base_b %>%
+#   mutate(subset = case_when(
+#     abs(dist_hv_border) < bw_main_b ~ 1,
+#     .default = 0
+#   )
+#   ) %>%
+#   filter(
+#     !is.na(d.media),
+#     subset == 1
+#   )
+# 
+# # Dependent variable
+# yv <- temp %>%
+#   filter(ano == 2019) %>%
+#   select(d.media) %>%
+#   rename(vd = 1)
+# 
+# #45696
+# # Running variable
+# xv <- temp %>%
+#   filter(ano == 2017) %>%
+#   select(dist_hv_border)
+# 
+# # Clusters
+# clu <- temp %>%
+#   filter(ano == 2017) %>%
+#   select(seg)
+# 
+# # Latitude
+# latv <- temp %>%
+#   filter(ano == 2017) %>%
+#   select(lat)
+# 
+# # Longitude
+# lonv <- temp %>%
+#   filter(ano == 2017) %>%
+#   select(lon)
+# 
+# ef <- dummy_cols(clu$seg)
+# ef <- ef %>% select(-1,-2)
+# 
+# # Estimando parâmetros do gráfico
+# fig <- rdplot(y = yv$vd,
+#               x = xv$dist_hv_border,
+#               c = 0,
+#               p = 1,
+#               nbins = 25,
+#               #binselect = "esmv",
+#               kernel = "triangular",
+#               h = bw_main_b,
+#               weights = temp$obs[temp$ano == 2017],
+#               subset = temp$subset == 1,
+#               hide = F,
+#               masspoints= "adjust",
+#               covs = cbind(ef,latv,lonv)
+# )
+# 
+# rm(yv, xv, clu, latv, lonv, ef, temp)
+# 
+# 
+# 
+# # Vetores e valores auxiliares
+# fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
+# fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
+# 
+# x_r_sta <- 0
+# x_r_end <- max(fig$vars_poly$rdplot_x)
+# y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2],
+#                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
+#                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
+# y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
+# 
+# x_l_sta <- min(fig$vars_poly$rdplot_x)
+# x_l_end <- 0
+# 
+# y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
+# y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
+#                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
+#                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
+# 
+# xtips <- seq(-4*10^5,4*10^5,10^5)
+# 
+# # Gráfico
+# fig_gg <- ggplot() +
+#   geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
+#              alpha = 0.5, size = 2, show.legend = FALSE) +
+#   geom_vline(xintercept = 0, linetype = "dashed") +
+#   scale_color_brewer(palette = "Set1") +
+#   geom_segment(aes(x = x_l_sta,
+#                    xend = x_l_end,
+#                    y = y_l_sta,
+#                    yend = y_l_end),
+#                size = 1.5, color = "#E41A4C") +
+#   geom_segment(aes(x = x_r_sta,
+#                    xend = x_r_end,
+#                    y = y_r_sta,
+#                    yend = y_r_end),
+#                size = 1.5, color = "#377EB8") +
+#   labs(x = "Distance to DST Border (km)",
+#        y = "Overall ENEM \n average") +
+#   theme_bw() +
+#   scale_x_continuous(breaks = xtips,
+#                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
+#   ylim(-5,25) + 
+#   theme(axis.title.x = element_text(size = 35),
+#         axis.title.y = element_text(size = 35),
+#         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
+#         axis.text.y = element_text(size = 30))
+# 
+# 
+# fig_gg
+# 
+# ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+# ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+# 
+# rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
+# 
+# 
+# 
+# # ---------------------------------------------------------------------------- #
 
 #### 2.1.3 18-17 ----
 
@@ -842,6 +844,7 @@ fig <- rdplot(y = yv$vd,
               x = xv$dist_hv_border,
               c = 0,
               p = 1,
+              nbins = 25,
               #binselect = "esmv",
               kernel = "triangular",
               h = bw_main_c,
@@ -881,18 +884,18 @@ xtips <- seq(-4*10^5,4*10^5,10^5)
 fig_gg <- ggplot() +
   geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
              alpha = 0.5, size = 2, show.legend = FALSE) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
+  geom_vline(xintercept = 0, linewidth = 1) +
   scale_color_brewer(palette = "Set1") +
-  geom_segment(aes(x = x_l_sta,
-                   xend = x_l_end,
-                   y = y_l_sta,
-                   yend = y_l_end),
-               size = 1.5, color = "#E41A4C") +
-  geom_segment(aes(x = x_r_sta,
-                   xend = x_r_end,
-                   y = y_r_sta,
-                   yend = y_r_end),
-               size = 1.5, color = "#377EB8") +
+  # geom_segment(aes(x = x_l_sta,
+  #                  xend = x_l_end,
+  #                  y = y_l_sta,
+  #                  yend = y_l_end),
+  #              size = 1.5, color = "#E41A4C") +
+  # geom_segment(aes(x = x_r_sta,
+  #                  xend = x_r_end,
+  #                  y = y_r_sta,
+  #                  yend = y_r_end),
+  #              size = 1.5, color = "#377EB8") +
   labs(x = "Distance to DST Border (km)",
        y = "Overall ENEM \n average") +
   theme_bw() +
@@ -907,8 +910,8 @@ fig_gg <- ggplot() +
 
 fig_gg
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1817_v2.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1817_v2.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
@@ -1912,6 +1915,123 @@ latex_table <- knitr::kable(
 
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Materias_v1.tex")
+
+# ---------------------------------------------------------------------------- #
+## 3.3 Gráfico redação ----
+# ---------------------------------------------------------------------------- #
+
+fig <- list()
+
+temp <- base_a %>% 
+  mutate(subset = case_when(
+    abs(dist_hv_border) < bw_main_a ~ 1,
+    .default = 0
+  )
+  ) %>% 
+  filter(
+    !is.na(d.media_rd),
+    subset == 1
+  )
+
+# Dependent variable
+yv <- temp %>%
+  filter(ano == 2019) %>% 
+  select(d.media_rd) %>% 
+  rename(vd = 1)
+
+#45696
+# Running variable
+xv <- temp %>%
+  filter(ano == 2018) %>% 
+  select(dist_hv_border)
+
+# Clusters
+clu <- temp %>% 
+  filter(ano == 2018) %>% 
+  select(seg)
+
+# Latitude
+latv <- temp %>%
+  filter(ano == 2018) %>% 
+  select(lat)
+
+# Longitude
+lonv <- temp %>% 
+  filter(ano == 2018) %>% 
+  select(lon)
+
+ef <- dummy_cols(clu$seg)
+ef <- ef %>% select(-1,-2)
+
+# Estimando parâmetros do gráfico
+fig <- rdplot(y = yv$vd,
+              x = xv$dist_hv_border,
+              c = 0,
+              p = 1,
+              #binselect = "esmv",
+              kernel = "triangular",
+              h = bw_main_a,
+              nbins = 25,
+              #b = bw_bias_a,
+              weights = temp$obs[temp$ano == 2018],
+              subset = temp$subset == 1,
+              hide = T,
+              masspoints= "adjust",
+              covs = cbind(ef,latv,lonv)
+)
+
+rm(yv, xv, clu, latv, lonv, ef, temp)
+
+
+
+# Vetores e valores auxiliares
+fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
+fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
+
+x_r_sta <- 0
+x_r_end <- max(fig$vars_poly$rdplot_x)
+y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
+                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
+                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
+y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
+
+x_l_sta <- min(fig$vars_poly$rdplot_x)
+x_l_end <- 0
+
+y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
+y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
+                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
+                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
+
+xtips <- seq(-4*10^5,4*10^5,10^5)
+
+# Gráfico
+fig_gg <- ggplot() +
+  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
+             alpha = 0.5, size = 2, show.legend = FALSE) + 
+  geom_vline(xintercept = 0, linewidth = 1) + 
+  scale_color_brewer(palette = "Set1") + 
+  labs(x = "Distance to DST Border (km)",
+       y = "Average Writing Score") + 
+  theme_bw() + 
+  scale_x_continuous(breaks = xtips,
+                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
+  ylim(15,160) + 
+  theme(axis.title.x = element_text(size = 35),
+        axis.title.y = element_text(size = 35),
+        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 30))
+
+
+fig_gg
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Redacao.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Redacao.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+
+rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
+
+
+
 
 rm(notas_tab, p_list, result, d_list, latex_table)
 
