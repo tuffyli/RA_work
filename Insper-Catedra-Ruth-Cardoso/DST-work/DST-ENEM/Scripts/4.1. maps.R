@@ -5,7 +5,7 @@
 # Data de criação: 14/11/2023
 # Criado por: Bruno Komatsu
 
-# Última modificação: 08/01/2025
+# Última modificação: 09/01/2025
 # Modificado por: Tuffy Issa
 
 # Descrição: 
@@ -235,5 +235,153 @@ map <- ggplot(mun_hv) +
 map
 
 ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_v2.png"),plot = map,device = "png", dpi = 300)
+
+
+# --------------------------------------------------------------------------- #
+# 5. Horário de Início ----
+# --------------------------------------------------------------------------- #
+## 5.1 Dados ----
+# --------------------------------------------------------------------------- #
+
+
+mun_hv <- mun_hv %>% 
+  mutate(horario_18 = case_when(
+    uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS") ~ "13h",
+    
+    uf %in% c("BA", "SE", "AL", "PE", "PB", "RN", "CE", "PI", "MA", "TO", "MT",
+              "MS", "PA", "AP") ~ "12h",
+    
+    uf %in% c("RO", "RR") | uf == "AM" & !co_municipio %in% 
+      c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+        1302306, 1302405, 1303502, 1303908, 1304062)  ~ "11h",
+    
+    uf == "AC" | co_municipio %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                   1301654, 1301803, 1301951, 1302306, 1302405,
+                                   1303502, 1303908, 1304062) ~ "10h",
+    TRUE ~ NA),
+    
+    horario_19 = case_when(
+      uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS", "BA", "SE",
+                "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP") ~ "13h",
+      
+      uf %in% c("MT", "MS", "RO", "RR") | uf == "AM" & !co_municipio %in%
+        c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+          1302306, 1302405, 1303502, 1303908, 1304062) ~ "12h",
+      
+      uf == "AC" | co_municipio %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                     1301654, 1301803, 1301951, 1302306, 1302405,
+                                     1303502, 1303908, 1304062) ~ "11h",
+      TRUE ~ NA),
+    
+    horario_18 = factor(horario_18, levels = c("10h", "11h", "12h", "13h")),
+    horario_19 = factor(horario_19, levels = c("11h", "12h", "13h")))
+
+#------------------------------------------------------------------------------#
+## 5.2 Com HV ----
+# -----------------------------------------------------------------------------#
+
+# Mapa de clusters
+map <- ggplot(mun_hv %>% arrange(horario_18)) +
+  
+  geom_sf(
+    data = mun_hv,
+    fill = NA,
+    color = "transparent",     
+    linewidth = 0.2        
+  ) +
+  
+  scale_fill_manual(
+    name = "Groups",
+    values = c(
+      "10h"  = "#6A3D9A", 
+      "11h"  = "#0072B2",
+      "12h"  = "#E69F00",     
+      "13h"  = "#009E73"      
+    ),
+    drop = FALSE
+  ) +
+  geom_sf(aes(fill = factor(horario_18)) ) +
+  
+  geom_sf(data = line, color = "blue") +
+  theme_bw() +
+  guides(
+    fill = guide_legend(
+      direction = "horizontal",
+      title.position = "top",
+      title.hjust = 0.5,
+      nrow = 1,              # force single row
+      byrow = TRUE
+    )
+  ) +
+  theme(
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 25, face = "bold"),
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.box.just = "center",
+    legend.key.width = unit(1.4, "cm"),
+    legend.key.height = unit(0.6, "cm"),
+    legend.spacing.x = unit(0.6, "cm"),
+    legend.title = element_text(size = 20),
+    legend.text  = element_text(size = 15)
+  )
+
+map
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_h18.png"),plot = map,device = "png", dpi = 300)
+
+
+#------------------------------------------------------------------------------#
+## 5.3 Sem HV ----
+# -----------------------------------------------------------------------------#
+
+# Mapa de clusters
+map <- ggplot(mun_hv %>% arrange(horario_19)) +
+  
+  geom_sf(
+    data = mun_hv,
+    fill = NA,
+    color = "transparent",     
+    linewidth = 0.2        
+  ) +
+  
+  scale_fill_manual(
+    name = "Groups",
+    values = c(
+      "11h"  = "#0072B2",
+      "12h"  = "#E69F00",     
+      "13h"  = "#009E73"      
+    ),
+    drop = FALSE
+  ) +
+  geom_sf(aes(fill = factor(horario_19)) ) +
+  
+  geom_sf(data = line, color = "blue") +
+  theme_bw() +
+  guides(
+    fill = guide_legend(
+      direction = "horizontal",
+      title.position = "top",
+      title.hjust = 0.5,
+      nrow = 1,              # force single row
+      byrow = TRUE
+    )
+  ) +
+  theme(
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 25, face = "bold"),
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.box.just = "center",
+    legend.key.width = unit(1.4, "cm"),
+    legend.key.height = unit(0.6, "cm"),
+    legend.spacing.x = unit(0.6, "cm"),
+    legend.title = element_text(size = 20),
+    legend.text  = element_text(size = 15)
+  )
+
+map
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_h19.png"),plot = map,device = "png", dpi = 300)
 
 
