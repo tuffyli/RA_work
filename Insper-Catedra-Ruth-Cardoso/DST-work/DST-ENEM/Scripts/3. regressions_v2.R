@@ -1974,7 +1974,7 @@ fig <- rdplot(y = yv$vd,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
-              subset = temp$subset == 1,
+              #subset = temp$subset == 1,
               hide = T,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
@@ -2016,7 +2016,7 @@ fig_gg <- ggplot() +
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(15,160) + 
+  ylim(40,105) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
@@ -2153,7 +2153,7 @@ fig <- rdplot(y = yv$vd,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2017],
-              subset = temp$subset == 1,
+              #subset = temp$subset == 1,
               hide = T,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
@@ -2196,7 +2196,7 @@ fig_gg <- ggplot() +
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-90, 25) + 
+  ylim(-50, 10) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
@@ -3322,7 +3322,7 @@ fig <- rdplot(y = yv$vd,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
-              subset = temp$subset == 1,
+              #subset = temp$subset == 1,
               hide = T,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
@@ -3364,7 +3364,7 @@ fig_gg <- ggplot() +
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-20,50) + 
+  #ylim(-20,50) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
@@ -3481,7 +3481,7 @@ fig <- rdplot(y = yv$vd,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2017],
-              subset = temp$subset == 1,
+              #subset = temp$subset == 1,
               hide = T,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
@@ -3523,7 +3523,7 @@ fig_gg <- ggplot() +
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-30,40) + 
+  #ylim(-30,40) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
@@ -5791,7 +5791,7 @@ fig <- rdplot(y = yv$vd,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
-              subset = temp$subset == 1,
+              #subset = temp$subset == 1,
               hide = T,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
@@ -5941,7 +5941,7 @@ fig <- rdplot(y = yv$vd,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
-              subset = temp$subset == 1,
+              #subset = temp$subset == 1,
               hide = T,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
@@ -5983,7 +5983,7 @@ fig_gg <- ggplot() +
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-20,40) + 
+  #ylim(-20,40) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
