@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 12/01/2026
+# Date: 13/01/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -460,8 +460,8 @@ temp <- base_a %>%
   )
   ) %>% 
   filter(
-    !is.na(d.media),
-    subset == 1
+    !is.na(d.media)#,
+    #subset == 1
   )
 
 # Dependent variable
@@ -501,11 +501,11 @@ fig <- rdplot(y = yv$vd,
               p = 1,
               #binselect = "esmv",
               kernel = "triangular",
-              h = bw_main_a,
+              #h = bw_main_a,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
-              subset = temp$subset == 1,
+              #subset = temp$subset == 1,
               hide = T,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
@@ -534,7 +534,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-4*10^5,4*10^5,10^5)
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -566,8 +566,9 @@ fig_gg <- ggplot() +
 
 fig_gg
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1918_v2.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1918_v2.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+#Para todas as observações possíveis. A v2 era focada na janela ótima de análise.
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1918_v3.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1918_v3.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
@@ -805,8 +806,8 @@ temp <- base_c %>%
   )
   ) %>%
   filter(
-    !is.na(d.media),
-    subset == 1
+    !is.na(d.media)#,
+    #subset == 1
   )
 
 # Dependent variable
@@ -847,9 +848,9 @@ fig <- rdplot(y = yv$vd,
               nbins = 25,
               #binselect = "esmv",
               kernel = "triangular",
-              h = bw_main_c,
+              #h = bw_main_c,
               weights = temp$obs[temp$ano == 2017],
-              subset = temp$subset == 1,
+              #subset = temp$subset == 1,
               hide = F,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
@@ -878,7 +879,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-4*10^5,4*10^5,10^5)
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -910,8 +911,8 @@ fig_gg <- ggplot() +
 
 fig_gg
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1817_v2.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1817_v2.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1817_v3.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1817_v3.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
@@ -1734,7 +1735,6 @@ rm(bins, j, plist, fig_loop, base_c, base_b, bw_bias_b, bw_main_b,
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
-
 # 3. Matérias----
 # ---------------------------------------------------------------------------- #
 #Bases
@@ -1929,8 +1929,8 @@ temp <- base_a %>%
   )
   ) %>% 
   filter(
-    !is.na(d.media_rd),
-    subset == 1
+    !is.na(d.media_rd)#,
+    #subset == 1
   )
 
 # Dependent variable
@@ -1970,7 +1970,7 @@ fig <- rdplot(y = yv$vd,
               p = 1,
               #binselect = "esmv",
               kernel = "triangular",
-              h = bw_main_a,
+              #h = bw_main_a,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
@@ -2003,7 +2003,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-4*10^5,4*10^5,10^5)
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -2108,8 +2108,8 @@ temp <- base_c %>%
   )
   ) %>% 
   filter(
-    !is.na(d.media_rd),
-    subset == 1
+    !is.na(d.media_rd)#,
+    #subset == 1
   )
 
 # Dependent variable
@@ -2149,7 +2149,7 @@ fig <- rdplot(y = yv$vd,
               p = 1,
               #binselect = "esmv",
               kernel = "triangular",
-              h = bw_main_a,
+              #h = bw_main_a,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2017],
@@ -2182,20 +2182,21 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-4*10^5,4*10^5,10^5)
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
   geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
              alpha = 0.5, size = 2, show.legend = FALSE) + 
   geom_vline(xintercept = 0, linewidth = 1) + 
+  #geom_vline(xintercept = bw_main_a, linediwdth = 0.75, alpha = 0.3) +
   scale_color_brewer(palette = "Set1") + 
   labs(x = "Distance to DST Border (km)",
        y = "Average Writing \n Score") + 
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  #ylim(15,160) + 
+  ylim(-90, 25) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
@@ -3276,8 +3277,8 @@ temp <- base_a %>%
   )
   ) %>% 
   filter(
-    !is.na(d.media_d1),
-    subset == 1
+    !is.na(d.media_d1)#,
+    #subset == 1
   )
 
 # Dependent variable
@@ -3317,7 +3318,7 @@ fig <- rdplot(y = yv$vd,
               p = 1,
               #binselect = "esmv",
               kernel = "triangular",
-              h = bw_main_a,
+              #h = bw_main_a,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
@@ -3350,7 +3351,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-4*10^5,4*10^5,10^5)
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -3363,7 +3364,7 @@ fig_gg <- ggplot() +
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  #ylim(15,160) + 
+  ylim(-20,50) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
@@ -3435,8 +3436,8 @@ temp <- base_c %>%
   )
   ) %>% 
   filter(
-    !is.na(d.media_d1),
-    subset == 1
+    !is.na(d.media_d1)#,
+    #subset == 1
   )
 
 # Dependent variable
@@ -3476,7 +3477,7 @@ fig <- rdplot(y = yv$vd,
               p = 1,
               #binselect = "esmv",
               kernel = "triangular",
-              h = bw_main_a,
+              #h = bw_main_a,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2017],
@@ -3509,7 +3510,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-4*10^5,4*10^5,10^5)
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -3522,7 +3523,7 @@ fig_gg <- ggplot() +
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-10,40) + 
+  ylim(-30,40) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
@@ -5745,8 +5746,8 @@ temp <- base_a %>%
   )
   ) %>% 
   filter(
-    !is.na(d.media),
-    subset == 1
+    !is.na(d.media)#,
+    #subset == 1
   )
 
 # Dependent variable
@@ -5786,7 +5787,7 @@ fig <- rdplot(y = yv$vd,
               p = 1,
               #binselect = "esmv",
               kernel = "triangular",
-              h = bw_main_a,
+              #h = bw_main_a,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
@@ -5819,7 +5820,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-4*10^5,4*10^5,10^5)
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -5895,8 +5896,8 @@ temp <- base_c %>%
   )
   ) %>% 
   filter(
-    !is.na(d.media),
-    subset == 1
+    !is.na(d.media)#,
+    #subset == 1
   )
 
 # Dependent variable
@@ -5936,7 +5937,7 @@ fig <- rdplot(y = yv$vd,
               p = 1,
               #binselect = "esmv",
               kernel = "triangular",
-              h = bw_main_a,
+              #h = bw_main_a,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
@@ -5969,7 +5970,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-4*10^5,4*10^5,10^5)
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -6817,8 +6818,8 @@ temp <- base_a %>%
   )
   ) %>% 
   filter(
-    !is.na(d.media),
-    subset == 1
+    !is.na(d.media)#,
+    #subset == 1
   )
 
 # Dependent variable
@@ -6858,11 +6859,11 @@ fig <- rdplot(y = yv$vd,
               p = 1,
               #binselect = "esmv",
               kernel = "triangular",
-              h = bw_main_a,
+              #h = bw_main_a,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
-              subset = temp$subset == 1,
+              #subset = temp$subset == 1,
               hide = T,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
@@ -6891,7 +6892,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-4*10^5,4*10^5,10^5)
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -6904,7 +6905,7 @@ fig_gg <- ggplot() +
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  #ylim(-330,330) + 
+  ylim(-20,40) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
@@ -6958,8 +6959,8 @@ temp <- base_c %>%
   )
   ) %>% 
   filter(
-    !is.na(d.media),
-    subset == 1
+    !is.na(d.media)#,
+    #subset == 1
   )
 
 # Dependent variable
@@ -6999,11 +7000,11 @@ fig <- rdplot(y = yv$vd,
               p = 1,
               #binselect = "esmv",
               kernel = "triangular",
-              h = bw_main_a,
+              #h = bw_main_a,
               nbins = 25,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2017],
-              subset = temp$subset == 1,
+              #subset = temp$subset == 1,
               hide = T,
               masspoints= "adjust",
               covs = cbind(ef,latv,lonv)
@@ -7032,7 +7033,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-4*10^5,4*10^5,10^5)
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
