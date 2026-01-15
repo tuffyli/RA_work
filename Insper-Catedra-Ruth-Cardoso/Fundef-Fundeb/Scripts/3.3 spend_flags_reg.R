@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions - Spending + Flags
 # Last edited by: Tuffy Licciardi Issa
-# Date: 06/01/2026
+# Date: 15/01/2026
 # ---------------------------------------------------------------------------- #
 
 
@@ -74,7 +74,10 @@ df_spend <- data %>%
     TRUE ~ NA_character_
   ),
   
-  net_fundeb = (receita_real - receita_simulada)/real_des_edu[ano == 2007]
+  net_fundeb = (receita_real - receita_simulada)/real_des_edu[ano == 2007],
+  
+  var_rob2  = (receita_real - receita_simulada)/real_des_edu[ano == 2006]
+  
   ) %>% 
   filter(tipo == "Municipal") %>% 
   #Manually creating dummy values
@@ -94,7 +97,12 @@ df_spend <- data %>%
          d18 = ifelse(ano == 2018, 1, 0),
          d19 = ifelse(ano == 2019, 1, 0),
          d20 = ifelse(ano == 2020, 1, 0),
-         d21 = ifelse(ano == 2021, 1, 0))
+         d21 = ifelse(ano == 2021, 1, 0)) %>% 
+  group_by(codigo_ibge) %>% 
+  mutate(  #Fixed spend
+    spend_edu6 = real_des_edu/mat_total[ano == 2006],
+    spend_inf6 = real_des_inf/mat_inf[ano == 2006]) %>% 
+  ungroup()
 
 # ---------------------------------------------------------------------------- #
 # 2. Regressions ----
@@ -344,7 +352,7 @@ etable(est_10, est_14, est_18, #mod_fund, mod_med,
 rm(est_10, est_14, est_18)
 
 # ---------------------------------------------------------------------------- #
-##3.3 Regression 2005 - 2018 -----
+##2.3 Regression 2005 - 2018 -----
 # ---------------------------------------------------------------------------- #
 
 #Here the dosage == 1 municipalities are loss through the filters
@@ -375,7 +383,77 @@ etable( est_10, est_prof, #mod_fund, mod_med,
         file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_extended.tex",
         replace = TRUE)
 
-rm(est_prof, est_10)
+#rm(est_prof, est_10)
+
+# ---------------------------------------------------------------------------- #
+## 2.4 Rob var 2 ----
+# ---------------------------------------------------------------------------- #
+
+#Here the dosage == 1 municipalities are loss through the filters
+
+est_102 <- feols(real_des_edu_pa ~ var_rob2 : i(ano, ref = 2006) + PIBpc
+                | codigo_ibge + ano + uf^ano,
+                data = df_spend %>% group_by (codigo_ibge) %>% 
+                  #filter(ano < 2011) %>% 
+                  #filter(all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                  ungroup(),
+                vcov = "hetero")
+
+est_prof2 <- feols(real_des_edu_pa ~ var_rob2 : i(ano, ref = 2006) + PIBpc
+                  | codigo_ibge + ano + uf^ano,
+                  data = df_spend %>% 
+                    #filter(ano < 2011) %>% 
+                    filter(dosage == 1 | flag_spend70 == 0 & flag_spendm20 == 0),
+                  vcov = "hetero")
+
+etable(est_10, est_prof
+)
+
+etable( est_102, est_prof2, #mod_fund, mod_med,
+        vcov = "hetero",
+        headers = list(":_:" = list("Sem Filtro" = 1,
+                                    #"Filtro +70 -20" = 1, "Sem Filtro" = 1,
+                                    "Filtro +70 -20" = 1)),
+        file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_extended_varrob2.tex",
+        replace = TRUE)
+
+rm( est102, est_prof2)
+
+# ---------------------------------------------------------------------------- #
+## 2.5 Nova var spend ----
+# ---------------------------------------------------------------------------- #
+ 
+
+#Here the dosage == 1 municipalities are loss through the filters
+
+est_106 <- feols(spend_edu6 ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                | codigo_ibge + ano + uf^ano,
+                data = df_spend %>% group_by (codigo_ibge) %>% 
+                  #filter(ano < 2011) %>% 
+                  #filter(all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                  ungroup(),
+                vcov = "hetero")
+
+est_prof6 <- feols(spend_edu6 ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                  | codigo_ibge + ano + uf^ano,
+                  data = df_spend %>% 
+                    #filter(ano < 2011) %>% 
+                    filter(dosage == 1 | flag_spend70 == 0 & flag_spendm20 == 0),
+                  vcov = "hetero")
+
+etable(est_106, est_prof6, est_10, est_prof
+)
+
+etable( est_10, est_prof, est_106, est_prof6,
+        vcov = "hetero",
+        headers = list(":_:" = list("Sem Filtro" = 1,
+                                    "Filtro +70 -20" = 1, "Sem Filtro" = 1,
+                                    "Filtro +70 -20" = 1)),
+        file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Spend/reg_extended_6.tex",
+        replace = TRUE)
+
+#rm(est_prof, est_10)
+
 
 
 # ---------------------------------------------------------------------------- #
@@ -1482,14 +1560,45 @@ filter_list[["abra"]] <- unique(df_abra$codigo_ibge) #broad
 
 
 #5) Now adding the enrollment filter
-
+## 15%
 df_enro <- df_spend %>% 
   group_by(codigo_ibge) %>% 
   filter(dosage == 1 | all(abs(growth_enroll) < 15 #| growth_enroll > -10
-                           ))
+                           , na.rm = T))
 
+filter_list[["enro"]] <- unique(df_enro$codigo_ibge) #15
 
-filter_list[["enro"]] <- unique(df_enro$codigo_ibge)
+## 20%
+df_enro <- df_spend %>% 
+  group_by(codigo_ibge) %>% 
+  filter(dosage == 1 | all(abs(growth_enroll) < 20, na.rm = T
+  ))
+
+filter_list[["enro20"]] <- unique(df_enro$codigo_ibge) #20
+
+## 25%
+df_enro <- df_spend %>% 
+  group_by(codigo_ibge) %>% 
+  filter(dosage == 1 | all(abs(growth_enroll) < 25, na.rm = T
+  ))
+
+filter_list[["enro25"]] <- unique(df_enro$codigo_ibge) #25
+
+## 30%
+df_enro <- df_spend %>% 
+  group_by(codigo_ibge) %>% 
+  filter(dosage == 1 | all(abs(growth_enroll) < 30, na.rm = T
+  ))
+
+filter_list[["enro30"]] <- unique(df_enro$codigo_ibge) #30
+
+## 40%
+df_enro <- df_spend %>% 
+  group_by(codigo_ibge) %>% 
+  filter(dosage == 1 | all(abs(growth_enroll) < 40, na.rm = T
+  ))
+
+filter_list[["enro40"]] <- unique(df_enro$codigo_ibge) #40
 
 
 rm(df_rest, df_abra, df_enro)
@@ -2180,7 +2289,7 @@ df_comb <- df_school %>%
 # ---------------------------------------------------------------------------- #
 ### 7.4.1 Infra reg ----
 # ---------------------------------------------------------------------------- #
-#### 7.4.1.1 Broad ----
+#### 7.4.1.1 Winlose ----
 # ---------------------------------------------------------------------------- #
 
 #Classroom
@@ -2276,9 +2385,112 @@ rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libr
    final, est_class, est_employ, est_labs, est_libra, est_lunch, est_play, win_lose_plot,
    est_troom)
 
+# ---------------------------------------------------------------------------- #
+#### 7.4.1.1 Comb ----
+# ---------------------------------------------------------------------------- #
+
+#Classroom
+est_class <- feols( class ~ aluno_dosage : i(ano, ref = 2006) +
+                      PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                    vcov = "hetero")
+#Teacher room
+est_troom <- feols( exp_troom ~ aluno_dosage : i(ano, ref = 2006) +
+                      PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                    vcov = "hetero")
+#Laboratory
+est_labs <- feols(exp_lab ~ aluno_dosage : i(ano, ref = 2006)
+                  + PIBpc |
+                    codmun + ano + uf^ano,
+                  data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                  vcov = "hetero")
+
+#Library
+est_libra <- feols(exp_lib ~ aluno_dosage : i(ano, ref = 2006)
+                   + PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                   vcov = "hetero")
+
+#Play Area
+est_play <- feols(exp_play ~ aluno_dosage : i(ano, ref = 2006)
+                  + PIBpc |
+                    codmun + ano + uf^ano,
+                  data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                  vcov = "hetero")
+
+#Lunch
+est_lunch <- feols(exp_lunch ~ aluno_dosage : i(ano, ref = 2006)
+                   + PIBpc |
+                     codmun + ano + uf^ano,
+                   data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                   vcov = "hetero")
+
+#Employee 
+est_employ <- feols(employee ~ aluno_dosage : i(ano, ref = 2006)
+                    + PIBpc |
+                      codmun + ano + uf^ano,
+                    data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                    vcov = "hetero")
+
+
+est_n_employ <- feols(n_employee ~ aluno_dosage : i(ano, ref = 2006)
+                      + PIBpc |
+                        codmun + ano + uf^ano,
+                      data = df_comb %>% filter(codmun %in% filter_list[["abra"]]),
+                      vcov = "hetero")
+
+etable(est_class, est_troom, est_labs, est_libra, est_play, est_lunch, est_employ, est_n_employ)
+
+
+# --------------------------------- #
+##### 7.4.1.1.2 Comb Graph ----
+# --------------------------------- #
+
+# 3) Apply helper to each ggiplot object
+p_class <- event_plot(est_class, "Aluno/Salas de aula")   #Classroom
+p_troom <- event_plot(est_troom, "Exp. Sala dos Prof.")  #Teacher's Room
+p_labs  <- event_plot(est_labs,  "Exp. Laboratórios")    #Laboratory
+p_libra <- event_plot(est_libra, "Exp. Biblioteca")      #Library
+p_play  <- event_plot(est_play,  "Exp. Quadras/Parque")  #Play Area
+p_lunch <- event_plot(est_lunch, "Exp. Merenda")         #Lunch
+p_employ <- event_plot(est_employ,"Aluno/Funcionários")   #Employee
+p_nemploy <- event_plot(est_n_employ, "N° Funcionários")
+blank <- ggplot() + theme_void()
+
+grid_plot <- ( p_troom + p_labs + p_libra) /
+  (p_play + p_lunch + blank) /
+  (p_class   + p_employ + p_nemploy)
+
+final <- grid_plot + plot_annotation(
+  #title = "Event-study: infrastructure / staff outcomes",
+  caption = "Estimates from feols(...) with i(k, ref = -1)"
+)
+
+final
+
+ggsave( #Saving image
+  filename = paste0("school_infra_abra_preschool.png"),
+  plot = final,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Filter/", #Saving directly to the report
+  width = 1300/96, height = 720/96, dpi = 300
+)
+
+rm(p_class, p_troom, p_labs, p_play, p_lunch, p_employ, blank, grid_plot, p_libra,
+   final, est_class, est_employ, est_labs, est_libra, est_lunch, est_play, win_lose_plot,
+   est_troom)
+
 
 
 rm(df_comb, df_reg, df_school, df_spend, est_n_employ, p_nemploy, data)
+
+
+
+
+
 # ---------------------------------------------------------------------------- #
 # 8. SAEB ----
 # ---------------------------------------------------------------------------- #
@@ -2352,14 +2564,15 @@ df <- df_saeb %>%
          )
   ) %>% 
   mutate(grupo = case_when(
-    dosage > 0 ~ "Winner",   # net beneficiary
-    dosage < 0 ~ "Loser",   # net contributer
+    aluno_dosage > 0 ~ "Winner",   # net beneficiary
+    aluno_dosage < 0 ~ "Loser",   # net contributer
     TRUE ~ NA_character_),
     
     grupo = factor(grupo, levels = c("Loser", "Winner")) #Beneficiary dumm
   ) %>% 
   filter(as.numeric(ano_nasc) < 2008) %>% # This remove younger than expected people in 2017  -> ideal age = 10.
-  mutate(ano_nasc = as.factor(ano_nasc))
+  mutate(ano_nasc = as.factor(ano_nasc)) %>% 
+  filter(!is.na(uf))
 
 
 # ---------------------------------------------------------------------------- #
@@ -2395,7 +2608,7 @@ df_mun_school <- df %>%
   ungroup(ano) %>% 
   mutate(aux2 = sum(aux1, na.rm = T)) %>% 
   filter(aux2 == 7) %>% #Appears in every year
-  select(-c(aux1, aux2))
+  select(-c(aux1, aux2)) 
 
 
 
@@ -2661,7 +2874,7 @@ etable(main_mat_a, main_pot_a)
 
 
 # ---------------------------------------------------------------------------- #
-#### 8.3.1.3 Enroll Filter ----
+#### 8.3.1.3 Enroll Filter 15 ----
 # ---------------------------------------------------------------------------- #
 
 
@@ -2755,6 +2968,7 @@ p_pot_e <- win_lose_plot(main_pot_e, "Português")    #Language
 
 
 # helper that returns a tiny ggplot containing the vertical label text
+
 label_row <- function(text, size_pt = 10) {
   ggplot() +
     theme_void() +
@@ -2910,6 +3124,386 @@ etable(main_mat_f, main_mat_a, main_pot_f, main_pot_a,
 
 
 rm(df_ww, df_saeb, df_mun_school)
+
+# ---------------------------------------------------------------------------- #
+## 8.4 Mun Count Table ----
+# ---------------------------------------------------------------------------- #
+
+
+#Creating the aggregated database
+df_mun <- df %>% ungroup() %>% 
+  filter(!is.na(profic_mat) & !is.na(uf)) %>% 
+  group_by(codmun) %>% 
+  summarise(n = sum(peso_mt, na.rm = T),
+            .groups = "drop")
+
+
+#Function to apply filter and aggregate for mun
+summarize_filter <- function(df_original, filter_fun, label) {
+  
+  
+  df_filtered <- tryCatch(
+    filter_fun(df_original))
+  
+  if (nrow(df_filtered) == 0) {
+    return(tibble(
+      filtro = label,
+      n_registros = 0L,
+      n_codmun_distintos = 0L,
+      soma_n = 0
+    ))
+  }
+  
+  df_mun_f <- df_filtered %>%
+    filter(!is.na(uf)) %>% 
+    group_by(codmun) %>%
+    summarise(n = sum(peso_mt, na.rm = TRUE), .groups = "drop")
+  
+  tibble(
+    filtro = label,
+    n_registros = nrow(df_filtered),                 
+    n_codmun_distintos = n_distinct(df_mun_f$codmun),
+    soma_n = sum(df_mun_f$n, na.rm = TRUE)           
+  )
+}
+
+
+# ---------------------------------------------------------------------------- #
+### 8.4.1 With Spend Filter ----
+# ---------------------------------------------------------------------------- #
+#Listing the filters that will be used
+filtros <- list(
+  "Sem Filtro (SAEB)"   = function(d) d %>% filter(grade == 5 & !is.na(grupo) & 
+                                                     codmun %in% filter_saeb[["in_saeb"]]),
+  
+  "Spending"     = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["abra"]] ),
+  
+  "|15|"         = function(d) d %>% filter(grade == 5 & !is.na(grupo) & 
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["abra"]] & codmun %in% filter_list[["enro"]]),
+  
+  
+  "|20|"         = function(d) d %>% filter(grade == 5 & !is.na(grupo) & 
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["abra"]] & codmun %in% filter_list[["enro20"]]),
+  
+  "|25|"         = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["abra"]] & codmun %in% filter_list[["enro25"]]), 
+  
+  "|30|"         = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["abra"]] & codmun %in% filter_list[["enro30"]]), 
+  
+  "|40|"         = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["abra"]] & codmun %in% filter_list[["enro40"]])
+)
+
+
+#Applying the filters
+comp <- imap_dfr(filtros, ~ summarize_filter(df, .x, .y))
+
+print(comp)
+
+
+##Renaming the columns tables
+colnames(comp) <- c(
+  "Filtros",
+  "Observações",
+  "N° de Municípios",
+  "N° Total de alunos"
+)
+
+
+## Saving the table
+
+latex_table <- comp %>%
+  kbl(
+    format = "latex",
+    booktabs = TRUE,
+    caption = "Resumo por Filtro",
+    align = "lrrr",
+    digits = 0
+  ) %>%
+  kable_styling(latex_options = c("hold_position"))
+
+writeLines(latex_table, "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/saeb_filter_mun.tex")
+
+
+rm(comp, latex_table, filtros)
+
+# ---------------------------------------------------------------------------- #
+### 8.4.2 Without Spend Filter ----
+# ---------------------------------------------------------------------------- #
+
+#Listing the filters that will be used
+filtros <- list(
+  "Sem Filtro (SAEB)"   = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                                     codmun %in% filter_saeb[["in_saeb"]]),
+  
+  "Spending"     = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["abra"]] ),
+  
+  "|15|"         = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["enro"]]),
+  
+  "|20|"         = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["enro20"]]),
+  
+  "|25|"         = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["enro25"]]),
+  
+  "|30|"         = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["enro30"]]),
+  
+  "|40|"         = function(d) d %>% filter(grade == 5 & !is.na(grupo) &
+                                              codmun %in% filter_saeb[["in_saeb"]]) %>%
+    filter(codmun %in% filter_list[["enro40"]])
+)
+
+
+#Applying the filters
+comp <- imap_dfr(filtros, ~ summarize_filter(df, .x, .y))
+
+print(comp)
+
+
+##Renaming the columns tables
+colnames(comp) <- c(
+  "Filtros",
+  "Observações",
+  "N° de Municípios",
+  "N° Total de alunos"
+)
+
+
+## Saving the table
+
+latex_table <- comp %>%
+  kbl(
+    format = "latex",
+    booktabs = TRUE,
+    caption = "Resumo por Filtro",
+    align = "lrrr",
+    digits = 0
+  ) %>%
+  kable_styling(latex_options = c("hold_position"))
+
+writeLines(latex_table, "Z:/Tuffy/Paper - Educ/Resultados/Tabelas/saeb_filter_mun_nospend.tex")
+
+
+rm(comp, latex_table, filtros, df_mun, summarize_filter)
+
+
+
+# ---------------------------------------------------------------------------- #
+## 8.5. Graph Filter enroll ----
+# ---------------------------------------------------------------------------- #
+### 8.5.1 15% ----
+# ---------------------------------------------------------------------------- #
+
+df_ww <- df %>% 
+  filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+  filter(codmun %in% filter_list[["abra"]] &
+           codmun %in% filter_list[["enro"]]) %>% #Enrollment within |10|%
+  select(peso, peso_mt, peso_lp)
+
+
+main_mat_15 <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(ano, grupo, ref = 2007)
+                    + PIBpc #Controls
+                    | codmun + ano + uf^ano, #FE
+                    data = df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+                      filter(codmun %in% filter_list[["abra"]] &
+                               codmun %in% filter_list[["enro"]]), 
+                    weights = df_ww$peso_mt,
+                    vcov = "hetero")
+
+main_pot_15 <- feols(as.numeric(profic_port) ~ aluno_dosage : i(ano, grupo, ref = 2007)
+                    + PIBpc #Controls
+                    | codmun + ano + uf^ano, #FE
+                    data = df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+                      filter(codmun %in% filter_list[["abra"]] &
+                               codmun %in% filter_list[["enro"]]),
+                    weights = df_ww$peso_lp,
+                    vcov = "hetero")
+
+
+etable(main_mat_15, main_pot_15)
+
+# ---------------------------------------------------------------------------- #
+### 8.5.2 25% ----
+# ---------------------------------------------------------------------------- #
+
+#weights
+df_ww <- df %>% 
+  filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+  filter(codmun %in% filter_list[["abra"]] &
+           codmun %in% filter_list[["enro25"]]) %>% #Enrollment within |10|%
+  select(peso, peso_mt, peso_lp)
+
+
+
+main_mat_25 <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(ano, grupo, ref = 2007)
+                     + PIBpc #Controls
+                     | codmun + ano + uf^ano, #FE
+                     data = df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+                       filter(codmun %in% filter_list[["abra"]] &
+                                codmun %in% filter_list[["enro25"]]), 
+                     weights = df_ww$peso_mt,
+                     vcov = "hetero")
+
+main_pot_25 <- feols(as.numeric(profic_port) ~ aluno_dosage : i(ano, grupo, ref = 2007)
+                     + PIBpc #Controls
+                     | codmun + ano + uf^ano, #FE
+                     data = df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+                       filter(codmun %in% filter_list[["abra"]] &
+                                codmun %in% filter_list[["enro25"]]),
+                     weights = df_ww$peso_lp,
+                     vcov = "hetero")
+
+
+etable(main_mat_25, main_pot_25)
+
+
+# ---------------------------------------------------------------------------- #
+### 8.5.3 30% ----
+# ---------------------------------------------------------------------------- #
+
+#Weights
+df_ww <- df %>% 
+  filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+  filter(codmun %in% filter_list[["abra"]] &
+           codmun %in% filter_list[["enro30"]]) %>% #Enrollment within |10|%
+  select(peso, peso_mt, peso_lp)
+
+
+main_mat_30 <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(ano, grupo, ref = 2007)
+                     + PIBpc #Controls
+                     | codmun + ano + uf^ano, #FE
+                     data = df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+                       filter(codmun %in% filter_list[["abra"]] &
+                                codmun %in% filter_list[["enro30"]]), 
+                     weights = df_ww$peso_mt,
+                     vcov = "hetero")
+
+main_pot_30 <- feols(as.numeric(profic_port) ~ aluno_dosage : i(ano, grupo, ref = 2007)
+                     + PIBpc #Controls
+                     | codmun + ano + uf^ano, #FE
+                     data = df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+                       filter(codmun %in% filter_list[["abra"]] &
+                                codmun %in% filter_list[["enro30"]]),
+                     weights = df_ww$peso_lp,
+                     vcov = "hetero")
+
+
+etable(main_mat_30, main_pot_30)
+
+# ---------------------------------------------------------------------------- #
+### 8.5.4 40% ----
+# ---------------------------------------------------------------------------- #
+
+#Weights
+df_ww <- df %>% 
+  filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+  filter(codmun %in% filter_list[["abra"]] &
+           codmun %in% filter_list[["enro40"]]) %>% #Enrollment within |10|%
+  select(peso, peso_mt, peso_lp)
+
+
+
+main_mat_40 <- feols(as.numeric(profic_mat) ~ aluno_dosage : i(ano, grupo, ref = 2007)
+                     + PIBpc #Controls
+                     | codmun + ano + uf^ano, #FE
+                     data = df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+                       filter(codmun %in% filter_list[["abra"]] &
+                                codmun %in% filter_list[["enro40"]]), 
+                     weights = df_ww$peso_mt,
+                     vcov = "hetero")
+
+main_pot_40 <- feols(as.numeric(profic_port) ~ aluno_dosage : i(ano, grupo, ref = 2007)
+                     + PIBpc #Controls
+                     | codmun + ano + uf^ano, #FE
+                     data = df %>% filter(grade == 5 & codmun %in% filter_saeb[["in_saeb"]]) %>% 
+                       filter(codmun %in% filter_list[["abra"]] &
+                                codmun %in% filter_list[["enro40"]]),
+                     weights = df_ww$peso_lp,
+                     vcov = "hetero")
+
+
+etable(main_mat_40, main_pot_40)
+
+
+# ---------------------------------------------------------------------------- #
+### 8.5.5 Plot ----
+# ---------------------------------------------------------------------------- #
+
+
+p_mat_15 <- win_lose_plot(main_mat_15, "Matemática")   #Math
+p_pot_15 <- win_lose_plot(main_pot_15, "Português")    #Language
+
+p_mat_25 <- win_lose_plot(main_mat_25, "Matemática")   #Math
+p_pot_25 <- win_lose_plot(main_pot_25, "Português")    #Language
+
+p_mat_30 <- win_lose_plot(main_mat_30, "Matemática")   #Math
+p_pot_30 <- win_lose_plot(main_pot_30, "Português")    #Language
+
+p_mat_40 <- win_lose_plot(main_mat_40, "Matemática")   #Math
+p_pot_40 <- win_lose_plot(main_pot_40, "Português")    #Language
+
+
+
+
+
+# Create the right column with vertical labels (one per row)
+labels_col <- 
+  label_row("15%", size_pt = 6) /
+  label_row("25%", size_pt = 6) /   # top row
+  label_row("30%", size_pt = 6) /
+  label_row("40%", size_pt = 6)
+
+# put the 12 plots in the exact left-to-right, top-to-bottom order
+plots <- list(p_mat_15, p_pot_15, #Double filter
+              p_mat_25, p_pot_25, #Filter
+              p_mat_30, p_pot_30, #No filter
+              p_mat_40, p_pot_40
+              )
+
+# normalize per-plot margins so they don't force reflow
+normalize_margin <- function(p) {
+  p + theme(plot.margin = grid::unit(c(2,2,2,2), "pt"))
+}
+plots <- lapply(plots, normalize_margin)
+
+# Force a 4 columns x 3 rows layout
+grid_plot <- patchwork::wrap_plots(plots, ncol = 2, nrow = 4) +
+  plot_layout(guides = "collect", widths = rep(1, 2), heights = rep(1,2))
+
+# Now combine with the label column (already defined earlier as labels_col)
+final <- (labels_col | grid_plot ) +
+  plot_layout(widths = c(0.6, 10), heights = c(1,1,1)) +
+  plot_annotation(caption = "Estimates from feols(...) with i(k, ref = -1)")
+
+print(final)
+
+ggsave( #Saving image
+  filename = paste0("winlose_saeb_notas_enrollfilter.png"),
+  plot = final,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Filter/", #Saving directly to the report
+  width = 1000/96, height = 620/96, dpi = 300
+)
+
+rm(final, grid_plot, plots, normalize_margin, p_mat_15, p_pot_15, p_mat_25, p_pot_25,
+   p_mat_30, p_pot_30, p_mat_40, p_pot_40, main_mat_15, main_mat_25, main_mat_30,
+   main_mat_40, main_pot_15, main_pot_25, main_pot_30, main_pot_40, df_ww)
+
 # ---------------------------------------------------------------------------- #
 #9. Aluno Dosage (2005) ----
 # ---------------------------------------------------------------------------- #
