@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions - Version 3
 # Last edited by: Tuffy Licciardi Issa
-# Date: 03/12/2025
+# Date: 16/01/2025
 # ---------------------------------------------------------------------------- #
 
 #' ** ----------------------------------------------------------------------- **
@@ -269,29 +269,64 @@ df_spend <- df_reg %>%
     dosage > 0 ~ "Winner",   # net beneficiary
     dosage < 0 ~ "Loser",   # net contributer
     TRUE ~ NA_character_
-    )
+    ),
+    
+    net_fundeb = (receita_real - receita_simulada)/real_des_edu[ano == 2007]
   ) %>% 
-  filter(tipo == "Municipal") 
+  filter(tipo == "Municipal") %>% 
+  #Manually creating dummy values
+  mutate(d05 = ifelse(ano == 2005, 1, 0),
+         d06 = ifelse(ano == 2006, 1, 0),
+         d07 = ifelse(ano == 2007, 1, 0),
+         d08 = ifelse(ano == 2008, 1, 0),
+         d09 = ifelse(ano == 2009, 1, 0),
+         d10 = ifelse(ano == 2010, 1, 0),
+         d11 = ifelse(ano == 2011, 1, 0),
+         d12 = ifelse(ano == 2012, 1, 0),
+         d13 = ifelse(ano == 2013, 1, 0),
+         d14 = ifelse(ano == 2014, 1, 0),
+         d15 = ifelse(ano == 2015, 1, 0),
+         d16 = ifelse(ano == 2016, 1, 0),
+         d17 = ifelse(ano == 2017, 1, 0),
+         d18 = ifelse(ano == 2018, 1, 0),
+         d19 = ifelse(ano == 2019, 1, 0),
+         d20 = ifelse(ano == 2020, 1, 0),
+         d21 = ifelse(ano == 2021, 1, 0))
 
 
 
 ## 2.2 Dosage Aluno (PC) ----
 
 # Dosage Student
-mod_edu <- feols(des_edu_pc ~ aluno_dosage * i(k, ref = -1)
+mod_edu <- feols(des_edu_pc ~ aluno_dosage : i(k, ref = -1)
                  + PIBpc
                  | codigo_ibge + ano + uf^ano,
-                 data = df_spend,
+                 data = df_spend %>% filter(ano < 2019),
                  vcov = "hetero")
+
 
 
 
 mod_inf <- feols(des_inf_pc ~ aluno_dosage * i(k, ref = -1)
                  + PIBpc
                  | codigo_ibge + ano + uf^ano,
-                 data = df_spend,
+                 data = df_spend %>% filter(ano < 2019),
                  vcov = "hetero")
 
+est_test <- feols(des_edu_pc ~ 
+                    aluno_dosage : d05 +
+                    aluno_dosage : d07 +
+                    aluno_dosage : d08 + aluno_dosage : d09 +
+                    aluno_dosage : d10 + aluno_dosage : d11 +
+                    aluno_dosage : d12 + aluno_dosage : d13 +
+                    aluno_dosage : d14 #+ aluno_dosage : d15 + 
+                    # aluno_dosage : d16 + aluno_dosage : d17 +
+                    # aluno_dosage : d18 + aluno_dosage : d19 +
+                    # aluno_dosage : d20 + aluno_dosage : d21 +
+                    #PIBpc 
+                  | codigo_ibge + uf^ano,
+                  data = df_spend %>% filter(ano < 2019),
+                  vcov = "hetero" )
 
 
 # mod_fund <- feols(des_fund_pc ~ aluno_dosage * i(k, ref = 0)
@@ -306,7 +341,9 @@ mod_inf <- feols(des_inf_pc ~ aluno_dosage * i(k, ref = -1)
 #                  data = df_spend,
 #                  vcov = "hetero")
 
-etable(mod_edu, mod_inf)
+etable(mod_edu)
+
+etable(est_test)
 
 etable(mod_edu, mod_inf, #mod_fund, mod_med,
        vcov = "hetero",
@@ -617,17 +654,17 @@ for (model_name in names(models_list)){
   
   # Criar coluna com os termos (anos relativos k)
   event_df$term <- rownames(event_df)
-  event_df <- event_df %>%
+  
+  event_df <- broom::tidy(current_model, conf.int = TRUE) %>%
+    filter(term != "PIBpc") %>% 
     mutate(
-      k = as.numeric(gsub(".*k::(-?\\d+)$", "\\1", term)), # Extrair o valor de k
-      conf.low = Estimate - 1.96 * `Std. Error`,           # Limite inferior do IC
-      conf.high = Estimate + 1.96 * `Std. Error`           # Limite superior do IC
-    ) %>%
+      k = as.numeric(gsub(".*k::(-?\\d+)$", "\\1", term)
+    )) %>%
     add_row(
-      Estimate = 0,
-      `Std. Error` = 0,
-      `t value` = 0,
-      `Pr(>|t|)` = 0,
+      estimate = 0,
+      std.error = 0,
+      statistic = 0,
+      p.value = 0,
       term = "k::0", # Adicionar termo com referência ao modelo
       k = -1,
       conf.low = 0,
@@ -636,7 +673,7 @@ for (model_name in names(models_list)){
     filter(!is.na(k))
   
   # Criar o gráfico de estilo event-study
-  p <- ggplot(event_df, aes(x = k + 2007, y = Estimate)) +
+  p <- ggplot(event_df, aes(x = k + 2007, y = estimate)) +
     geom_ribbon(aes(ymin = conf.low, ymax = conf.high), fill = "grey60", alpha = 0.3) +
     geom_hline(yintercept = 0, linetype = "dotted", color = "red") +
     geom_vline(xintercept = 2006, color = "black") +
@@ -1827,9 +1864,81 @@ df <- df_saeb %>%
   filter(as.numeric(ano_nasc) < 2008) %>% # This remove younger than expected people in 2017  -> ideal age = 10.
   mutate(ano_nasc = as.factor(ano_nasc))
 
+
+#Adjusting the 2011 grades
+df <- df %>%
+  mutate(
+    across(
+      c(profic_mat, profic_port),
+      ~ as.numeric(gsub(",", ".", .))
+    )
+  )
+
 #Weights dataframes
 df_w5 <- df %>% filter(grade == 5) %>% select(peso, peso_mt, peso_lp)  #5th grade
 df_w9 <- df %>% filter(grade == 9) %>% select(peso, peso_mt, peso_lp)  #9th grade
+
+# ---------------------------------------------------------------------------- #
+## 6.3 Mean grade ----
+# ---------------------------------------------------------------------------- #
+
+
+df_mean <- df %>% group_by(ano) %>% 
+  summarise(nota_mat = mean(as.numeric(profic_mat), na.rm = T),
+            nota_pot = mean(as.numeric(profic_port), na.rm = T))
+
+
+
+plot <- ggplot(df_mean, aes(x = ano)) +
+  # Mathematics
+  geom_line(aes(y = nota_mat, color = "Matemática"), size = 1.2) +
+  geom_point(aes(y = nota_mat, color = "Matemática"), size = 2.5) +
+  geom_text(
+    aes(y = nota_mat, label = round(nota_mat, 1), color = "Matemática"),
+    vjust = -1.2, size = 4, show.legend = FALSE
+  ) +
+  
+  # Portuguese
+  geom_line(aes(y = nota_pot, color = "Português"), size = 1.2) +
+  geom_point(aes(y = nota_pot, color = "Português"), size = 2.5) +
+  geom_text(
+    aes(y = nota_pot, label = round(nota_pot, 1), color = "Português"),
+    vjust = 1.5, size = 4, show.legend = FALSE
+  ) +
+  # X-axis formatting
+  scale_x_continuous(
+    breaks = seq(min(df_mean$ano), max(df_mean$ano), by = 2),
+    labels = function(x) formatC(x, digits = 0, format = "f")
+  ) +
+  
+  scale_color_manual(
+    values = c("Matemática" = "#0072B2", "Português" = "#D55E00")
+  ) +
+  
+  labs(
+    x = "Ano",
+    y = "Nota Média ",
+    color = ""
+  ) +
+  ylim(180, 240) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+
+plot
+
+
+ggsave(
+  filename = ("saeb_metia.png"), # Nome baseado no modelo
+  plot = plot,                           # [English: Name based model]
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Mat",
+  width = 600/96, height = 420/96, dpi = 110)
+
+rm(plot, df_mean)
 
 
 # ------------------------- #
