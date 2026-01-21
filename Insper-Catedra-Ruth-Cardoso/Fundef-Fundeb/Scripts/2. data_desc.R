@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 05/01/2026
+# Date: 21/01/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1474,8 +1474,8 @@ p <- ggplot(data = df_reg %>%
             aes(x = shr_inf, y = (aluno_dosage))) +
   geom_point(color = "#66c2a5", alpha = 0.7, size = 2) +
   labs(
-    x = "Share de estudantes Infantil (2006) (%)",
-    y = "Aluno Dosage; Diferença de receita por matrícula (R$)"
+    x = "Early Childhood Education Enrollment (2006) (%)",
+    y = "Student Dosage (R$)"
   ) +
   scale_y_continuous(
     breaks = seq(-400, 2000, by = 200)#,
@@ -2372,10 +2372,328 @@ for(i in edu) {
   
 }
 
+# ---------------------------------------------------------------------------- #
+# 12. Data Desc----
+# ---------------------------------------------------------------------------- #
+
+gc()
+rm(ls = list())
+
+# Main data
+df_flag <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf_flags.rds") %>% 
+  #Groups
+  mutate(grupo = case_when(
+    aluno_dosage > 0 ~ "Winner",   # net beneficiary
+    aluno_dosage < 0 ~ "Loser",   # net contributer
+    TRUE ~ NA_character_
+  )) %>% 
+  group_by(codigo_ibge) %>% 
+  filter(dosage == 1 |
+           all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>% 
+  ungroup()
+
+
+# ---------------------------------------------------------------------------- #
+## 12.1 Spend + Enroll ----
+# ---------------------------------------------------------------------------- #
+
+
+vars <- c("real_des_edu", "real_des_inf",
+             "real_des_edu_pa", "real_des_inf_pa",
+             "mat_total", "mat_inf",
+             "aluno_dosage",
+             "PIBpc"
+             )
+
+row_labels <- c(
+  "Total Education Spending",
+  "Total Early Childhood Education Spending",
+  "Total Education Spending per Student",
+  "Early Childhood Education Spending per Student",
+  "All Enrolled Students",
+  "Early Childhood Education Enrollment",
+  "Student Dosage",
+  "GDP per capita"
+)
+
+
+dsc_raw <- df_flag %>% 
+  filter(grupo %in% c("Winner", "Loser")) %>% 
+  select(grupo, all_of(vars)) %>% 
+  group_by(grupo) %>% 
+  summarise(
+    across(
+      all_of(vars),
+      list(
+        Mean = ~ mean(.x, na.rm = T),
+        SD = ~ sd(.x, na.rm = T),
+        Obs = ~ sum(!is.na(.x))
+      ),
+      .names = "{.col}_{.fn}"
+    ),
+    .groups = "drop"
+  )
+
+
+# 2) pivot usando names_pattern para extrair variable e stat corretamente
+desc_table <- dsc_raw %>%
+  pivot_longer(
+    cols = -grupo,
+    names_to = c("variable", "stat"),
+    names_pattern = "^(.*)_(Mean|SD|Obs)$",
+    values_to = "value"
+  ) %>%
+  pivot_wider(
+    names_from  = c(grupo, stat),
+    values_from = value
+  )
+
+# 3) transformar variável em factor com rótulos, e ordenar
+desc_table <- desc_table %>%
+  mutate(
+    variable = factor(variable, levels = vars, labels = row_labels)
+  ) %>%
+  arrange(variable) %>%
+  select(
+    Variable = variable,
+    Winner_Mean = paste0("Winner_", "Mean"),
+    Winner_SD   = paste0("Winner_", "SD"),
+    Winner_Obs  = paste0("Winner_", "Obs"),
+    Loser_Mean  = paste0("Loser_",  "Mean"),
+    Loser_SD    = paste0("Loser_",  "SD"),
+    Loser_Obs   = paste0("Loser_",  "Obs")
+  )
+
+# 4) verificar o resultado
+print(desc_table)
+
+filter_mun <- list()
+
+filter_mun[["Mun"]] <- unique(df_flag$codigo_ibge)
+filter_mun[["Win"]] <- unique(df_flag$codigo_ibge[df_flag$grupo == "Winner"])
+filter_mun[["Los"]] <- unique(df_flag$codigo_ibge[df_flag$grupo == "Loser"])
+
+# ---------------------------------------------------------------------------- #
+## 12.2 School ----
+# ---------------------------------------------------------------------------- #
+
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
+  mutate(codmun = as.character(codmun %/% 10),
+         new_psc = ifelse(pre_tot > 0, 1, 0),
+         new_day = ifelse(day_tot > 0, 1, 0)
+  ) %>% 
+  filter(codmun %in% filter_mun[["Mun"]])
+
+#We will calculate the municipal exposure, weighted by the enrollment numbers
+df_school <- df_school %>% 
+  group_by(codmun, ano) %>% 
+  summarise(
+    total_enroll = sum(enroll, na.rm = T),
+    total_presch = sum(pre_tot, na.rm = T),
+    total_daycar = sum(day_tot, na.rm = T),
+    
+    #numeral variables
+    class     = ifelse(sum(classroom, na.rm = T) != 0,
+                       total_enroll / sum(classroom, na.rm = T), NA),
+    
+    n_employee = sum(employee, na.rm = T),                 #New contracts
+    employee  = total_enroll / n_employee,
+    schools   = n(),
+    
+    
+    #School characteristics
+    exp_troom = sum(enroll*teach_room, na.rm = T)/total_enroll,
+    exp_lab   = sum(enroll*lab_dummy, na.rm = T) /total_enroll,
+    exp_lib   = sum(enroll*lib_dummy, na.rm = T) /total_enroll,
+    exp_play  = sum(enroll*play_area, na.rm = T) /total_enroll,
+    exp_lunch = sum(enroll*lunch, na.rm = T)     /total_enroll,
+    
+    #Courses Student Exposure
+    exp_psch  = sum((pre_tot + day_tot)*kinder, na.rm = T)    /total_enroll,
+    exp_elem  = sum(ef_tot*elementary, na.rm = T)/total_enroll,
+    exp_high  = sum(em_tot*high, na.rm = T)      /total_enroll,
+    exp_inc   = sum(esp_tot*inclusion, na.rm = T) /total_enroll,
+    
+    #Childhood exp
+    child_psch = sum(pre_tot*preschool, na.rm = T),
+    child_dayc = sum(day_tot*daycare, na.rm = T),
+    
+    new_child_psch = sum(pre_tot, na.rm = T),
+    new_child_dayc = sum(day_tot, na.rm = T),
+    
+    #Numb. Schools
+    n_daycare = sum(daycare, na.rm = T),
+    n_preschl = sum(preschool, na.rm = T),
+    
+    new_n_daycare = sum(new_day, na.rm = T),
+    new_n_preschl = sum(new_psc, na.rm = T),
+    
+    
+    .groups = "drop"
+  ) %>% 
+  mutate(
+    grupo = case_when(
+      codmun %in% filter_mun[["Win"]] ~ "Winner",
+      codmun %in% filter_mun[["Los"]] ~ "Loser",
+      TRUE ~ NA_character_
+    )
+  )
 
 
 
+vars <- c("class",
+          "employee",
+          "n_employee",
+          "schools",
+          "exp_troom",
+          "exp_lab",
+          "exp_lib",
+          "exp_play",
+          "exp_lunch",
+          "new_child_psch",
+          "new_child_dayc",
+          "new_n_daycare",
+          "new_n_preschl"
+          
+          
+)
+
+row_labels <- c(
+  "Students per Classroom",
+  "Students per Employee",
+  "Total Employees",
+  "Total Schools",
+  "Exposition to Teacher's Room",
+  "Exposition to Lab",
+  "Exposition to Library",
+  "Exposition to Play Area",
+  "Exposition to Lunch",
+  "Preschool Enrollment",
+  "Daycare Enrollment",
+  "Total Preschools",
+  "Total Daycares"
+)
 
 
 
+dsc_raw2 <- df_school %>% 
+  filter(grupo %in% c("Winner", "Loser")) %>% 
+  select(grupo, all_of(vars)) %>% 
+  group_by(grupo) %>% 
+  summarise(
+    across(
+      all_of(vars),
+      list(
+        Mean = ~ mean(.x, na.rm = T),
+        SD = ~ sd(.x, na.rm = T),
+        Obs = ~ sum(!is.na(.x))
+      ),
+      .names = "{.col}_{.fn}"
+    ),
+    .groups = "drop"
+  )
 
+
+# 2) pivot usando names_pattern para extrair variable e stat corretamente
+desc_table2 <- dsc_raw2 %>%
+  pivot_longer(
+    cols = -grupo,
+    names_to = c("variable", "stat"),
+    names_pattern = "^(.*)_(Mean|SD|Obs)$",
+    values_to = "value"
+  ) %>%
+  pivot_wider(
+    names_from  = c(grupo, stat),
+    values_from = value
+  )
+
+# 3) transformar variável em factor com rótulos, e ordenar
+desc_table2 <- desc_table2 %>%
+  mutate(
+    variable = factor(variable, levels = vars, labels = row_labels)
+  ) %>%
+  arrange(variable) %>%
+  select(
+    Variable = variable,
+    Winner_Mean = paste0("Winner_", "Mean"),
+    Winner_SD   = paste0("Winner_", "SD"),
+    Winner_Obs  = paste0("Winner_", "Obs"),
+    Loser_Mean  = paste0("Loser_",  "Mean"),
+    Loser_SD    = paste0("Loser_",  "SD"),
+    Loser_Obs   = paste0("Loser_",  "Obs")
+  )
+
+# 4) verificar o resultado
+print(desc_table2)
+
+rm(var, row_labels, filter_mun)
+
+desc_table <- rbind(desc_table, desc_table2)
+
+
+# ---------------------------------------------------------------------------- #
+## 12.3 Refining ----
+# ---------------------------------------------------------------------------- #
+
+
+colnames(desc_table) <- c(
+  "Variable",                                # coluna das variáveis (vazia ou "Variable")
+  "Mean", "Std. Dev.", "Obs.",
+  "Mean1", "Std. Dev.1", "Obs.1"
+)
+
+
+desc_table <- desc_table %>% 
+  mutate(across(where(is.numeric), ~ round (., 2))) 
+
+colnames(desc_table) <- c(
+  " ",                                # coluna das variáveis (vazia ou "Variable")
+  "Mean", "Std. Dev.", "Obs.",
+  "Mean", "Std. Dev.", "Obs."
+)
+
+
+rm( df_school, df_raw, df_raw2, desc_table2)
+
+# Gerar a tabela LaTeX com cabeçalho agrupado (Winner / Loser)
+latex_tbl <- kable(
+  desc_table,
+  format = "latex",
+  booktabs = TRUE,
+  escape = FALSE,            # permite comandos LaTeX nos rótulos, se houver
+  caption = "Descriptive statistics by group",
+  label = "tab:data_desc",
+  align = c("l", rep("r", 6))
+) %>%
+  kable_styling(latex_options = c("HOLD_position", "scale_down")) %>%
+  add_header_above(c(" " = 1, "Winner" = 3, "Loser" = 3)) 
+
+# Salvar em arquivo .tex
+out_file <- "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Desc/descriptive_by_group.tex"
+save_kable(latex_tbl, out_file)
+
+
+# ---------------------------------------------------------------------------- #
+## 12.4 Plot ----
+# ---------------------------------------------------------------------------- #
+
+library(ggplot2)
+
+### 2.2.1 Ensino Básico ----
+#Plot Sem Corte 
+plot <- ggplot(df_flag %>% filter(ano == 2006), aes(x = shr_inf, y = aluno_dosage)) +
+  geom_point(size = 3, alpha = 0.6, color = "#2C3E50") +
+  geom_smooth(method = "lm", se = F, linetype = 2, color = "red") +
+  labs(
+    #title = "Share of Early Childhood",
+    x = "Share Early Childhood Education (2006)",
+    y = "Student Dosage"
+  ) +
+  theme_minimal(base_size = 14) +                      # clean theme
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12, color = "gray40"),
+    legend.position = "right",
+    panel.grid.minor = element_blank()                 # cleaner grid
+  )
+plot

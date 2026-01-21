@@ -1623,10 +1623,10 @@ data <- data %>%
          growth_spend  = ((real_des_edu - lag(real_des_edu))/lag(real_des_edu))*100) %>% 
   ungroup() %>% group_by(codigo_ibge, ano) %>% 
   mutate(
-    real_des_edu_pa  = real_des_edu/mat_total,
-    real_des_inf_pa  = real_des_inf/mat_inf,
-    real_des_fun_pa  = real_des_fund/mat_fun,
-    real_des_med_pa  = real_des_med/mat_med
+    real_des_edu_pa  = ifelse(mat_total != 0, real_des_edu/mat_total, NA),
+    real_des_inf_pa  = ifelse(mat_inf != 0, real_des_inf/mat_inf, NA),
+    real_des_fun_pa  = ifelse(mat_fun != 0, real_des_fund/mat_fun, NA),
+    real_des_med_pa  = ifelse(mat_med != 0, real_des_med/mat_med, NA)
     ) %>% 
   ungroup() %>% 
   select(-c(mat_fun_aux, mat_med_aux, mat_inf_aux, mat_esp_aux, mat_eja_aux)) %>% 
