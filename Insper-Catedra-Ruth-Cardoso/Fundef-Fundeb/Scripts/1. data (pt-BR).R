@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 10/12/2025
+# Date: 21/01/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1550,11 +1550,11 @@ df_reg <- temp %>%
   
   dosage = (receita_real - receita_simulada)/receita_real,            #Prefered
   
-  old_dosage = (receita_real - receita_simulada)/real_des_edu[ano == 2006],
+  old_dosage = (receita_real - receita_simulada)/real_des_edu[ano == 2006] )
   
   #dosage_perc = del_spending_dos *100,
   
-  aluno_dosage = (receita_real - receita_simulada)/total_alunos_2006) #Prefered
+  #aluno_dosage = (receita_real - receita_simulada)/total_alunos_2006) #Prefered
 
 
 
@@ -1604,20 +1604,20 @@ df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>
     mat_total = mat_fun + mat_med + mat_inf + mat_eja + mat_esp,
     .groups = "drop") %>% 
   mutate(codmun = codmun %/% 10) %>% 
-  rename(codigo_ibge = codmun) %>% 
-  filter(ano != 2006)
+  rename(codigo_ibge = codmun) #%>% 
+  #filter(ano != 2006)
 
 #combining the data
 data <- data %>% 
   left_join(df_enroll,
             by = c("ano", "codigo_ibge")) %>% 
   group_by(codigo_ibge) %>% 
-  mutate(mat_fun   = ifelse(ano == 2006, mat_fun_aux, mat_fun),
-         mat_med   = ifelse(ano == 2006, mat_med_aux, mat_med),
-         mat_inf   = ifelse(ano == 2006, mat_inf_aux, mat_inf),
-         mat_esp   = ifelse(ano == 2006, mat_esp_aux, mat_esp),
-         mat_eja   = ifelse(ano == 2006, mat_eja_aux, mat_eja),
-         mat_total = ifelse(ano == 2006, total_alunos_2006, mat_total)) %>% 
+  # mutate(mat_fun   = ifelse(ano == 2006, mat_fun_aux, mat_fun),
+  #        mat_med   = ifelse(ano == 2006, mat_med_aux, mat_med),
+  #        mat_inf   = ifelse(ano == 2006, mat_inf_aux, mat_inf),
+  #        mat_esp   = ifelse(ano == 2006, mat_esp_aux, mat_esp),
+  #        mat_eja   = ifelse(ano == 2006, mat_eja_aux, mat_eja),
+  #        mat_total = ifelse(ano == 2006, mat_total_aux, mat_total)) %>% 
   filter(ano > 2004 & ano < 2019) %>%  # Removing NA values
   mutate(growth_enroll = ((mat_total - lag(mat_total))/lag(mat_total))*100,
          growth_spend  = ((real_des_edu - lag(real_des_edu))/lag(real_des_edu))*100) %>% 
@@ -1629,7 +1629,10 @@ data <- data %>%
     real_des_med_pa  = real_des_med/mat_med
     ) %>% 
   ungroup() %>% 
-  select(-c(mat_fun_aux, mat_med_aux, mat_inf_aux, mat_esp_aux, mat_eja_aux))
+  select(-c(mat_fun_aux, mat_med_aux, mat_inf_aux, mat_esp_aux, mat_eja_aux)) %>% 
+  mutate(
+    aluno_dosage = (receita_real - receita_simulada)/mat_total[ano == 2006] #Prefered final spec
+  )
 
 
 
@@ -1703,6 +1706,7 @@ summary(data %>% select(flag_enroll15, flag_enroll20, flag_enroll25, flag_enroll
                         flag_spend40, flag_spend50, flag_spend60, flag_spend70,
                         flag_spend80, old_dosage))
 
+test2 <- data %>% filter(flag_enroll15 == 0 & flag_enrollm15 == 0 & ano == 2007)
 
 # ------------------------ #
 ### 7.1.1 Graph ----
