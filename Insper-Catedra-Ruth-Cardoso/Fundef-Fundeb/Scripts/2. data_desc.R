@@ -2677,23 +2677,41 @@ save_kable(latex_tbl, out_file)
 ## 12.4 Plot ----
 # ---------------------------------------------------------------------------- #
 
-library(ggplot2)
 
-### 2.2.1 Ensino Básico ----
-#Plot Sem Corte 
-plot <- ggplot(df_flag %>% filter(ano == 2006), aes(x = shr_inf, y = aluno_dosage)) +
-  geom_point(size = 3, alpha = 0.6, color = "#2C3E50") +
-  geom_smooth(method = "lm", se = F, linetype = 2, color = "red") +
+plot <- ggplot(data = df_flag %>% 
+              filter(tipo == "Municipal" & rede == "Pública") %>% 
+                filter(ano == 2007), 
+            aes(x = shr_inf, y = (aluno_dosage))) +
+  geom_point(color = "#4E79A7", alpha = 0.7, size = 2) +
   labs(
-    #title = "Share of Early Childhood",
-    x = "Share Early Childhood Education (2006)",
-    y = "Student Dosage"
+    x = "Early Childhood Education Enrollment Share (2006) (%)",
+    y = "Student Dosage (R$)"
   ) +
-  theme_minimal(base_size = 14) +                      # clean theme
+  scale_y_continuous(
+    breaks = seq(-400, 2000, by = 200)
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, 100, by = 20)#,
+    #limits = c(0, 100)
+  ) +
+  # xlim(-5, 5)+
+  #ylim(-30,100)+
+  stat_smooth(method = "lm", se = FALSE, color = "#E20020", linetype = "solid") +
+  theme_minimal() +
+  geom_hline(yintercept = 0, linetype = "dashed",
+             color = "black", linewidth = 0.6) +
   theme(
-    plot.title = element_text(face = "bold", size = 16),
-    plot.subtitle = element_text(size = 12, color = "gray40"),
-    legend.position = "right",
-    panel.grid.minor = element_blank()                 # cleaner grid
+    text = element_text(family = "sans", color = "black", size = 11),
+    plot.title = element_text(hjust = 0.5),
+    plot.caption = element_markdown(hjust = 0, face = "italic")
   )
+
 plot
+
+ggsave(
+  filename = ("scatter_shr_alu_dos_final.png"), # Nome baseado no modelo
+  plot = plot,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Scatter",
+  width = 600/96, height = 420/96, dpi = 110)
+
+
