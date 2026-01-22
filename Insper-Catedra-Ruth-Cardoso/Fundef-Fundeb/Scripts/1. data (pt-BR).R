@@ -1629,10 +1629,13 @@ data <- data %>%
     real_des_med_pa  = ifelse(mat_med != 0, real_des_med/mat_med, NA)
     ) %>% 
   ungroup() %>% 
-  select(-c(mat_fun_aux, mat_med_aux, mat_inf_aux, mat_esp_aux, mat_eja_aux)) %>% 
+  select(-c(mat_fun_aux, mat_med_aux, mat_inf_aux, mat_esp_aux, mat_eja_aux)) %>%
+  group_by(codigo_ibge) %>% 
   mutate(
     aluno_dosage = (receita_real - receita_simulada)/mat_total[ano == 2006] #Prefered final spec
-  )
+  ) %>% ungroup() %>% 
+  select(-c(tx_aprovacao_finais, tx_aprovacao_8, rs_por_aluno_fundeb,
+            rs_por_aluno_sim, nom, nom_mun))
 
 
 
