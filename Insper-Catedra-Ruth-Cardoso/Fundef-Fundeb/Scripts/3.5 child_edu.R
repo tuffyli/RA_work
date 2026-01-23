@@ -112,6 +112,8 @@ my_dict <- c(
   "aluno_dosage" = "Student dosage",
   "real_des_edu_pa" = "Total",
   "real_des_inf_pa" = "Pre-primary",
+  "real_des_edu"    = "Total",
+  "real_des_inf"    =  "Pre-primary",
   "PIBpc"        = "GDP per capita (R$)",
   "codigo_ibge" = "municipality",
   "uf^ano"      = "state x year",
@@ -534,7 +536,7 @@ ggsave(                                                #Saving image
   plot = final,
   create.dir = T,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Einf/",
-  width = 1300/96, height = 820/96, dpi = 300
+  width = 800/96, height = 350/96, dpi = 300
 )
 
 rm(p_fun_a, p_fun_r, p_inf_a, p_inf_r, p_med_a, p_med_r, p_tot_a, p_tot_r, final, grid_plot,
@@ -710,7 +712,7 @@ ggsave(                                                #Saving image
   filename = paste0("win_lose_spend_filter.png"),
   plot = final,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Einf/",
-  width = 1300/96, height = 820/96, dpi = 300
+  width = 800/96, height = 350/96, dpi = 300
 )
 
 rm(p_fun_a, p_fun_r, p_inf_a, p_inf_r, p_med_a, p_med_r, p_tot_a, p_tot_r, final, grid_plot,
@@ -839,7 +841,7 @@ ggsave(                                                #Saving image
   filename = paste0("win_lose_spend_lvl_filter.png"),
   plot = final,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Einf/",
-  width = 1300/96, height = 820/96, dpi = 300
+  width = 800/96, height = 350/96, dpi = 300
 )
 
 rm(p_fun_a, p_fun_r, p_inf_a, p_inf_r, p_med_a, p_med_r, p_tot_a, p_tot_r, final, grid_plot,
