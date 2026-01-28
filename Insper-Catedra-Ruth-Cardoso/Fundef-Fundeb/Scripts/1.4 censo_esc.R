@@ -1361,7 +1361,9 @@ data_stat <- data %>%
 # ---------------------------------------------------------------------------- #
 
 data_final <- data_priv %>% 
-  left_join(data_stat, by = "codmun")
+  left_join(data_stat, by = c("codmun", "ano")) %>% 
+  select(-uf.y) %>% 
+  rename(uf = uf.x)
 
 
 
