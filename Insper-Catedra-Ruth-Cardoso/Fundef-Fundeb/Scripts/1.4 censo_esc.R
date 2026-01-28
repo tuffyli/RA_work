@@ -1360,8 +1360,8 @@ data_stat <- data %>%
 # 7. Combinign data ----
 # ---------------------------------------------------------------------------- #
 
-data_final <- data_priv %>% 
-  left_join(data_stat, by = c("codmun", "ano")) %>% 
+data_final <- data_stat %>% 
+  left_join(data_priv, by = c("codmun", "ano")) %>% 
   select(-uf.y) %>% 
   rename(uf = uf.x)
 
