@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions - Spending + Flags For early-childhood
 # Last edited by: Tuffy Licciardi Issa
-# Date: 22/01/2026
+# Date: 28/01/2026
 # ---------------------------------------------------------------------------- #
 
 
@@ -331,6 +331,25 @@ rm(est_abra_tot, est_abra_med, est_abra_fun, est_abra_inf)
 
 # ---------------------------------------------------------------------------- #
 #5. ES Win vs. Lose ----
+# ---------------------------------------------------------------------------- #
+## 5.0 Additional Data ----
+# ---------------------------------------------------------------------------- #
+
+new_data <- readRDS("Z:/Tuffy/Paper - Educ/Dados/enroll_state_private.rds") %>%
+  group_by(codmun, ano) %>% 
+  mutate( #Creating the total enrollment variables
+    mat_tot_priv = ef_priv + em_priv + ed_inf_priv + eja_priv + esp_priv,
+    mat_tot_stat = ef_stat + em_stat + ed_inf_stat + eja_stat + esp_stat
+  ) %>% 
+  ungroup() %>% 
+  select(-uf) %>% 
+  mutate(codmun = codmun %/% 10)
+
+df_temp <- df_spend %>% select(codigo_ibge, ano, aluno_dosage, grupo, dosage,
+                               growth_spend, PIBpc, uf) %>% 
+  left_join(new_data, by = c("codigo_ibge" = "codmun", "ano"))
+
+
 # ---------------------------------------------------------------------------- #
 ## 5.1 Plot Func ----
 # ---------------------------------------------------------------------------- #
@@ -847,7 +866,104 @@ ggsave(                                                #Saving image
 rm(p_fun_a, p_fun_r, p_inf_a, p_inf_r, p_med_a, p_med_r, p_tot_a, p_tot_r, final, grid_plot,
    p_fun_f, p_inf_f, p_med_f, p_tot_f,
    est_abra_fun, est_abra_inf, est_abra_med, est_abra_tot, est_rest_fun, est_rest_inf,
-   est_rest_med, est_rest_tot, est_fun, est_inf, est_med, est_tot, plots, labels_col, normalize_margin, label_row, win_lose_plot)
+   est_rest_med, est_rest_tot, est_fun, est_inf, est_med, est_tot)
+
+# ---------------------------------------------------------------------------- #
+##5.5 State and Private Enrollment ----
+# ---------------------------------------------------------------------------- #
+### 5.5.1 State ----
+# ---------------------------------------------------------------------------- #
+
+est_tot_stat <- feols( mat_tot_stat ~ aluno_dosage : i(ano, grupo, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_temp %>% group_by (codigo_ibge) %>% 
+                        #filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = ~codigo_ibge)
+
+est_inf_stat <- feols(ed_inf_stat ~ aluno_dosage : i(ano, grupo, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_temp %>% group_by (codigo_ibge) %>% 
+                        #filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = ~codigo_ibge)
+
+# ---------------------------------------------------------------------------- #
+### 5.5.2 Private ----
+# ---------------------------------------------------------------------------- #
+
+est_tot_priv <- feols( mat_tot_priv ~ aluno_dosage : i(ano, grupo, ref = 2006) + PIBpc
+                       | codigo_ibge + ano + uf^ano,
+                       data = df_temp %>% group_by (codigo_ibge) %>% 
+                         #filter(ano < 2011) %>% 
+                         filter(dosage == 1 |
+                                  all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                         ungroup(),
+                       vcov = ~codigo_ibge)
+
+est_inf_priv <- feols(ed_inf_priv ~ aluno_dosage : i(ano, grupo, ref = 2006) + PIBpc
+                     | codigo_ibge + ano + uf^ano,
+                     data = df_temp %>% group_by (codigo_ibge) %>% 
+                       #filter(ano < 2011) %>% 
+                       filter(dosage == 1 |
+                                all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                       ungroup(),
+                     vcov = ~codigo_ibge)
+
+# -------------------------------------------- #
+### 5.3.4 Plot ----
+# -------------------------------------------- #
+
+p_tot_s <- win_lose_plot(est_tot_stat, "Total")
+p_inf_s <- win_lose_plot(est_inf_stat, "Pre-primary")
+
+p_inf_p <- win_lose_plot(est_inf_priv, "Pre-primary")
+p_tot_p <- win_lose_plot(est_tot_priv, "Total")
+
+
+# Create the right column with vertical labels (one per row)
+labels_col <- label_row("State",     size_pt = 6) /   # top row
+ label_row("Private", size_pt = 6) #/   # middle row
+# label_row("Fundamental", size_pt = 6) /   # middle row
+# label_row("Médio", size_pt = 6) # bottom row
+
+# put the 12 plots in the exact left-to-right, top-to-bottom order
+plots <- list(
+  p_tot_s, p_inf_s,
+  p_tot_p, p_inf_p
+  # p_fun_a, p_fun_f,
+  # p_med_a, p_med_f
+)
+
+plots <- lapply(plots, normalize_margin)
+
+# Force a 4 columns x 3 rows layout
+grid_plot <- patchwork::wrap_plots(plots, ncol = 2, nrow = 2) +
+  plot_layout(guides = "collect", widths = rep(1, 2), heights = rep(1,2))
+
+# Now combine with the label column (already defined earlier as labels_col)
+final <- (labels_col | grid_plot ) +
+  plot_layout(widths = c(0.6, 10), heights = c(1,1,1)) +
+  plot_annotation(caption = "Clustered (municipality) standard-errors")
+
+print(final)
+
+
+ggsave(                                                #Saving image
+  filename = paste0("win_lose_other_enroll.png"),
+  plot = final,
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Einf/",
+  width = 800/96, height = 350/96, dpi = 300
+)
+
+rm(p_fun_a, p_fun_r, p_inf_a, p_inf_r, p_med_a, p_med_r, p_tot_a, p_tot_r, final, grid_plot,
+   p_fun_f, p_inf_f, p_med_f, p_tot_f,
+   est_abra_fun, est_abra_inf, est_abra_med, est_abra_tot, est_rest_fun, est_rest_inf,
+   est_rest_med, est_rest_tot, est_fun, est_inf, est_med, est_tot, df_spend)
 
 
 # ---------------------------------------------------------------------------- #
