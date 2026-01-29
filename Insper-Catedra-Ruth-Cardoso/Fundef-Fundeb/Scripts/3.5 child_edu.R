@@ -960,10 +960,9 @@ ggsave(                                                #Saving image
   width = 800/96, height = 350/96, dpi = 300
 )
 
-rm(p_fun_a, p_fun_r, p_inf_a, p_inf_r, p_med_a, p_med_r, p_tot_a, p_tot_r, final, grid_plot,
-   p_fun_f, p_inf_f, p_med_f, p_tot_f,
-   est_abra_fun, est_abra_inf, est_abra_med, est_abra_tot, est_rest_fun, est_rest_inf,
-   est_rest_med, est_rest_tot, est_fun, est_inf, est_med, est_tot, df_spend)
+rm(df_temp, est_inf_priv, est_inf_stat, est_tot_priv, est_tot_stat, new_data,
+   plots, labels_col, p_inf_p, p_inf_s, p_tot_p, p_tot_s, label_row, normalize_margin,
+   win_lose_plot)
 
 
 # ---------------------------------------------------------------------------- #
