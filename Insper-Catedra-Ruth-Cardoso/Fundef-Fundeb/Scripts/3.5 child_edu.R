@@ -345,10 +345,33 @@ new_data <- readRDS("Z:/Tuffy/Paper - Educ/Dados/enroll_state_private.rds") %>%
   select(-uf) %>% 
   mutate(codmun = codmun %/% 10)
 
+
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
+  mutate(codmun = as.character(codmun %/% 10),
+         new_psc = ifelse(pre_tot > 0, 1, 0),
+         new_day = ifelse(day_tot > 0, 1, 0),
+         
+         school_inf = ifelse(ed_inf_tot > 0, 1, 0)
+  ) 
+
+
+df_school <- df_school %>% 
+  group_by(codmun, ano) %>% 
+  summarise(
+    n_school = n_distinct(school),
+    n_psc    = sum(new_psc, na.rm = T),
+    n_day    = sum(new_day, na.rm = T),
+    
+    n_inf    = sum(school_inf, na.rm = T),
+    .groups = "drop"
+  ) %>% 
+  mutate(codmun = as.double(codmun))
+
+
 df_temp <- df_spend %>% select(codigo_ibge, ano, aluno_dosage, grupo, dosage,
                                growth_spend, PIBpc, uf) %>% 
-  left_join(new_data, by = c("codigo_ibge" = "codmun", "ano"))
-
+  left_join(new_data, by = c("codigo_ibge" = "codmun", "ano")) %>% 
+  left_join(df_school, by = c("codigo_ibge" = "codmun", "ano"))
 
 # ---------------------------------------------------------------------------- #
 ## 5.1 Plot Func ----
@@ -957,12 +980,88 @@ ggsave(                                                #Saving image
   filename = paste0("win_lose_other_enroll.png"),
   plot = final,
   path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/Einf/",
-  width = 800/96, height = 350/96, dpi = 300
+  width = 800/96, height = 550/96, dpi = 300
 )
 
-rm(df_temp, est_inf_priv, est_inf_stat, est_tot_priv, est_tot_stat, new_data,
-   plots, labels_col, p_inf_p, p_inf_s, p_tot_p, p_tot_s, label_row, normalize_margin,
-   win_lose_plot)
+rm( est_inf_priv, est_inf_stat, est_tot_priv, est_tot_stat, new_data,
+   plots, p_inf_p, p_inf_s, p_tot_p, p_tot_s)
+
+# ---------------------------------------------------------------------------- #
+## 5.6 N° Schools ----
+# ---------------------------------------------------------------------------- #
+### 5.6.1 Regression -----
+# ---------------------------------------------------------------------------- #
+
+est_tot <- feols( n_school ~ aluno_dosage : i(ano, grupo, ref = 2006) + PIBpc
+                       | codigo_ibge + ano + uf^ano,
+                       data = df_temp %>% group_by (codigo_ibge) %>% 
+                         #filter(ano < 2011) %>% 
+                         filter(dosage == 1 |
+                                  all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                         ungroup(),
+                       vcov = ~codigo_ibge)
+
+est_inf <- feols(n_inf ~ aluno_dosage : i(ano, grupo, ref = 2006) + PIBpc
+                      | codigo_ibge + ano + uf^ano,
+                      data = df_temp %>% group_by (codigo_ibge) %>% 
+                        #filter(ano < 2011) %>% 
+                        filter(dosage == 1 |
+                                 all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+                        ungroup(),
+                      vcov = ~codigo_ibge)
+
+# ---------------------------------------------------------------------------- #
+### 5.6.2 Plot -----
+# ---------------------------------------------------------------------------- #
+
+
+p_tot <- win_lose_plot(est_tot, "Total")
+p_inf <- win_lose_plot(est_inf, "Pre-primary")
+
+
+# Create the right column with vertical labels (one per row)
+labels_col <- label_row(" ",     size_pt = 6) #/   # top row
+  #label_row("Private", size_pt = 6) #/   # middle row
+# label_row("Fundamental", size_pt = 6) /   # middle row
+# label_row("Médio", size_pt = 6) # bottom row
+
+# put the 12 plots in the exact left-to-right, top-to-bottom order
+plots <- list(
+  p_tot, p_inf
+  # p_fun_a, p_fun_f,
+  # p_med_a, p_med_f
+)
+
+plots <- lapply(plots, normalize_margin)
+
+# Force a 4 columns x 3 rows layout
+grid_plot <- patchwork::wrap_plots(plots, ncol = 2, nrow = 1) +
+  plot_layout(guides = "collect", widths = rep(1, 2), heights = rep(1,2))
+
+# Now combine with the label column (already defined earlier as labels_col)
+final <- (labels_col | grid_plot ) +
+  plot_layout(widths = c(0.6, 10), heights = c(1,1,1)) +
+  plot_annotation(caption = "Clustered (municipality) standard-errors")
+
+print(final)
+
+
+
+
+# ---------------------------------------------------------------------------- #
+### 5.6.3  Time Plot -----
+# ---------------------------------------------------------------------------- #
+
+df_temp2 <- df_temp %>%
+  group_by (codigo_ibge) %>% 
+  filter(dosage == 1 |
+           all(growth_spend > -20 & growth_spend < 70, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  group_by(ano, grupo) %>% 
+  summarise(
+    preprimary = sum(n_inf, na.rm = T),
+    .groups = "drop"
+  )
 
 
 # ---------------------------------------------------------------------------- #
