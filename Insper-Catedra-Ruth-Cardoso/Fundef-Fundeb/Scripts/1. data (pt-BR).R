@@ -398,9 +398,9 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 ## 4.2 Transferências do Fundeb: ----
 
 # rm(list =ls())
-# siope <- read.csv2("C:/Users/giovannioz/Downloads/finbraRREO_MUNEST_Previsaoatualizadaexercicio/finbraRREO.csv", fileEncoding = "latin1", skip = 5) %>% 
-#   filter(Cod.IBGE == 1200203) %>% 
-#          # Conta %in% c("Dedução de Receita para Formação do FUNDEB", "Transferências do FUNDEB")) %>% 
+# siope <- read.csv2("C:/Users/giovannioz/Downloads/finbraRREO_MUNEST_Previsaoatualizadaexercicio/finbraRREO.csv", fileEncoding = "latin1", skip = 5) %>%
+#   filter(Cod.IBGE == 1200203) %>%
+#          # Conta %in% c("Dedução de Receita para Formação do FUNDEB", "Transferências do FUNDEB")) %>%
 #   mutate(Valor = format(round(Valor, 2), big.mark = ".", decimal.mark = ","),)
 # 
 # unique(siope$Coluna)
@@ -417,19 +417,19 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 # 
 # unique(teste$NOM_ITEM)
 # 
-# teste <- siope_pda %>% 
+# teste <- siope_pda %>%
 #   filter(
 #     NOM_MUNI == "Cruzeiro do Sul",
 #     NOM_COLU == "Deduções FUNDEB" |
 #       str_starts(NOM_ITEM, "Transferências de Recursos do Fundo de Manutenção e Desenvolvimento da Educação Básica")
-#   ) %>% 
+#   ) %>%
 #   mutate(
 #     VAL_DECL = format(round(as.numeric(VAL_DECL), 2), big.mark = ".", decimal.mark = ",")
 #   )
 # 
 # 
 # unique(siope_pda$NOM_COLU)
-
+# 
 
 
 ### 4.2.1 Baixando as planilhas pelo Portal de Dados Abertos do FNDE (RODAR UMA VEZ SÓ): ----
@@ -543,82 +543,82 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 
 ### 4.2.3 Importar todos os anos para uma lista: ----
 
-# pasta_anos <- "C:/Users/giovannioz/OneDrive - Insper/Av. Novo Fundeb/Dados/SIOPE/Anos"
-# 
-# # Inicializa a lista
-# lista_anos <- list()
-# 
-# # Loop pelos anos
-# for (ano in 2005:2024) {
-#   caminho_arquivo <- file.path(pasta_anos, paste0(ano, ".csv"))
-#   
-#   if (!file.exists(caminho_arquivo)) {
-#     message(glue::glue("❌ Arquivo não encontrado para {ano}"))
-#     next
-#   }
-#   
-#   df2 <- read.csv(caminho_arquivo, fileEncoding = "UTF-8") %>% 
-#     # select(-c(NUM_NIVE, NUM_ORDE, NUM_PERI, COD_EXIB_FORMATADO, IDN_CLASS, SIG_UF, NUM_ANO)) %>% 
-#     select(c(ANO, TIPO, UF, COD_UF, COD_MUNI, NOM_MUNI, NOM_ITEM, NOM_COLU, VAL_DECL)) %>% 
-#     filter(NOM_COLU %in% c("Receitas Realizadas", "Deduções FUNDEB")) %>% 
-#            # COD_MUNI != "null") %>% 
-#     mutate(TIPO = as.character(TIPO),
-#            COD_UF = as.numeric(COD_UF),
-#            COD_MUNI = if_else(TIPO == "Estadual", COD_UF, COD_MUNI))
-#  
-#   if (ano == 2005){
-#     df_filtrado <- df2 %>%
-#       mutate(
-#         NOM_ITEM = stringr::str_replace_all(NOM_ITEM, regex("FUNDEB", ignore_case = TRUE), "FUNDEF")
-#       ) %>% 
-#       filter(
-#           NOM_ITEM == "Transferências de Recursos do FUNDEF" |
-#           str_starts(NOM_ITEM, "Transferências da Complementação") |
-#           NOM_ITEM == "DEDUÇÕES DA RECEITA CORRENTE"
-#       ) 
-#   }
-# 
-#   if (ano == 2006){
-#   df_filtrado <- df2 %>%
-#     filter(
-#            NOM_ITEM == "Transferências Multigovernamentais" |
-#            NOM_ITEM == "Transferências de Recursos do FUNDEF" |
-#            str_starts(NOM_ITEM, "Transferências da Complementação") |
-#            NOM_ITEM == "DEDUÇÕES DA RECEITA CORRENTE"
-#            )
-#   }
-#   
-#   if(ano >= 2007 & ano <= 2020){
-#     df_filtrado <- df2 %>% 
-#       filter(NOM_ITEM == "DEDUÇÕES DA RECEITA CORRENTE" |
-#                NOM_ITEM == "Transferências de Recursos do FUNDEB" |
-#                NOM_ITEM == "Transferências de Recursos da Complementação da União ao FUNDEB" |
-#                # NOM_ITEM == "Receita da Remuneração de Depósitos Bancários de Recursos Vinculados - FUNDEB" |
-#                NOM_ITEM == "Transferências Multigovernamentais")
-#   }
-#   
-#   if(ano > 2020){
-#     df_filtrado <- df2 %>% 
-#       filter(str_starts(NOM_ITEM, "Transferências de Recursos do Fundo de Manutenção") & str_ends(NOM_ITEM, regex("Fundeb$", ignore_case = TRUE)) |
-#                str_starts(NOM_ITEM, "Transferências de Recursos de Complementação da União") & str_ends(NOM_ITEM, regex("Fundeb$", ignore_case = TRUE)) |
-#                NOM_ITEM == "Receitas Correntes" & NOM_COLU == "Deduções FUNDEB" |
-#                # str_starts(NOM_ITEM, "Remuneração de Depósitos Bancários") |
-#               NOM_ITEM == "Transferências Multigovernamentais"
-#              ) %>% 
-#       mutate(
-#         NOM_ITEM = case_when(
-#           str_detect(NOM_ITEM, regex("Transferências de Recursos do Fundo de Manutenção.*Fundeb$", ignore_case = TRUE)) ~ "Transferências de Recursos do Fundeb",
-#           str_detect(NOM_ITEM, regex("Transferências de Recursos de Complementação da União.*Fundeb$", ignore_case = TRUE)) ~ "Transferências de Recursos de Complementação da União ao Fundeb",
-#           TRUE ~ NOM_ITEM
-#           )
-#         ) %>% 
-#       filter(NOM_COLU != "Deduções FUNDEB" | NOM_ITEM == "Receitas Correntes")
-#   }
-# 
-#   lista_anos[[as.character(ano)]] <- df_filtrado
-#   message(glue("✅{ano} importado e filtrado com sucesso."))
-#   rm(df2, df_filtrado)
-# }
+pasta_anos <- "Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/SIOPE/Anos"
+
+# Inicializa a lista
+lista_anos <- list()
+
+# Loop pelos anos
+for (ano in 2005:2024) {
+  caminho_arquivo <- file.path(pasta_anos, paste0(ano, ".csv"))
+
+  if (!file.exists(caminho_arquivo)) {
+    message(glue::glue("❌ Arquivo não encontrado para {ano}"))
+    next
+  }
+
+  df2 <- read.csv(caminho_arquivo, fileEncoding = "UTF-8") %>%
+    # select(-c(NUM_NIVE, NUM_ORDE, NUM_PERI, COD_EXIB_FORMATADO, IDN_CLASS, SIG_UF, NUM_ANO)) %>%
+    select(c(ANO, TIPO, UF, COD_UF, COD_MUNI, NOM_MUNI, NOM_ITEM, NOM_COLU, VAL_DECL)) %>%
+    filter(NOM_COLU %in% c("Receitas Realizadas", "Deduções FUNDEB")) %>%
+           # COD_MUNI != "null") %>%
+    mutate(TIPO = as.character(TIPO),
+           COD_UF = as.numeric(COD_UF),
+           COD_MUNI = if_else(TIPO == "Estadual", COD_UF, COD_MUNI))
+
+  if (ano == 2005){
+    df_filtrado <- df2 %>%
+      mutate(
+        NOM_ITEM = stringr::str_replace_all(NOM_ITEM, regex("FUNDEB", ignore_case = TRUE), "FUNDEF")
+      ) %>%
+      filter(
+          NOM_ITEM == "Transferências de Recursos do FUNDEF" |
+          str_starts(NOM_ITEM, "Transferências da Complementação") |
+          NOM_ITEM == "DEDUÇÕES DA RECEITA CORRENTE"
+      )
+  }
+
+  if (ano == 2006){
+  df_filtrado <- df2 %>%
+    filter(
+           NOM_ITEM == "Transferências Multigovernamentais" |
+           NOM_ITEM == "Transferências de Recursos do FUNDEF" |
+           str_starts(NOM_ITEM, "Transferências da Complementação") |
+           NOM_ITEM == "DEDUÇÕES DA RECEITA CORRENTE"
+           )
+  }
+
+  if(ano >= 2007 & ano <= 2020){
+    df_filtrado <- df2 %>%
+      filter(NOM_ITEM == "DEDUÇÕES DA RECEITA CORRENTE" |
+               NOM_ITEM == "Transferências de Recursos do FUNDEB" |
+               NOM_ITEM == "Transferências de Recursos da Complementação da União ao FUNDEB" |
+               # NOM_ITEM == "Receita da Remuneração de Depósitos Bancários de Recursos Vinculados - FUNDEB" |
+               NOM_ITEM == "Transferências Multigovernamentais")
+  }
+
+  if(ano > 2020){
+    df_filtrado <- df2 %>%
+      filter(str_starts(NOM_ITEM, "Transferências de Recursos do Fundo de Manutenção") & str_ends(NOM_ITEM, regex("Fundeb$", ignore_case = TRUE)) |
+               str_starts(NOM_ITEM, "Transferências de Recursos de Complementação da União") & str_ends(NOM_ITEM, regex("Fundeb$", ignore_case = TRUE)) |
+               NOM_ITEM == "Receitas Correntes" & NOM_COLU == "Deduções FUNDEB" |
+               # str_starts(NOM_ITEM, "Remuneração de Depósitos Bancários") |
+              NOM_ITEM == "Transferências Multigovernamentais"
+             ) %>%
+      mutate(
+        NOM_ITEM = case_when(
+          str_detect(NOM_ITEM, regex("Transferências de Recursos do Fundo de Manutenção.*Fundeb$", ignore_case = TRUE)) ~ "Transferências de Recursos do Fundeb",
+          str_detect(NOM_ITEM, regex("Transferências de Recursos de Complementação da União.*Fundeb$", ignore_case = TRUE)) ~ "Transferências de Recursos de Complementação da União ao Fundeb",
+          TRUE ~ NOM_ITEM
+          )
+        ) %>%
+      filter(NOM_COLU != "Deduções FUNDEB" | NOM_ITEM == "Receitas Correntes")
+  }
+
+  lista_anos[[as.character(ano)]] <- df_filtrado
+  message(glue("✅{ano} importado e filtrado com sucesso."))
+  rm(df2, df_filtrado)
+}
 
 
 
@@ -634,8 +634,8 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 # 
 # for (ano in 2005:2024) {
 #   df_ano <- lista_anos[[as.character(ano)]] %>%
-#     distinct(.keep_all = TRUE) %>% 
-#     select(-NOM_COLU) %>% 
+#     distinct(.keep_all = TRUE) %>%
+#     select(-NOM_COLU) %>%
 #     pivot_wider(names_from = NOM_ITEM, values_from = VAL_DECL, values_fill = 0) %>%
 #     group_by(
 #       COD_MUNI,
@@ -643,7 +643,7 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 #       UF,
 #       ANO
 #     )
-#   
+# 
 #   # if(ano == 2005){
 #   #   df_ano <- df_ano %>%
 #   #     mutate(
@@ -656,9 +656,9 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 #   #       # Dif = `Transferência Líquida 1` - `Transferência Líquida 2`,
 #   #     ) %>%
 #   #     ungroup()
-#   # 
+#   #
 #   # }
-#   
+# 
 #   if (ano <= 2006) {
 #     df_ano <- df_ano %>%
 #       mutate(
@@ -669,11 +669,11 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 #         # `Transferência Líquida 1` = `Receita total do FUNDEF/FUNDEB` - `Deduções` - `Complementação da União`,
 #         `Transferência Líquida` = `Principal do FUNDEF/FUNDEB` - `Deduções`
 #         # Dif = `Transferência Líquida 1` - `Transferência Líquida 2`,
-#       ) %>% 
+#       ) %>%
 #       ungroup()
-#     
-#   } 
-#   
+# 
+#   }
+# 
 #   else if (ano >= 2007 & ano <= 2020) {
 #     df_ano <- df_ano %>%
 #       mutate(
@@ -685,9 +685,9 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 #         # `Transferência Líquida 1` = `Receita total do FUNDEF/FUNDEB` + `Remuneração Financeira` - `Deduções` - `Complementação da União`,
 #         `Transferência Líquida` = `Principal do FUNDEF/FUNDEB` - `Deduções`
 #         # Dif = `Transferência Líquida 1` - `Transferência Líquida 2`,
-#       ) %>% 
+#       ) %>%
 #       ungroup()
-#   
+# 
 #   } else {
 #     df_ano <- df_ano %>%
 #       mutate(
@@ -700,11 +700,11 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 #         # `Transferência Líquida 1` = `Receita total do FUNDEF/FUNDEB`  - `Deduções` - `Complementação da União`,
 #         `Transferência Líquida` = `Principal do FUNDEF/FUNDEB`  - `Deduções`
 #         # Dif = `Transferência Líquida 1` - `Transferência Líquida 2`,
-#       ) %>% 
+#       ) %>%
 #       ungroup()
 #   }
-#   
-#   df_ano <- df_ano %>% 
+# 
+#   df_ano <- df_ano %>%
 #     select(c(ANO, TIPO, UF, COD_UF, NOM_MUNI, COD_MUNI, `Principal do FUNDEF/FUNDEB`,
 #              `Complementação da União`,
 #              `Deduções`,
@@ -714,7 +714,7 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 #   message(glue("✅ {ano} manipulado com sucesso"))
 # }
 # 
-# transf <- bind_rows(lista_liq) %>% 
+# transf <- bind_rows(lista_liq) %>%
 #   clean_names()
 
 
