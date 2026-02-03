@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 13/01/2026
+# Date: 03/02/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -40,6 +40,57 @@ base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
   setDT() %>% 
   filter(conclusao == 2)
+
+#Exam start time dummies
+base <- base %>% 
+  mutate(
+    h13 = case_when( #Prova iniciando as 13h
+      ano %in% c(2017:2019) &
+        uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS") ~ 1,
+      
+      ano == 2019 &
+        uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS", "BA", "SE",
+                  "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP") ~ 1,
+      
+      TRUE ~ 0
+    ),
+    
+    h12 = case_when( #Prova iniciando as 12h
+      ano %in% c(2017, 2018) &
+        uf %in% c("BA", "SE", "AL", "PE", "PB", "RN", "CE", "PI", "MA", "TO", "MT",
+                  "MS", "PA", "AP") ~ 1,
+      
+      ano == 2019 &
+        uf %in% c("MT", "MS", "RO", "RR") | uf == "AM" & !mun_prova %in%
+        c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+          1302306, 1302405, 1303502, 1303908, 1304062) ~ 1,
+      
+      TRUE ~ 0
+    ),
+    
+    h11 = case_when( #Prova iniciando as 12h
+      ano %in% c(2017, 2018) &
+        uf %in% c("RO", "RR") | uf == "AM" & !mun_prova %in% 
+        c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+          1302306, 1302405, 1303502, 1303908, 1304062) ~ 1,
+      
+      ano == 2019 &
+        uf == "AC" | mun_prova %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                      1301654, 1301803, 1301951, 1302306, 1302405,
+                                      1303502, 1303908, 1304062) ~ 1,
+      
+      TRUE ~ 0
+    ),
+    
+    h10 = case_when( #Prova iniciando as 12h
+      ano %in% c(2017, 2018) &
+        uf == "AC" | mun_prova %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                      1301654, 1301803, 1301951, 1302306, 1302405,
+                                      1303502, 1303908, 1304062) ~ 1,
+      
+      TRUE ~ 0
+    ))
+
 
 summary(base %>% select(idade, conclusao, esc_mae))
 
@@ -10424,4 +10475,5 @@ rm(both_days18, both_days19, conc_18, conc_19,
    in_em_18, in_em_19, latex_table, n_both_days18, n_both_days19,
    names, nconc_18, nconc_19, nin_em_18, nin_em_19, npub_em_18, npub_em_19,
    ntrei_18, ntrei_19, pub_em_18, pub_em_19, total18, total19, trei_18, trei_19)
+
 
