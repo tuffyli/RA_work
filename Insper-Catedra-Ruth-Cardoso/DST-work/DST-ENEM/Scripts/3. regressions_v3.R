@@ -2471,8 +2471,9 @@ for (i in d_list){
       y = base_a[[i]][base_a$ano == 2019],
       x = base_a$dist_hv_border[base_a$ano == 2018],
       c = 0,
-      h = bw_main_a,
-      b = bw_bias_a,
+      h = bw_main_p,
+      b = bw_bias_p,
+      p = 2, 
       cluster = base_a$seg[base_a$ano == 2018],
       weights = base_a$obs[base_a$ano == 2018],
       vce = "hc0",
@@ -2572,7 +2573,7 @@ latex_table <- knitr::kable(
   linesep = ""
 )
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Redacao_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Redacao_v1.tex")
 
 
 rm(p_list, red_tab, result, d_list, latex_table, row)
@@ -3348,8 +3349,9 @@ for (i in d_list){
       y = base_a[[i]][base_a$ano == 2019],
       x = base_a$dist_hv_border[base_a$ano == 2018],
       c = 0,
-      h = bw_main_a,
-      b = bw_bias_a,
+      h = bw_main_p,
+      b = bw_bias_p,
+      p = 2,
       cluster = base_a$seg[base_a$ano == 2018],
       weights = base_a$obs[base_a$ano == 2018],
       vce = "hc0",
@@ -3433,7 +3435,7 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Dias_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Dias_v1.tex")
 
 
 rm(dias, p_list, result, d_list, latex_table)
