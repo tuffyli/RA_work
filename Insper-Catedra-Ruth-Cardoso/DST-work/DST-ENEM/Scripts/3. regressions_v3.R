@@ -6491,7 +6491,7 @@ ef <- ef %>% select(-1,-2)
 fig <- rdplot(y = yv$vd,
               x = xv$dist_hv_border,
               c = 0,
-              p = 1,
+              p = 2,
               #binselect = "esmv",
               kernel = "triangular",
               #h = bw_main_a,
@@ -6549,8 +6549,8 @@ fig_gg <- ggplot() +
 
 fig_gg
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_nomig_17.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_nomig_17.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/RDD_nomig_17.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/pdf/RDD_nomig_17.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
@@ -6611,6 +6611,7 @@ for (i in var_list) {
     y = base_a$d.media[base_a$ano == 2019],
     x = base_a$dist_hv_border[base_a$ano == 2018],
     c = 0,
+    p = 2,
     cluster = base_a$seg[base_a$ano == 2018],
     weights = base_a$obs[base_a$ano == 2018],
     vce = "hc0",
@@ -6626,11 +6627,12 @@ for (i in var_list) {
     y = base_a$d.media[base_a$ano == 2019],
     x = base_a$dist_hv_border[base_a$ano == 2018],
     c = 0,
+    p = 2,
     cluster = base_a$seg[base_a$ano == 2018],
     weights = base_a$obs[base_a$ano == 2018],
     vce = "hc0",
-    h = bw_main_a,
-    b = bw_bias_a,
+    h = bw_main_p,
+    b = bw_bias_p,
     covs = cbind(
       ef,
       base_a$lat[base_a$ano == 2018],
@@ -6740,7 +6742,7 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/grupos_mig_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/grupos_mig_v1.tex")
 
 
 
