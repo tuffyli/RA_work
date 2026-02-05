@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 03/02/2026
+# Date: 05/02/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -36,10 +36,17 @@ library(stargazer)
 
 
 
+
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
   setDT() %>% 
-  filter(conclusao == 2)
+  filter(conclusao == 2) #%>% 
+  # select(mun_prova,uf, ano, seg, lat, lon, dist_hv_border, pibpc,  #Municipal
+  #        #Alunos
+  #        id_enem, conclusao, mun_res, mun_escola, idade, media, lc, ch, mt, cn, rd,
+  #        rd1, rd2, rd3, rd4, rd5, dia_1, dia_2, priv0, old, escm, escp, mae_trab_man, pai_trab_man,
+  #        ppi, fem, mig_dummy, nonmig1, nonmig2, nonmig3, nonmig4, renda1, dom5, id18)
+
 
 #Exam start time dummies
 base <- base %>% 
@@ -189,17 +196,43 @@ save(bw_main_a, bw_bias_a,
 # ---------------------------------------------------------------------------- #
 #rm(ef,list,base_a)
 
+#### 1.1.1.1 Func de resultado -----
+# 
+# #Funcção para vizualização de resultados:
+# tidy.rdrobust <- function(model, ...) {
+#   ret <- data.frame(
+#     term = row.names(model$coef),
+#     coef = model$coef[, 1],
+#     std.error = model$se[, 1],
+#     p.value = model$pv[, 1]
+#   )
+#   row.names(ret) <- NULL
+#   ret
+# }
+# 
+# glance.rdrobust <- function(model, ...) {
+#   ret <- data.frame(
+#     Kernel = model$kernel,
+#     Bandwidth = model$bwselect
+#   )
+#   ret
+# }
+# 
+# 
+# modelsummary(list, statistic = c("coef", "std.error", "p.value"))
 
 
-hv18 <- weighted.mean(base_a$media[base_a$ano == 2018 & base_a$dist_hv_border > 0 & abs(base_a$dist_hv_border) <= bw_main_a],
-                      w = base_a$obs[base_a$ano == 2018 & base_a$dist_hv_border > 0 & abs(base_a$dist_hv_border) <= bw_main_a])
-hv18_out <- weighted.mean(base_a$media[base_a$ano == 2018 & base_a$dist_hv_border < 0 & abs(base_a$dist_hv_border) <= bw_main_a],
-                          w = base_a$obs[base_a$ano == 2018 & base_a$dist_hv_border < 0 & abs(base_a$dist_hv_border) <= bw_main_a])
 
 
-hv18 - hv18_out
-
-9.28/(hv18-hv18_out)
+# hv18 <- weighted.mean(base_a$media[base_a$ano == 2018 & base_a$dist_hv_border > 0 & abs(base_a$dist_hv_border) <= bw_main_a],
+#                       w = base_a$obs[base_a$ano == 2018 & base_a$dist_hv_border > 0 & abs(base_a$dist_hv_border) <= bw_main_a])
+# hv18_out <- weighted.mean(base_a$media[base_a$ano == 2018 & base_a$dist_hv_border < 0 & abs(base_a$dist_hv_border) <= bw_main_a],
+#                           w = base_a$obs[base_a$ano == 2018 & base_a$dist_hv_border < 0 & abs(base_a$dist_hv_border) <= bw_main_a])
+# 
+# 
+# hv18 - hv18_out
+# 
+# 9.28/(hv18-hv18_out)
 
 
 ### 1.1.2 Add Control ----
@@ -252,7 +285,6 @@ save(bw_main_p, bw_bias_p,
 # ----------------------------------------------------- #
 
 
-
 ### 1.1.4 Pol Horário ----
 list[[as.character(paste0(2019,"-",2018,"P2|NF"))]] <- rdrobust(
   y = base_a$d.media[base_a$ano == 2019],
@@ -298,6 +330,15 @@ list[[as.character(paste0(2019,"-",2018,"P3|NF"))]] <- rdrobust(
 
 ## 1.2 Tabela  ----
 # ---------------------------------------------------------------------------- #
+
+
+# Source - https://stackoverflow.com/a/4227273
+# Posted by nico, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-02-05, License - cc BY-SA 4.0
+
+df <- data.frame(matrix(unlist(list), nrow= 2, byrow=TRUE))
+
+
 
 t10 <- data.frame(
   coef = do.call(rbind,lapply(list, FUN = function(x){x$coef[3]})),
@@ -1034,8 +1075,8 @@ fig_gg <- ggplot() +
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
   ylim(-5,25) + 
-  theme(axis.title.x = element_text(size = 18),
-        axis.title.y = element_text(size = 18),
+  theme(axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
         axis.text.x = element_text(size = 18,angle = 90,hjust = 1, vjust = 0.5),
         axis.text.y = element_text(size = 18))
 
@@ -1755,10 +1796,10 @@ for (i in fig_loop) {
     scale_x_continuous(breaks = xtips,
                        labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
       ylim(-5,25) + 
-    theme(axis.title.x = element_text(size = 35),
-          axis.title.y = element_text(size = 35),
-          axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-          axis.text.y = element_text(size = 30))
+    theme(axis.title.x = element_text(size = 25),
+          axis.title.y = element_text(size = 25),
+          axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+          axis.text.y = element_text(size = 20))
 
   ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/bins/3_bins_",i,"_pol1_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
   ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/bins/3_bins_",i,"_pol1_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
@@ -2694,7 +2735,7 @@ rm(p_list, red_tab, result, d_list, latex_table, row)
 #   ef <- ef %>% select(-1,-2)
 #   
 #   
-#   rp_list[[as.character(paste0("CC_",i,"|TC"))]] <-
+#   rp_list[[as.character(paste0("cc_",i,"|TC"))]] <-
 #     rdrobust(
 #       y = base_a[[i]][base_a$ano == 2019],
 #       x = base_a$dist_hv_border[base_a$ano == 2018],
@@ -3772,8 +3813,9 @@ for (i in d_list){
       y = base_a[[i]][base_a$ano == 2019],
       x = base_a$dist_hv_border[base_a$ano == 2018],
       c = 0,
-      h = bw_main_a,
-      b = bw_bias_a,
+      p = 2,
+      h = bw_main_p,
+      b = bw_bias_p,
       cluster = base_a$seg[base_a$ano == 2018],
       weights = base_a$obs[base_a$ano == 2018],
       vce = "hc0"
@@ -3793,8 +3835,9 @@ for (i in d_list){
       y = base_a[[i]][base_a$ano == 2019],
       x = base_a$dist_hv_border[base_a$ano == 2018],
       c = 0,
-      h = bw_main_a,
-      b = bw_bias_a,
+      p = 2,
+      h = bw_main_p,
+      b = bw_bias_p,
       cluster = base_a$seg[base_a$ano == 2018],
       weights = base_a$obs[base_a$ano == 2018],
       vce = "hc0",
@@ -3871,7 +3914,7 @@ latex_table <- knitr::kable(
 
 resultabs <- result
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Abs_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Abs_v1.tex")
 
 rm(abs_tab, latex_table,i, result, d_list, rabs_list)
 
@@ -3952,8 +3995,9 @@ for (i in d_list){
       y = base_a[[i]][base_a$ano == 2019],
       x = base_a$dist_hv_border[base_a$ano == 2018],
       c = 0,
-      h = bw_main_a,
-      b = bw_bias_a,
+      p = 2,
+      h = bw_main_p,
+      b = bw_bias_p,
       cluster = base_a$seg[base_a$ano == 2018],
       weights = base_a$obs[base_a$ano == 2018],
       vce = "hc0",
@@ -4043,8 +4087,8 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Abs_Dias_v1.tex")
-
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Abs_Dias_v1.tex")
+rm(base_abs, resultabs)
 # ---------------------------------------------------------------------------- #
 # 9. Anexo ----
 # ---------------------------------------------------------------------------- #
@@ -4144,8 +4188,9 @@ for (j in c(0:1)){
     cluster = base_a$seg[base_a$ano == 2018],
     weights = base_a$obs[base_a$ano == 2018],
     vce = "hc0",
-    h = bw_main_a,
-    b = bw_bias_a,
+    p = 2,
+    h = bw_main_p,
+    b = bw_bias_p,
     covs = cbind(
       ef,
       base_a$lat[base_a$ano == 2018],
@@ -4231,12 +4276,9 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/conc_vs_nonconc_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/conc_vs_nonconc_v1.tex")
 
 rm(base_a, names, result, rlist, tab, latex_table, base_nf)
-
-
-
 
 
 
@@ -4244,95 +4286,110 @@ rm(base_a, names, result, rlist, tab, latex_table, base_nf)
 # 10. Anos ----
 # ---------------------------------------------------------------------------- #
 
-base <- data.frame()
+#' Vamos inciar a estimação das diferenças anuais através da abertura das bases de dados
+#' e da agregação destas para o nível municipal.
 
-for(ano in 2013:2019) {
+# 1) Abrindo a base de dados:
+base <- data.frame() #Criando a base de dados vazia que será preenchida pelos dados anuais
+
+for(ano in 2013:2019) { #loop para abertura das bases de dados
+  
+  #Abrindo a base de dados de cada ano
   base_temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_",ano,".RDS")) %>% 
-    select(
+    select( #selecionando apenas as colunas principais
       mun_prova, ano, id_enem, hv, priv0, lon, lat, dist_hv_border, seg, media, idade, conclusao
     ) %>% 
     filter(
-      conclusao == 2
+      conclusao == 2 #mantendo apenas alunos concluintes
     )
   
-  base_nota <- base_temp[priv0 == 1,.(media_nota = mean(media, na.rm = T),
-                              obs = .N),
-                 by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] 
+
+  #Agregando a base de dados para o nível municipal
+  base_nota <- base_temp[priv0 == 1,.(media_nota = mean(media, na.rm = T), #nota média
+                              obs = .N), #n° de observações
+                 by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] #variáveis de agregação
   
   base_nota <- base_nota %>% 
-    filter(abs(dist_hv_border) <= bw_main_a)
+    filter(abs(dist_hv_border) <= bw_main_a) #selecionando apenas os municípios dentro da janela ótima
   
   
   summary(base$conclusao)
 
+  #Salvando a base de dados agregada no nível municipal:
   saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/Agregados/base_nota_ag_",ano,".RDS"))
   
-  base <- rbind(base, base_temp)
+  base <- rbind(base, base_temp) #unindo as bases de dados]
   
-  rm(base_temp, base_nota)
+  message("Finalizado para ", ano)
+  
+  rm(base_temp, base_nota) #removendo os itensque não serão mais utilizados
 }
 
 
 pad <- function(x){
-  x = (x - mean(x, na.rm = T)) / 
+  x = (x - mean(x, na.rm = T)) /
     sd(x, na.rm = T)
   return(x)
 }
 
 
-base <- base %>% 
+base <- base %>%
   mutate(media_p = pad(media))
 
 base_a <- base[priv0 == 1,.(media_nota = mean(media, na.rm = T),
                             obs = .N),
-               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] 
+               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)]
 
 
+
+load(file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_p2.RData")
 
 ### Reg ----
-rlist <- list()
+
+#2) Criando as listas que irão armazenar os resultados para os RDDS
 c_rlist <- list()
+t_rlist <- list()
 
-
-
-
+w_rlist <- list()
+e_rlist <- list()
+#Anos que serão usados no loop de regressões
 ano_list <- c(2013:2018)
 
-### A. TC ----
+# ### A. TC ----
 
 for(ano_ref in ano_list) {
-  
-  
+
+
   ano_comp <- ano_ref + 1
-  
-  
+
+
   base_t <- base_a %>%
-    filter(as.numeric(ano) %in% c(ano_ref,ano_comp)) %>% 
+    filter(as.numeric(ano) %in% c(ano_ref,ano_comp)) %>%
     arrange(mun_prova,ano) %>%
     group_by(mun_prova) %>%
     mutate(
       dup1 = 1,
-      dup2 = sum(dup1)) %>% 
-    ungroup() %>% 
-    filter(dup2 == 2) %>% 
+      dup2 = sum(dup1)) %>%
+    ungroup() %>%
+    filter(dup2 == 2) %>%
     group_by(mun_prova) %>%
     mutate(
       v1_nota = ifelse(ano == ano_ref, media_nota, NA),
       v2_nota = max(v1_nota, na.rm = T),
-      d.media = media_nota - v2_nota 
+      d.media = media_nota - v2_nota
     ) %>%
-    ungroup() %>% 
+    ungroup() %>%
     select(-c(dup2, dup1, v1_nota, v2_nota))
-  
-  
-  
-  
-  
+
+
+
+
+
   #Com controles
   ef <- dummy_cols(base_t$seg[base_t$ano == ano_ref])
   ef <- ef %>% select(-1,-2)
-  
-  c_rlist[[as.character(paste0(ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
+
+  w_rlist[[as.character(paste0(ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
     y = base_t$d.media[base_t$ano == ano_comp],
     x = base_t$dist_hv_border[base_t$ano == ano_ref],
     c = 0,
@@ -4348,8 +4405,25 @@ for(ano_ref in ano_list) {
     )
   )
   
+  e_rlist[[as.character(paste0(ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
+    y = base_t$d.media[base_t$ano == ano_comp],
+    x = base_t$dist_hv_border[base_t$ano == ano_ref],
+    c = 0,
+    p = 2,
+    h = bw_main_p,
+    b = bw_bias_p,
+    cluster = base_t$seg[base_t$ano == ano_ref],
+    weights = base_t$obs[base_t$ano == ano_ref],
+    vce = "hc0",
+    covs = cbind(
+      ef,
+      base_t$lat[base_t$ano == ano_ref],
+      base_t$lon[base_t$ano == ano_ref]
+    )
+  )
+
   rm(ano_ref, ano_comp, base_t)
-  
+
 }
 rm(ef)
 
@@ -4359,22 +4433,36 @@ rm(ef)
 ### Resultados ----
 
 
-t10cc <- data.frame(
-  coef = do.call(rbind,lapply(c_rlist, FUN = function(x){x$coef[3]})),
-  se = do.call(rbind,lapply(c_rlist, FUN = function(x){x$se[3]})),
-  pv = do.call(rbind,lapply(c_rlist, FUN = function(x){x$pv[3]})),
-  n = do.call(rbind, lapply(c_rlist, FUN = function(x){x$N_h}))
+t10c3 <- data.frame(
+  coef = do.call(rbind,lapply(w_rlist, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(w_rlist, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(w_rlist, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(w_rlist, FUN = function(x){x$N_h})),
+  t = do.call(rbind, lapply(w_rlist, FUN = function(x){x$N}))
 ) %>% 
   mutate(
-    N = n.1 + n.2
+    N = n.1 + n.2,
+    Tot = t.1 + t.2
+  ) %>% 
+  select(-c(n.1, n.2))
+
+t10c4 <- data.frame(
+  coef = do.call(rbind,lapply(e_rlist, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(e_rlist, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(e_rlist, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(e_rlist, FUN = function(x){x$N_h})),
+  t = do.call(rbind, lapply(e_rlist, FUN = function(x){x$N}))
+) %>% 
+  mutate(
+    N = n.1 + n.2,
+    Tot = t.1 + t.2
   ) %>% 
   select(-c(n.1, n.2))
 
 
 
 
-
-names <- c("2014 - 2013",
+names2 <- c("2014 - 2013",
            " ",
            " ",
            "2015 - 2014",
@@ -4391,24 +4479,27 @@ names <- c("2014 - 2013",
            " ",
            "2019 - 2018",
            " ",
-           " ")
-
-result <- data.frame(
-  var = names,
-  #tcnc = rep(NA, times = length(names)),
-  tccc = rep(NA, times = length(names))#,
-  #jcnc = rep(NA, times = length(names)),
-  #jccc = rep(NA, times = length(names))
-)
+           " ",
+           "  ",            " ",
+           " ",
+           "Banda")
+# 
+# result <- data.frame(
+#   var = names,
+#   #tcnc = rep(NA, times = length(names)),
+#   tccc = rep(NA, times = length(names))#,
+#   #jcnc = rep(NA, times = length(names)),
+#   #jccc = rep(NA, times = length(names))
+# )
 
 
 
 #Controles
-t10cc <- t10cc %>% 
+t10c3 <- t10c3 %>%
   mutate(
     coef = paste0(formatC(x = coef, digits = 2, format = "f"),
-                  ifelse(pv < 0.01, "**", 
-                         ifelse(pv < 0.05, "*", 
+                  ifelse(pv < 0.01, "**",
+                         ifelse(pv < 0.05, "*",
                                 ifelse(pv < 0.1, "", "")
                          ))),
     se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
@@ -4416,87 +4507,121 @@ t10cc <- t10cc %>%
     N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
     esp = 1,
     id = 1:6
-  ) 
+  )
+
+t10c4 <- t10c4 %>%
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**",
+                         ifelse(pv < 0.05, "*",
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
+    esp = 1,
+    id = 1:6
+  )
 # %>%
 #   select(-c(pv,se)) %>%
 #   setDT() %>%
 #   dcast(id ~ esp, value.var = c("coef"),fill = "") %>%
 #   select(-id)
-
-#Base A
-result$tccc[1] <- t10cc$coef[[1]]
-result$tccc[2] <- t10cc$se[[1]]
-result$tccc[3] <- t10cc$N[[1]]
-result$tccc[4] <- t10cc$coef[[2]]
-result$tccc[5] <- t10cc$se[[2]]
-result$tccc[6] <- t10cc$N[[2]]
-result$tccc[7] <- t10cc$coef[[3]]
-result$tccc[8] <- t10cc$se[[3]]
-result$tccc[9] <- t10cc$N[[3]]
-result$tccc[10] <- t10cc$coef[[4]]
-result$tccc[11] <- t10cc$se[[4]]
-result$tccc[12] <- t10cc$N[[4]]
-result$tccc[13] <- t10cc$coef[[5]]
-result$tccc[14] <- t10cc$se[[5]]
-result$tccc[15] <- t10cc$N[[5]]
-result$tccc[16] <- t10cc$coef[[6]]
-result$tccc[17] <- t10cc$se[[6]]
-result$tccc[18] <- t10cc$N[[6]]
-
-
-
-
-
-# t10_final <- cbind(t10nc, t10cc)
+# 
+# #Base A
+# result$tccc[1] <- t10cc$coef[[1]]
+# result$tccc[2] <- t10cc$se[[1]]
+# result$tccc[3] <- t10cc$N[[1]]
+# result$tccc[4] <- t10cc$coef[[2]]
+# result$tccc[5] <- t10cc$se[[2]]
+# result$tccc[6] <- t10cc$N[[2]]
+# result$tccc[7] <- t10cc$coef[[3]]
+# result$tccc[8] <- t10cc$se[[3]]
+# result$tccc[9] <- t10cc$N[[3]]
+# result$tccc[10] <- t10cc$coef[[4]]
+# result$tccc[11] <- t10cc$se[[4]]
+# result$tccc[12] <- t10cc$N[[4]]
+# result$tccc[13] <- t10cc$coef[[5]]
+# result$tccc[14] <- t10cc$se[[5]]
+# result$tccc[15] <- t10cc$N[[5]]
+# result$tccc[16] <- t10cc$coef[[6]]
+# result$tccc[17] <- t10cc$se[[6]]
+# result$tccc[18] <- t10cc$N[[6]]
 # 
 
-colnames(result) <- c("", "(1)")
 
-# Cria a tabela LaTeX
-latex_table <- knitr::kable(
-  result,
-  format = "latex",
-  booktabs = TRUE,
-  align = "lc",
-  linesep = ""
-)
-
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Anos_v1.tex")
+# 
+# 
+# # t10_final <- cbind(t10nc, t10cc)
+# # 
+# 
+# colnames(result) <- c("", "(1)")
+# 
+# # Cria a tabela LaTeX
+# latex_table <- knitr::kable(
+#   result,
+#   format = "latex",
+#   booktabs = TRUE,
+#   align = "lc",
+#   linesep = ""
+# )
+# 
+# writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Anos_v1.tex")
 
 # ---------------------------------------------------------------------------- #
 ## 10.1 Nível ----
 # ---------------------------------------------------------------------------- #
 
+#2) Com os resultados da nota em nível:
+c_rlist <- list() #lista para armazenar os resultados
 
-c_rlist <- list()
+ano_list <- c(2013:2019) #Lista dos anos que serão comparados no loop
 
-ano_list <- c(2013:2019)
-
+#Loop de regressão por ano:
 for(ano_ref in ano_list) {
   
   base_t <- base_a %>% 
-    filter(ano == ano_ref)
+    filter(ano == ano_ref) #Selecionando apenas os dados no ano de referência
   
-  #Com controles
-  ef <- dummy_cols(base_t$seg[base_t$ano == ano_ref])
+  #Com controles no ano de referência
+  ef <- dummy_cols(base_t$seg[base_t$ano == ano_ref]) #EF de segmento
   ef <- ef %>% select(-1,-2)
   
-  c_rlist[[as.character(paste0(ano_ref,"C|TC"))]] <- rdrobust(
-    y = base_t$media_nota[base_t$ano == ano_ref],
-    x = base_t$dist_hv_border[base_t$ano == ano_ref],
-    c = 0,
-    h = bw_main_a,
-    b = bw_bias_a,
-    cluster = base_t$seg[base_t$ano == ano_ref],
-    weights = base_t$obs[base_t$ano == ano_ref],
-    vce = "hc0",
-    covs = cbind(
+  c_rlist[[as.character(paste0(ano_ref,"C|TC"))]] <- rdrobust( #Resultado armazenado na lista
+    y = base_t$media_nota[base_t$ano == ano_ref], #nota media no município
+    x = base_t$dist_hv_border[base_t$ano == ano_ref], #RV de distância
+    c = 0, #Ponto de corte
+    p = 2,
+    h = bw_main_p, #Limitando para a banda ótima de ref.
+    b = bw_bias_p, #Limitando para a banda ótima de ref.
+    cluster = base_t$seg[base_t$ano == ano_ref], #cluster no segmento
+    weights = base_t$obs[base_t$ano == ano_ref], #peso nas amostras
+    vce = "hc0", 
+    covs = cbind( #covariadas
       ef,
       base_t$lat[base_t$ano == ano_ref],
       base_t$lon[base_t$ano == ano_ref]
     )
   )
   
+  
+  
+  t_rlist[[as.character(paste0(ano_ref,"C|TC"))]] <- rdrobust( #Resultado armazenado na lista
+    y = base_t$media_nota[base_t$ano == ano_ref], #nota media no município
+    x = base_t$dist_hv_border[base_t$ano == ano_ref], #RV de distância
+    c = 0, #Ponto de corte
+    p = 1,
+    h = bw_main_a, #Limitando para a banda ótima de ref.
+    b = bw_bias_a, #Limitando para a banda ótima de ref.
+    cluster = base_t$seg[base_t$ano == ano_ref], #cluster no segmento
+    weights = base_t$obs[base_t$ano == ano_ref], #peso nas amostras
+    vce = "hc0", 
+    covs = cbind( #covariadas
+      ef,
+      base_t$lat[base_t$ano == ano_ref],
+      base_t$lon[base_t$ano == ano_ref]
+    )
+  )
   rm(ano_ref, base_t)
   
 }
@@ -4517,6 +4642,18 @@ t10cc <- data.frame(
   select(-c(n.1, n.2))
 
 
+t10c2 <- data.frame(
+  coef = do.call(rbind,lapply(t_rlist, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(t_rlist, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(t_rlist, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(t_rlist, FUN = function(x){x$N_h})),
+  t = do.call(rbind, lapply(t_rlist, FUN = function(x){x$N}))
+) %>% 
+  mutate(
+    N = n.1 + n.2,
+    Tot = t.1 + t.2
+  ) %>% 
+  select(-c(n.1, n.2))
 
 
 
@@ -4533,20 +4670,48 @@ names <- c("2013",
            "2018",
            " "," ",
            "2019",
-           " ", " ")
+           " ", " ",
+           "Banda")
 
+
+# ----------------- #
+# Tabela ------------------------
+# -----------------#
 result <- data.frame(
   var = names,
   #tcnc = rep(NA, times = length(names)),
   tccc = rep(NA, times = length(names)),
-  mun = rep(NA, times = length(names))
-  #jccc = rep(NA, times = length(names))
+  mun = rep(NA, times = length(names)),
+  spa = rep(NA, times = length(names)),
+  tcc2 = rep(NA, times = length(names)),
+  mun2 = rep(NA, times = length(names)),
+  var2 = names2,
+  tcc3 = rep(NA, time = length(names)),
+  mun3 = rep(NA, time = length(names)),
+  spa2 = rep(NA, times = length(names)),
+  tcc4 = rep(NA, time = length(names)),
+  mun4 = rep(NA, time = length(names)),
+
 )
 
 
 
 #Controles
-t10cc <- t10cc %>% 
+t10cc<- t10cc %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
+    esp = 1,
+    id = 1:7
+  ) 
+
+t10c2 <- t10c2 %>% 
   mutate(
     coef = paste0(formatC(x = coef, digits = 2, format = "f"),
                   ifelse(pv < 0.01, "**", 
@@ -4587,6 +4752,8 @@ result$tccc[18] <- t10cc$N[[6]]
 result$tccc[19] <- t10cc$coef[[7]]
 result$tccc[20] <- t10cc$se[[7]]
 result$tccc[21] <- t10cc$N[[7]]
+result$tccc[22] <- bw_main_p
+
 
 result$mun[1] <- " "
 result$mun[2] <- t10cc$Tot[[1]]
@@ -4609,25 +4776,228 @@ result$mun[18] <- " "
 result$mun[19] <- " "
 result$mun[20] <- t10cc$Tot[[6]]
 result$mun[21] <- " "
+result$mun[22] <- bw_bias_p
+
+result$spa[1] <- " "
+result$spa[2] <- " "
+result$spa[3] <- " "
+result$spa[4] <- " "
+result$spa[5] <- " "
+result$spa[6] <- " "
+result$spa[7] <- " "
+result$spa[8] <- " "
+result$spa[9] <- " "
+result$spa[10] <- " "
+result$spa[11] <- " "
+result$spa[12] <- " "
+result$spa[13] <- " "
+result$spa[14] <- " "
+result$spa[15] <- " "
+result$spa[16] <- " "
+result$spa[17] <- " "
+result$spa[18] <- " "
+result$spa[19] <- " "
+result$spa[20] <- " "
+result$spa[21] <- " "
+result$spa[22] <- " "
+
+
+result$spa2[1] <- " "
+result$spa2[2] <- " "
+result$spa2[3] <- " "
+result$spa2[4] <- " "
+result$spa2[5] <- " "
+result$spa2[6] <- " "
+result$spa2[7] <- " "
+result$spa2[8] <- " "
+result$spa2[9] <- " "
+result$spa2[10] <- " "
+result$spa2[11] <- " "
+result$spa2[12] <- " "
+result$spa2[13] <- " "
+result$spa2[14] <- " "
+result$spa2[15] <- " "
+result$spa2[16] <- " "
+result$spa2[17] <- " "
+result$spa2[18] <- " "
+result$spa2[19] <- " "
+result$spa2[20] <- " "
+result$spa2[21] <- " "
+result$spa2[22] <- " "
 
 
 
-# t10_final <- cbind(t10nc, t10cc)
+
+#Base 2
+result$tcc2[1] <- t10c2$coef[[1]]
+result$tcc2[2] <- t10c2$se[[1]]
+result$tcc2[3] <- t10c2$N[[1]]
+result$tcc2[4] <- t10c2$coef[[2]]
+result$tcc2[5] <- t10c2$se[[2]]
+result$tcc2[6] <- t10c2$N[[2]]
+result$tcc2[7] <- t10c2$coef[[3]]
+result$tcc2[8] <- t10c2$se[[3]]
+result$tcc2[9] <- t10c2$N[[3]]
+result$tcc2[10] <- t10c2$coef[[4]]
+result$tcc2[11] <- t10c2$se[[4]]
+result$tcc2[12] <- t10c2$N[[4]]
+result$tcc2[13] <- t10c2$coef[[5]]
+result$tcc2[14] <- t10c2$se[[5]]
+result$tcc2[15] <- t10c2$N[[5]]
+result$tcc2[16] <- t10c2$coef[[6]]
+result$tcc2[17] <- t10c2$se[[6]]
+result$tcc2[18] <- t10c2$N[[6]]
+result$tcc2[19] <- t10c2$coef[[7]]
+result$tcc2[20] <- t10c2$se[[7]]
+result$tcc2[21] <- t10c2$N[[7]]
+result$tcc2[22] <- bw_main_a
+
+
+result$mun2[1] <- " "
+result$mun2[2] <- t10c2$Tot[[1]]
+result$mun2[3] <- " "
+result$mun2[4] <- " "
+result$mun2[5] <- t10c2$Tot[[2]]
+result$mun2[6] <- " "
+result$mun2[7] <- " "
+result$mun2[8] <- t10c2$Tot[[3]]
+result$mun2[9] <- " "
+result$mun2[10] <-  " "
+result$mun2[11] <- t10c2$Tot[[4]]
+result$mun2[12] <- " "
+result$mun2[13] <- " "
+result$mun2[14] <- t10c2$Tot[[5]]
+result$mun2[15] <- " "
+result$mun2[16] <- " "
+result$mun2[17] <- t10c2$Tot[[6]]
+result$mun2[18] <- " "
+result$mun2[19] <- " "
+result$mun2[20] <- t10c2$Tot[[6]]
+result$mun2[21] <- " "
+result$mun2[22] <- bw_bias_a
+
+##
+
+#Base A
+result$tcc4[1] <- t10c4$coef[[1]]
+result$tcc4[2] <- t10c4$se[[1]]
+result$tcc4[3] <- t10c4$N[[1]]
+result$tcc4[4] <- t10c4$coef[[2]]
+result$tcc4[5] <- t10c4$se[[2]]
+result$tcc4[6] <- t10c4$N[[2]]
+result$tcc4[7] <- t10c4$coef[[3]]
+result$tcc4[8] <- t10c4$se[[3]]
+result$tcc4[9] <- t10c4$N[[3]]
+result$tcc4[10] <- t10c4$coef[[4]]
+result$tcc4[11] <- t10c4$se[[4]]
+result$tcc4[12] <- t10c4$N[[4]]
+result$tcc4[13] <- t10c4$coef[[5]]
+result$tcc4[14] <- t10c4$se[[5]]
+result$tcc4[15] <- t10c4$N[[5]]
+result$tcc4[16] <- t10c4$coef[[6]]
+result$tcc4[17] <- t10c4$se[[6]]
+result$tcc4[18] <- t10c4$N[[6]]
+result$tcc4[19] <- " "
+result$tcc4[20] <- " "
+result$tcc4[21] <- " "
+result$tcc4[22] <- bw_main_p
+
+
+result$mun3[1] <- " "
+result$mun3[2] <- t10c4$Tot[[1]]
+result$mun3[3] <- " "
+result$mun3[4] <- " "
+result$mun3[5] <- t10c4$Tot[[2]]
+result$mun3[6] <- " "
+result$mun3[7] <- " "
+result$mun3[8] <- t10c4$Tot[[3]]
+result$mun3[9] <- " "
+result$mun3[10] <-  " "
+result$mun3[11] <- t10c4$Tot[[4]]
+result$mun3[12] <- " "
+result$mun3[13] <- " "
+result$mun3[14] <- t10c4$Tot[[5]]
+result$mun3[15] <- " "
+result$mun3[16] <- " "
+result$mun3[17] <- t10c4$Tot[[6]]
+result$mun3[18] <- " "
+result$mun3[19] <- " "
+result$mun3[20] <- " "
+result$mun3[21] <- " "
+result$mun3[22] <- bw_bias_p
+
+
+#Base Dif
+result$tcc3[1] <- t10c3$coef[[1]]
+result$tcc3[2] <- t10c3$se[[1]]
+result$tcc3[3] <- t10c3$N[[1]]
+result$tcc3[4] <- t10c3$coef[[2]]
+result$tcc3[5] <- t10c3$se[[2]]
+result$tcc3[6] <- t10c3$N[[2]]
+result$tcc3[7] <- t10c3$coef[[3]]
+result$tcc3[8] <- t10c3$se[[3]]
+result$tcc3[9] <- t10c3$N[[3]]
+result$tcc3[10] <- t10c3$coef[[4]]
+result$tcc3[11] <- t10c3$se[[4]]
+result$tcc3[12] <- t10c3$N[[4]]
+result$tcc3[13] <- t10c3$coef[[5]]
+result$tcc3[14] <- t10c3$se[[5]]
+result$tcc3[15] <- t10c3$N[[5]]
+result$tcc3[16] <- t10c3$coef[[6]]
+result$tcc3[17] <- t10c3$se[[6]]
+result$tcc3[18] <- t10c3$N[[6]]
+result$tcc3[19] <- t10c3$coef[[7]]
+result$tcc3[20] <- t10c3$se[[7]]
+result$tcc3[21] <- t10c3$N[[7]]
+result$tcc3[22] <- bw_main_a
+
+
+result$mun4[1] <- " "
+result$mun4[2] <- t10c3$Tot[[1]]
+result$mun4[3] <- " "
+result$mun4[4] <- " "
+result$mun4[5] <- t10c3$Tot[[2]]
+result$mun4[6] <- " "
+result$mun4[7] <- " "
+result$mun4[8] <- t10c3$Tot[[3]]
+result$mun4[9] <- " "
+result$mun4[10] <-  " "
+result$mun4[11] <- t10c3$Tot[[4]]
+result$mun4[12] <- " "
+result$mun4[13] <- " "
+result$mun4[14] <- t10c3$Tot[[5]]
+result$mun4[15] <- " "
+result$mun4[16] <- " "
+result$mun4[17] <- t10c3$Tot[[6]]
+result$mun4[18] <- " "
+result$mun4[19] <- " "
+result$mun4[20] <- " "
+result$mun4[21] <- " "
+result$mun4[22] <- bw_bias_a
+
+
+
+
+
+# t10_final <- cbind(t10nc, t10c2)
 # 
 
-colnames(result) <- c("", "(1)", "(2)")
+write.xlsx(result, "Z:/Tuffy/Paper - HV/Resultados/nvl_ano.xlsx")
+
+
+colnames(result) <- c("", "(1)", "(2)", " ", "(3)", "(4)", " ", " ")
 
 # Cria a tabela LaTeX
 latex_table <- knitr::kable(
   result,
   format = "latex",
   booktabs = TRUE,
-  align = "lcc",
+  align = "lc2c2c2c2c2c",
   linesep = ""
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Anos_nivel_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Anos_nivel_v1.tex")
 
 
 
@@ -4673,8 +5043,8 @@ p <- ggplot(t10cc, aes(x = ano, y = coef)) +
 
 p
 
-ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/anos_lvl.png"), device = "png", height = 7, width = 10)
-ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/anos_lvl.eps"), device = "eps", height = 7, width = 10)
+ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/anos_lvl.png"), device = "png", height = 7, width = 10)
+ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/pdf/anos_lvl.eps"), device = "eps", height = 7, width = 10)
 
 
 
@@ -6536,7 +6906,7 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/grupos_
 # breaks_vec <- tablist_cutseg$c
 # labes_2 <- c("-3SD", "-2SD", "-1SD", "0", "1SD", "2SD", "3SD")
 # labels_vec <- c("-3*BW", "-2*BW", "-1*BW", "0", "1*BW", "2*BW", "3*BW")
-# labels_vec2 <- c("-0.3*SD", "-0.2*SD", "-0.1*SD", "0", "0.1*SD", "0.2*SD", "0.3*SD")
+# labels_vecc <- c("-0.3*SD", "-0.2*SD", "-0.1*SD", "0", "0.1*SD", "0.2*SD", "0.3*SD")
 # 
 # 
 # graph <-  ggplot(data = tablist_cutseg) +
@@ -8233,7 +8603,7 @@ map <- ggplot(mun_hv) +
   scale_fill_manual(
     name = "Groups",
     values = c(
-      "Out"           = "#66c2a5",     # soft green
+      "Out"           = "#66cca5",     # soft green
       "In BW"         = "#E0D268",     # muted yellow
       "In BW & ENEM"  = "#CB4C4E"      # muted red
     ),
