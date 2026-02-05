@@ -4675,7 +4675,7 @@ names <- c("2013",
 
 
 # ----------------- #
-# Tabela ------------------------
+### Tabela ------------------------
 # -----------------#
 result <- data.frame(
   var = names,
@@ -4690,7 +4690,7 @@ result <- data.frame(
   mun3 = rep(NA, time = length(names)),
   spa2 = rep(NA, times = length(names)),
   tcc4 = rep(NA, time = length(names)),
-  mun4 = rep(NA, time = length(names)),
+  mun4 = rep(NA, time = length(names))
 
 )
 
@@ -4946,9 +4946,9 @@ result$tcc3[15] <- t10c3$N[[5]]
 result$tcc3[16] <- t10c3$coef[[6]]
 result$tcc3[17] <- t10c3$se[[6]]
 result$tcc3[18] <- t10c3$N[[6]]
-result$tcc3[19] <- t10c3$coef[[7]]
-result$tcc3[20] <- t10c3$se[[7]]
-result$tcc3[21] <- t10c3$N[[7]]
+result$tcc3[19] <- " "
+result$tcc3[20] <- " "
+result$tcc3[21] <- " "
 result$tcc3[22] <- bw_main_a
 
 
@@ -4984,21 +4984,21 @@ result$mun4[22] <- bw_bias_a
 
 write.xlsx(result, "Z:/Tuffy/Paper - HV/Resultados/nvl_ano.xlsx")
 
-
-colnames(result) <- c("", "(1)", "(2)", " ", "(3)", "(4)", " ", " ")
-
-# Cria a tabela LaTeX
-latex_table <- knitr::kable(
-  result,
-  format = "latex",
-  booktabs = TRUE,
-  align = "lc2c2c2c2c2c",
-  linesep = ""
-)
-
-
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Anos_nivel_v1.tex")
-
+# 
+# colnames(result) <- c("", "(1)", "(2)", " ", "(3)", "(4)", " ", " ")
+# 
+# # Cria a tabela LaTeX
+# latex_table <- knitr::kable(
+#   result,
+#   format = "latex",
+#   booktabs = TRUE,
+#   align = "lccccc",
+#   linesep = ""
+# )
+# 
+# 
+# writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Anos_nivel_v1.tex")
+# 
 
 
 
@@ -5049,7 +5049,7 @@ ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/po
 
 
 rm(base_a, base_t, c_rlist, result, rlist, t10cc, t10nc, ano, ano_list, latex_table, names, ef)
-
+rm(t10c2, t10c3, t10c4, w_rlist, e_rlist, t_rlist)
 # ---------------------------------------------------------------------------- #
 ## 10.3 Picchetti ----
 # ---------------------------------------------------------------------------- #
@@ -5073,7 +5073,7 @@ base_test1 <- base_a %>%
     # peso = max(peso_aux, na.rm = T)
   ) %>% 
   ungroup() %>% 
-  filter( abs(dist_hv_border) <= bw_main_a,
+  filter( abs(dist_hv_border) <= bw_main_p,
           #dup2 == max(dup2),
           ano <= 2016) %>% 
   select(-c( dup, dup2)) %>% 
@@ -5086,7 +5086,7 @@ base_test1 <- base_a %>%
   )
 
 
-saveRDS(base_test1, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/Agregados/base_2013_2016.RDS"))
+saveRDS(base_test1, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/Agregados/base_2013_2016_v2.RDS"))
 
 
 
@@ -5097,8 +5097,9 @@ test <- rdrobust(
   y = base_test1$media_nota[base_test1$ano == 2016],
   x = base_test1$dist_hv_border[base_test1$ano == 2016],
   c = 0,
-  h = bw_main_a,
-  b = bw_bias_a,
+  p = 2,
+  h = bw_main_p,
+  b = bw_bias_p,
   cluster = base_test1$seg[base_test1$ano == 2016],
   weights = base_test1$obs[base_test1$ano == 2016],
   vce = "hc0",
@@ -5249,8 +5250,8 @@ base_test2 <- base_a %>%
   )
 
 
-saveRDS(base_test2, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/Agregados/base_2017_2018.RDS"))
-write_dta(base_test2, "Z:/Tuffy/Paper - HV/Bases/No_age_filt/Agregados/base_2017_2018.dta")
+saveRDS(base_test2, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/Agregados/base_2017_2018_v2.RDS"))
+write_dta(base_test2, "Z:/Tuffy/Paper - HV/Bases/No_age_filt/Agregados/base_2017_2018_v2.dta")
 
 
 
@@ -5322,10 +5323,11 @@ summary(base_test2)
 ###WALD ----
 
 ## Tabelas -----
+library(car)
 
 etable(est1_17,
        tex = TRUE,
-       file = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Picchetti_2017.tex")
+       file = "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Picchetti_2017.tex")
 
 
 wt_1718 <- linearHypothesis(
@@ -5369,7 +5371,7 @@ result$p_val[3] <- p_val17
 
 etable(est1_16,
        tex = TRUE,
-       file = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Picchetti_2014.tex")
+       file = "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Picchetti_2014.tex")
 
 
 
@@ -5400,7 +5402,7 @@ latex_table <- knitr::kable(
   linesep = ""
 )
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Picchetti_Wald.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Picchetti_Wald.tex")
 
 
 
@@ -5609,6 +5611,7 @@ for(ano_ref in ano_list) {
       y = base_a$d.media[base_a$ano == ano_comp],
       x = base_a$dist_hv_border[base_a$ano == ano_ref],
       c = 0,
+      p = 2,
       cluster = base_a$seg[base_a$ano == ano_ref],
       weights = base_a$obs[base_a$ano == ano_ref],
       vce = "hc0",
@@ -5624,8 +5627,9 @@ for(ano_ref in ano_list) {
       y = base_a$d.media[base_a$ano == ano_comp],
       x = base_a$dist_hv_border[base_a$ano == ano_ref],
       c = 0,
-      h = bw_main_a,
-      b = bw_bias_a,
+      p = 2,
+      h = bw_main_p,
+      b = bw_bias_p,
       cluster = base_a$seg[base_a$ano == ano_ref],
       weights = base_a$obs[base_a$ano == ano_ref],
       vce = "hc0",
@@ -5723,7 +5727,7 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Raca_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Raca_v1.tex")
 
 rm(base_ab, base_ppi, result, rlist, t10cc, df, latex_table, names2)
 
@@ -5800,6 +5804,7 @@ for(ano_ref in ano_list) {
       y = base_a$d.media[base_a$ano == ano_comp],
       x = base_a$dist_hv_border[base_a$ano == ano_ref],
       c = 0,
+      p = 2,
       cluster = base_a$seg[base_a$ano == ano_ref],
       weights = base_a$obs[base_a$ano == ano_ref],
       vce = "hc0",
@@ -5815,8 +5820,9 @@ for(ano_ref in ano_list) {
       y = base_a$d.media[base_a$ano == ano_comp],
       x = base_a$dist_hv_border[base_a$ano == ano_ref],
       c = 0,
-      h = bw_main_a,
-      b = bw_bias_a,
+      p = 2,
+      h = bw_main_p,
+      b = bw_bias_p,
       cluster = base_a$seg[base_a$ano == ano_ref],
       weights = base_a$obs[base_a$ano == ano_ref],
       vce = "hc0",
@@ -5913,7 +5919,7 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Sexo_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Sexo_v1.tex")
 
 rm(base_masc, result, base_fem, rlist, t10cc, df, latex_table, names2)
 
@@ -5990,6 +5996,7 @@ for(ano_ref in ano_list) {
       y = base_a$d.media[base_a$ano == ano_comp],
       x = base_a$dist_hv_border[base_a$ano == ano_ref],
       c = 0,
+      p = 2,
       cluster = base_a$seg[base_a$ano == ano_ref],
       weights = base_a$obs[base_a$ano == ano_ref],
       vce = "hc0",
@@ -6006,8 +6013,9 @@ for(ano_ref in ano_list) {
       y = base_a$d.media[base_a$ano == ano_comp],
       x = base_a$dist_hv_border[base_a$ano == ano_ref],
       c = 0,
-      h = bw_main_a,
-      b = bw_bias_a,
+      p = 2,
+      h = bw_main_p,
+      b = bw_bias_p,
       cluster = base_a$seg[base_a$ano == ano_ref],
       weights = base_a$obs[base_a$ano == ano_ref],
       vce = "hc0",
@@ -6097,7 +6105,7 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Mae_Education_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/Mae_Education_v1.tex")
 
 rm(base_low, result, base_high, rlist, t10cc, df, latex_table, base_a, ano_list, names)
 
@@ -6155,6 +6163,7 @@ for (j in c(0:1)){
     y = base_a$d.media[base_a$ano == 2019],
     x = base_a$dist_hv_border[base_a$ano == 2018],
     c = 0,
+    p = 2,
     cluster = base_a$seg[base_a$ano == 2018],
     weights = base_a$obs[base_a$ano == 2018],
     vce = "hc0",
@@ -6170,11 +6179,12 @@ for (j in c(0:1)){
     y = base_a$d.media[base_a$ano == 2019],
     x = base_a$dist_hv_border[base_a$ano == 2018],
     c = 0,
+    p = 2,
     cluster = base_a$seg[base_a$ano == 2018],
     weights = base_a$obs[base_a$ano == 2018],
     vce = "hc0",
-    h = bw_main_a,
-    b = bw_bias_a,
+    h = bw_main_p,
+    b = bw_bias_p,
     covs = cbind(
       ef,
       base_a$lat[base_a$ano == 2018],
@@ -6251,7 +6261,7 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/migration_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/migration_v1.tex")
 
 
 # ---------------------------------------------------------------------------- #
@@ -6331,7 +6341,7 @@ ef <- ef %>% select(-1,-2)
 fig <- rdplot(y = yv$vd,
               x = xv$dist_hv_border,
               c = 0,
-              p = 1,
+              p = 2,
               #binselect = "esmv",
               kernel = "triangular",
               #h = bw_main_a,
@@ -6381,16 +6391,16 @@ fig_gg <- ggplot() +
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
   #ylim(15,160) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
+  theme(axis.title.x = element_text(size = 25),
+        axis.title.y = element_text(size = 25),
+        axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 20))
 
 
 fig_gg
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_nomig.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_nomig.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/RDD_nomig.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/pdf/RDD_nomig.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
@@ -6402,7 +6412,7 @@ rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xt
 # ---------------------------------------------------------------------------- #
 
 #Criando a dummy de migração
-base_temp <- base_temp %>% 
+base_temp <- base %>% 
   mutate(
     mig_dummy = ifelse(
       !is.na(mun_prova) & !is.na(mun_res) & mun_prova != mun_res, 1,
