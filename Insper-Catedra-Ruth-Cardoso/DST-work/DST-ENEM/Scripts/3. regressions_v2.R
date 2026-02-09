@@ -2,14 +2,14 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 03/02/2026
+# Date: 09/02/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
 # Libraries -----
 # ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
-# Reg Para os mais velhos ----
+# 1. Início ----
 # ---------------------------------------------------------------------------- #
 
 library(tidyverse)
@@ -39,7 +39,13 @@ library(stargazer)
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
   setDT() %>% 
-  filter(conclusao == 2)
+  filter(conclusao == 2) #%>% 
+# select(mun_prova,uf, ano, seg, lat, lon, dist_hv_border, pibpc,  #Municipal
+#        #Alunos
+#        id_enem, conclusao, mun_res, mun_escola, idade, media, lc, ch, mt, cn, rd,
+#        rd1, rd2, rd3, rd4, rd5, dia_1, dia_2, priv0, old, escm, escp, mae_trab_man, pai_trab_man,
+#        ppi, fem, mig_dummy, nonmig1, nonmig2, nonmig3, nonmig4, renda1, dom5, id18)
+
 
 #Exam start time dummies
 base <- base %>% 
@@ -89,7 +95,11 @@ base <- base %>%
                                       1303502, 1303908, 1304062) ~ 1,
       
       TRUE ~ 0
-    ))
+    ),
+    
+    
+    new_dist = dist_hv_border/100000)
+
 
 
 summary(base %>% select(idade, conclusao, esc_mae))
@@ -122,12 +132,18 @@ base <- base %>%
     )
   )
 
-
+# ---------------------------------------------------------------------------- #
+## 1.1 Base agregada ----
+# ---------------------------------------------------------------------------- #
 base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
                             idade = mean(id18, na.rm = T),
                             esc_mae = mean(escm, na.rm = T),
+                            h13 = first(h13),
+                            h12 = first(h12),
+                            h11 = first(h11),
+                            h10 = first(h10),
                             obs = .N),
-               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+               by = .(mun_prova,ano,dist_hv_border,new_dist,seg,lat,lon)] %>% 
   filter(as.numeric(ano) %in% c(2018,2019)) %>% 
   arrange(mun_prova,ano) %>%
   group_by(mun_prova) %>%
@@ -136,12 +152,18 @@ base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
     dup2 = sum(dup1),
     v1_nota = ifelse(ano == 2018, media, NA),
     v2_nota = max(v1_nota, na.rm = T),
-    d.media = media - v2_nota,
-    
+    d.media = media - v2_nota
   ) %>%
   ungroup() %>% 
   filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota))
+  select(-c(dup2, dup1, v1_nota, v2_nota)) %>% 
+  group_by(mun_prova) %>% 
+  mutate(
+    d.h13 = h13[ano == 2019] + h13[ano == 2018], #2 = Manteve, 1 mudou, 0 nunca
+    d.h12 = h12[ano == 2019] + h12[ano == 2018],
+    d.h11 = h11[ano == 2019] + h11[ano == 2018],
+    d.h10 = h10[ano == 2019] + h10[ano == 2018]
+  )
 
 ### 1.1.1 Controles ----
 ef <- dummy_cols(base_a$seg[base_a$ano == 2018])
@@ -178,22 +200,45 @@ save(bw_main_a, bw_bias_a,
 # ---------------------------------------------------------------------------- #
 #rm(ef,list,base_a)
 
+# 
+# 
+# hv18 <- weighted.mean(base_a$media[base_a$ano == 2018 & base_a$dist_hv_border > 0 & abs(base_a$dist_hv_border) <= bw_main_a],
+#                       w = base_a$obs[base_a$ano == 2018 & base_a$dist_hv_border > 0 & abs(base_a$dist_hv_border) <= bw_main_a])
+# hv18_out <- weighted.mean(base_a$media[base_a$ano == 2018 & base_a$dist_hv_border < 0 & abs(base_a$dist_hv_border) <= bw_main_a],
+#                           w = base_a$obs[base_a$ano == 2018 & base_a$dist_hv_border < 0 & abs(base_a$dist_hv_border) <= bw_main_a])
+# 
+# 
+# hv18 - hv18_out
+# 
+# 9.28/(hv18-hv18_out)
 
 
-hv18 <- weighted.mean(base_a$media[base_a$ano == 2018 & base_a$dist_hv_border > 0 & abs(base_a$dist_hv_border) <= bw_main_a],
-                      w = base_a$obs[base_a$ano == 2018 & base_a$dist_hv_border > 0 & abs(base_a$dist_hv_border) <= bw_main_a])
-hv18_out <- weighted.mean(base_a$media[base_a$ano == 2018 & base_a$dist_hv_border < 0 & abs(base_a$dist_hv_border) <= bw_main_a],
-                          w = base_a$obs[base_a$ano == 2018 & base_a$dist_hv_border < 0 & abs(base_a$dist_hv_border) <= bw_main_a])
+# ---------------------------------------------------------------------------- #
+### 1.1.2 Fuso ----
+# ---------------------------------------------------------------------------- #
 
+list[[as.character(paste0(2019,"-",2018,"|fuso"))]] <- rdrobust(
+  y = base_a$d.media[base_a$ano == 2019],
+  x = base_a$dist_hv_border[base_a$ano == 2018],
+  c = 0,
+  cluster = base_a$seg[base_a$ano == 2018],
+  weights = base_a$obs[base_a$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_a$lat[base_a$ano == 2018],
+    base_a$lon[base_a$ano == 2018],
+    base_a$h13[base_a$ano == 2019],
+    base_a$h12[base_a$ano == 2019],
+    base_a$h11[base_a$ano == 2019]
+  )
+)
 
-hv18 - hv18_out
+# ---------------------------------------------------------------------------- #
+### 1.1.3 Fuso + C ----
+# ---------------------------------------------------------------------------- #
 
-9.28/(hv18-hv18_out)
-
-
-### 1.1.2 Add Control ----
-
-list[[as.character(paste0(2019,"-",2018,"S|NF"))]] <- rdrobust(
+list[[as.character(paste0(2019,"-",2018,"|fuso+C"))]] <- rdrobust(
   y = base_a$d.media[base_a$ano == 2019],
   x = base_a$dist_hv_border[base_a$ano == 2018],
   c = 0,
@@ -205,13 +250,18 @@ list[[as.character(paste0(2019,"-",2018,"S|NF"))]] <- rdrobust(
     base_a$lat[base_a$ano == 2018],
     base_a$lon[base_a$ano == 2018],
     base_a$esc_mae[base_a$ano == 2018],
+    base_a$idade[base_a$ano == 2018],
+    base_a$esc_mae[base_a$ano == 2018],
     base_a$idade[base_a$ano == 2018]
   )
 )
 
-### 1.1.3 Pol ----
 
-list[[as.character(paste0(2019,"-",2018,"P|NF"))]] <- rdrobust(
+# ---------------------------------------------------------------------------- #
+### 1.1.4 Pol ----
+# ---------------------------------------------------------------------------- #
+
+list[[as.character(paste0(2019,"-",2018,"|pol"))]] <- rdrobust(
   y = base_a$d.media[base_a$ano == 2019],
   x = base_a$dist_hv_border[base_a$ano == 2018],
   c = 0,
@@ -226,7 +276,53 @@ list[[as.character(paste0(2019,"-",2018,"P|NF"))]] <- rdrobust(
   )
 )
 
+# ---------------------------------------------------------------------------- #
+### 1.1.5 Pol + Fuso ----
+# ---------------------------------------------------------------------------- #
 
+list[[as.character(paste0(2019,"-",2018,"|pol+fuso"))]] <- rdrobust(
+  y = base_a$d.media[base_a$ano == 2019],
+  x = base_a$dist_hv_border[base_a$ano == 2018],
+  c = 0,
+  p = 2, 
+  cluster = base_a$seg[base_a$ano == 2018],
+  weights = base_a$obs[base_a$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_a$lat[base_a$ano == 2018],
+    base_a$lon[base_a$ano == 2018],
+    base_a$h13[base_a$ano == 2019],
+    base_a$h12[base_a$ano == 2019],
+    base_a$h11[base_a$ano == 2019]
+  )
+)
+
+# ---------------------------------------------------------------------------- #
+### 1.1.6 Pol + Fuso + Cont ----
+# ---------------------------------------------------------------------------- #
+
+list[[as.character(paste0(2019,"-",2018,"|pol+fuso+C"))]] <- rdrobust(
+  y = base_a$d.media[base_a$ano == 2019],
+  x = base_a$dist_hv_border[base_a$ano == 2018],
+  c = 0,
+  p = 2, 
+  cluster = base_a$seg[base_a$ano == 2018],
+  weights = base_a$obs[base_a$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_a$lat[base_a$ano == 2018],
+    base_a$lon[base_a$ano == 2018],
+    base_a$h13[base_a$ano == 2019],
+    base_a$h12[base_a$ano == 2019],
+    base_a$h11[base_a$ano == 2019],
+    base_a$esc_mae[base_a$ano == 2018],
+    base_a$idade[base_a$ano == 2018]
+  )
+)
+
+# ---------------------------------------------------------------------------- #
 ## 1.2 Tabela  ----
 # ---------------------------------------------------------------------------- #
 
@@ -260,8 +356,11 @@ names <- c("2019 - 2018",
 result <- data.frame(
   var = names,
   con = rep(NA, times = length(names)),
+  fus = rep(NA, times = length(names)),
   mor = rep(NA, times = length(names)),
-  po2 = rep(NA, times = length(names))
+  po2 = rep(NA, times = length(names)),
+  pfu = rep(NA, times = length(names)),
+  pfc = rep(NA, times = length(names))
 )
 
 # #TC Segmentos
@@ -274,29 +373,42 @@ result$con[1] <- t10$coef[[1]]
 result$con[2] <- t10$se[[1]]
 result$con[3] <- t10$N[[1]]
 
+#TC Fus
+result$fus[1] <- t10$coef[[2]]
+result$fus[2] <- t10$se[[2]]
+result$fus[3] <- t10$N[[2]]
+
 #Mais Cont
-result$mor[1] <- t10$coef[[2]]
-result$mor[2] <- t10$se[[2]]
-result$mor[3] <- t10$N[[2]]
+result$mor[1] <- t10$coef[[3]]
+result$mor[2] <- t10$se[[3]]
+result$mor[3] <- t10$N[[3]]
 
 
 #TC Pol 2° Grau
-result$po2[1] <- t10$coef[[3]]
-result$po2[2] <- t10$se[[3]]
-result$po2[3] <- t10$N[[3]]
+result$po2[1] <- t10$coef[[4]]
+result$po2[2] <- t10$se[[4]]
+result$po2[3] <- t10$N[[4]]
+
+#TC Pol 2° Grau + Fuso
+result$pfu[1] <- t10$coef[[5]]
+result$pfu[2] <- t10$se[[5]]
+result$pfu[3] <- t10$N[[5]]
+
+#TC Pol 2° Grau + Fuso + C
+result$pfc[1] <- t10$coef[[6]]
+result$pfc[2] <- t10$se[[6]]
+result$pfc[3] <- t10$N[[6]]
 
 
 
-
-
-colnames(result) <- c("", "(1)", "(2)", "(3)")
+colnames(result) <- c("", "(1)", "(2)", "(3)", "(4)", "(5)","(6)")
 
 # Cria a tabela LaTeX
 latex_table <- knitr::kable(
   result,
   format = "latex",
   booktabs = TRUE,
-  align = "lccc",
+  align = "lcccccc",
   linesep = ""
 )
 
@@ -478,8 +590,8 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/OLDER_v
 
 rm(base_a, names, result, rlist, tab, latex_table)
 
-base <- base %>% select(-old) #Removing the column for further databases
-# # ---------------------------------------------------------------------------- #
+
+# ---------------------------------------------------------------------------- #
 #2. Gráfico ----
 ## 2.1 Principal ----
 # ---------------------------------------------------------------------------- #
@@ -500,8 +612,9 @@ base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
   filter(dup2 == 2) %>% 
   select(-c(dup2, dup1, v1_nota, v2_nota))
 
-
+# ---------------------------------------------------------------------------- #
 #### 2.1.1 19-18 ----
+# ---------------------------------------------------------------------------- #
 fig <- list()
 
 temp <- base_a %>% 
@@ -553,7 +666,7 @@ fig <- rdplot(y = yv$vd,
               #binselect = "esmv",
               kernel = "triangular",
               #h = bw_main_a,
-              nbins = 25,
+              nbins = 35,
               #b = bw_bias_a,
               weights = temp$obs[temp$ano == 2018],
               #subset = temp$subset == 1,
@@ -604,11 +717,186 @@ fig_gg <- ggplot() +
   #                  yend = y_r_end),
   #              size = 1.5, color = "#377EB8") +
   labs(x = "Distance to DST Border (km)",
-       y = "Overall ENEM \n average") + 
+       y = "Overall ENEM Score") + 
   theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
   ylim(-20,20) + 
+  theme(axis.title.x = element_text(size = 25),
+        axis.title.y = element_text(size = 25),
+        axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 20))
+
+
+fig_gg
+
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+
+rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
+
+# ---------------------------------------------------------------------------- #
+#### 2.1.2 19-17 ----
+# ---------------------------------------------------------------------------- #
+
+
+base_temp <- base %>%
+  select(-old) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2017.RDS"))) %>%
+  setDT() %>%
+  filter(conclusao == 2)
+
+##### 2.1.2.1 opt bw -----
+base_b <- base_temp[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+                    by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>%
+  filter(as.numeric(ano) %in% c(2017,2019)) %>%
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2017, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota
+  ) %>%
+  ungroup() %>%
+  filter(dup2 == 2) %>%
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+
+ef <- dummy_cols(base_b$seg[base_b$ano == 2017])
+ef <- ef %>% select(-1,-2)
+
+list <- list()
+
+list[[as.character(paste0(2019,"-",2017,"C|NF"))]] <- rdrobust(
+  y = base_b$d.media[base_b$ano == 2019],
+  x = base_b$dist_hv_border[base_b$ano == 2017],
+  c = 0,
+  cluster = base_b$seg[base_b$ano == 2017],
+  weights = base_b$obs[base_b$ano == 2017],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_b$lat[base_b$ano == 2017],
+    base_b$lon[base_b$ano == 2017]
+  )
+)
+
+# ---------------------------------------------------------------------------- #
+#Extração da banda ótima
+bw_main_b  <- list[["2019-2017C|NF"]]$bws[1]
+bw_bias_b  <- list[["2019-2017C|NF"]]$bws[2]
+# ---------------------------------------------------------------------------- #
+
+rm(list, ef)
+##### 2.1.2.2. graph -----
+fig <- list()
+
+temp <- base_b %>%
+  mutate(subset = case_when(
+    abs(dist_hv_border) < bw_main_b ~ 1,
+    .default = 0
+  )
+  ) %>%
+  filter(
+    !is.na(d.media),
+    subset == 1
+  )
+
+# Dependent variable
+yv <- temp %>%
+  filter(ano == 2019) %>%
+  select(d.media) %>%
+  rename(vd = 1)
+
+#45696
+# Running variable
+xv <- temp %>%
+  filter(ano == 2017) %>%
+  select(dist_hv_border)
+
+# Clusters
+clu <- temp %>%
+  filter(ano == 2017) %>%
+  select(seg)
+
+# Latitude
+latv <- temp %>%
+  filter(ano == 2017) %>%
+  select(lat)
+
+# Longitude
+lonv <- temp %>%
+  filter(ano == 2017) %>%
+  select(lon)
+
+ef <- dummy_cols(clu$seg)
+ef <- ef %>% select(-1,-2)
+
+# Estimando parâmetros do gráfico
+fig <- rdplot(y = yv$vd,
+              x = xv$dist_hv_border,
+              c = 0,
+              p = 1,
+              #binselect = "esmv",
+              kernel = "triangular",
+              h = bw_main_b,
+              weights = temp$obs[temp$ano == 2017],
+              subset = temp$subset == 1,
+              hide = F,
+              masspoints= "adjust",
+              covs = cbind(ef,latv,lonv)
+)
+
+rm(yv, xv, clu, latv, lonv, ef, temp)
+
+
+
+# Vetores e valores auxiliares
+fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
+fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
+
+x_r_sta <- 0
+x_r_end <- max(fig$vars_poly$rdplot_x)
+y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2],
+                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
+                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
+y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
+
+x_l_sta <- min(fig$vars_poly$rdplot_x)
+x_l_end <- 0
+
+y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
+y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
+                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
+                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
+
+xtips <- seq(-4*10^5,4*10^5,10^5)
+
+# Gráfico
+fig_gg <- ggplot() +
+  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
+             alpha = 0.5, size = 2, show.legend = FALSE) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  scale_color_brewer(palette = "Set1") +
+  geom_segment(aes(x = x_l_sta,
+                   xend = x_l_end,
+                   y = y_l_sta,
+                   yend = y_l_end),
+               size = 1.5, color = "#E41A4C") +
+  geom_segment(aes(x = x_r_sta,
+                   xend = x_r_end,
+                   y = y_r_sta,
+                   yend = y_r_end),
+               size = 1.5, color = "#377EB8") +
+  labs(x = "Distance to DST Border (km)",
+       y = "Overall ENEM \n average") +
+  theme_bw() +
+  scale_x_continuous(breaks = xtips,
+                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
+  ylim(-5,25) + 
   theme(axis.title.x = element_text(size = 35),
         axis.title.y = element_text(size = 35),
         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
@@ -617,190 +905,16 @@ fig_gg <- ggplot() +
 
 fig_gg
 
-#Para todas as observações possíveis. A v2 era focada na janela ótima de análise.
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1918_v3.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1918_v3.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
-# #### 2.1.2 19-17 ----
-# 
-# 
-base_temp <- base %>%
-  #select(-old) %>%
-  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2017.RDS"))) %>%
-  setDT() %>%
-  filter(conclusao == 2)
-# 
-# ##### 2.1.2.1 opt bw -----
-# base_b <- base_temp[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
-#                     by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>%
-#   filter(as.numeric(ano) %in% c(2017,2019)) %>%
-#   arrange(mun_prova,ano) %>%
-#   group_by(mun_prova) %>%
-#   mutate(
-#     dup1 = 1,
-#     dup2 = sum(dup1),
-#     v1_nota = ifelse(ano == 2017, media, NA),
-#     v2_nota = max(v1_nota, na.rm = T),
-#     d.media = media - v2_nota
-#   ) %>%
-#   ungroup() %>%
-#   filter(dup2 == 2) %>%
-#   select(-c(dup2, dup1, v1_nota, v2_nota))
-# 
-# 
-# ef <- dummy_cols(base_b$seg[base_b$ano == 2017])
-# ef <- ef %>% select(-1,-2)
-# 
-# list <- list()
-# 
-# list[[as.character(paste0(2019,"-",2017,"C|NF"))]] <- rdrobust(
-#   y = base_b$d.media[base_b$ano == 2019],
-#   x = base_b$dist_hv_border[base_b$ano == 2017],
-#   c = 0,
-#   cluster = base_b$seg[base_b$ano == 2017],
-#   weights = base_b$obs[base_b$ano == 2017],
-#   vce = "hc0",
-#   covs = cbind(
-#     ef,
-#     base_b$lat[base_b$ano == 2017],
-#     base_b$lon[base_b$ano == 2017]
-#   )
-# )
-# 
-# # ---------------------------------------------------------------------------- #
-# #Extração da banda ótima
-# bw_main_b  <- list[["2019-2017C|NF"]]$bws[1]
-# bw_bias_b  <- list[["2019-2017C|NF"]]$bws[2]
-# # ---------------------------------------------------------------------------- #
-# 
-# rm(list, ef)
-# ##### 2.1.2.2. graph -----
-# fig <- list()
-# 
-# temp <- base_b %>%
-#   mutate(subset = case_when(
-#     abs(dist_hv_border) < bw_main_b ~ 1,
-#     .default = 0
-#   )
-#   ) %>%
-#   filter(
-#     !is.na(d.media),
-#     subset == 1
-#   )
-# 
-# # Dependent variable
-# yv <- temp %>%
-#   filter(ano == 2019) %>%
-#   select(d.media) %>%
-#   rename(vd = 1)
-# 
-# #45696
-# # Running variable
-# xv <- temp %>%
-#   filter(ano == 2017) %>%
-#   select(dist_hv_border)
-# 
-# # Clusters
-# clu <- temp %>%
-#   filter(ano == 2017) %>%
-#   select(seg)
-# 
-# # Latitude
-# latv <- temp %>%
-#   filter(ano == 2017) %>%
-#   select(lat)
-# 
-# # Longitude
-# lonv <- temp %>%
-#   filter(ano == 2017) %>%
-#   select(lon)
-# 
-# ef <- dummy_cols(clu$seg)
-# ef <- ef %>% select(-1,-2)
-# 
-# # Estimando parâmetros do gráfico
-# fig <- rdplot(y = yv$vd,
-#               x = xv$dist_hv_border,
-#               c = 0,
-#               p = 1,
-#               nbins = 25,
-#               #binselect = "esmv",
-#               kernel = "triangular",
-#               h = bw_main_b,
-#               weights = temp$obs[temp$ano == 2017],
-#               subset = temp$subset == 1,
-#               hide = F,
-#               masspoints= "adjust",
-#               covs = cbind(ef,latv,lonv)
-# )
-# 
-# rm(yv, xv, clu, latv, lonv, ef, temp)
-# 
-# 
-# 
-# # Vetores e valores auxiliares
-# fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
-# fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-# 
-# x_r_sta <- 0
-# x_r_end <- max(fig$vars_poly$rdplot_x)
-# y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2],
-#                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-#                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-# y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-# 
-# x_l_sta <- min(fig$vars_poly$rdplot_x)
-# x_l_end <- 0
-# 
-# y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
-# y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
-#                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-#                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-# 
-# xtips <- seq(-4*10^5,4*10^5,10^5)
-# 
-# # Gráfico
-# fig_gg <- ggplot() +
-#   geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-#              alpha = 0.5, size = 2, show.legend = FALSE) +
-#   geom_vline(xintercept = 0, linetype = "dashed") +
-#   scale_color_brewer(palette = "Set1") +
-#   geom_segment(aes(x = x_l_sta,
-#                    xend = x_l_end,
-#                    y = y_l_sta,
-#                    yend = y_l_end),
-#                size = 1.5, color = "#E41A4C") +
-#   geom_segment(aes(x = x_r_sta,
-#                    xend = x_r_end,
-#                    y = y_r_sta,
-#                    yend = y_r_end),
-#                size = 1.5, color = "#377EB8") +
-#   labs(x = "Distance to DST Border (km)",
-#        y = "Overall ENEM \n average") +
-#   theme_bw() +
-#   scale_x_continuous(breaks = xtips,
-#                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-#   ylim(-5,25) + 
-#   theme(axis.title.x = element_text(size = 35),
-#         axis.title.y = element_text(size = 35),
-#         axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-#         axis.text.y = element_text(size = 30))
-# 
-# 
-# fig_gg
-# 
-# ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-# ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-# 
-# rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-# 
-# 
-# 
-# # ---------------------------------------------------------------------------- #
 
+
+# ---------------------------------------------------------------------------- #
 #### 2.1.3 18-17 ----
+# ---------------------------------------------------------------------------- #
 
 
 ##### 2.1.3.1 opt bw -----
@@ -896,10 +1010,10 @@ fig <- rdplot(y = yv$vd,
               x = xv$dist_hv_border,
               c = 0,
               p = 1,
-              nbins = 25,
               #binselect = "esmv",
               kernel = "triangular",
               #h = bw_main_c,
+              nbins = 35,
               weights = temp$obs[temp$ano == 2017],
               #subset = temp$subset == 1,
               hide = F,
@@ -933,11 +1047,13 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
 xtips <- seq(-100*10^5,100*10^5,2*10^5)
 
 # Gráfico
+
+# Gráfico
 fig_gg <- ggplot() +
   geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-             alpha = 0.5, size = 2, show.legend = FALSE) +
-  geom_vline(xintercept = 0, linewidth = 1) +
-  scale_color_brewer(palette = "Set1") +
+             alpha = 0.5, size = 2, show.legend = FALSE) + 
+  geom_vline(xintercept = 0, linewidth = 1) + 
+  scale_color_brewer(palette = "Set1") + 
   # geom_segment(aes(x = x_l_sta,
   #                  xend = x_l_end,
   #                  y = y_l_sta,
@@ -949,21 +1065,21 @@ fig_gg <- ggplot() +
   #                  yend = y_r_end),
   #              size = 1.5, color = "#377EB8") +
   labs(x = "Distance to DST Border (km)",
-       y = "Overall ENEM \n average") +
-  theme_bw() +
+       y = "Overall ENEM Score") + 
+  theme_bw() + 
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-5,25) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
+  #ylim(-20,20) + 
+  theme(axis.title.x = element_text(size = 25),
+        axis.title.y = element_text(size = 25),
+        axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 20))
 
 
 fig_gg
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1817_v3.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1817_v3.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Principal_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Principal_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
@@ -972,15 +1088,16 @@ rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xt
 # ---------------------------------------------------------------------------- #
 ## 2.2 Bins ----
 # ---------------------------------------------------------------------------- #
-
 ### A. 1918 ----
+# ---------------------------------------------------------------------------- #
 #### 2.2.1 POL 1 ------
+# ---------------------------------------------------------------------------- #
 plist <- list()
 
 bins <- c(5, 10, 25)
 
 for(j in bins) {
-
+  
   temp <- base_a %>%
     mutate(subset = case_when(
       abs(dist_hv_border) < bw_main_a ~ 1,
@@ -991,37 +1108,37 @@ for(j in bins) {
       !is.na(d.media),
       subset == 1
     )
-
+  
   # Dependent variable
   yv <- temp %>%
     filter(ano == 2019) %>%
     select(d.media) %>%
     rename(vd = 1)
-
+  
   #45696
   # Running variable
   xv <- temp %>%
     filter(ano == 2018) %>%
     select(dist_hv_border)
-
+  
   # Clusters
   clu <- temp %>%
     filter(ano == 2018) %>%
     select(seg)
-
+  
   # Latitude
   latv <- temp %>%
     filter(ano == 2018) %>%
     select(lat)
-
+  
   # Longitude
   lonv <- temp %>%
     filter(ano == 2018) %>%
     select(lon)
-
+  
   ef <- dummy_cols(clu$seg)
   ef <- ef %>% select(-1,-2)
-
+  
   # Estimando parâmetros do gráfico
   plist[[as.character(paste0(j))]] <- rdplot(y = yv$vd,
                                              x = xv$dist_hv_border,
@@ -1037,37 +1154,58 @@ for(j in bins) {
                                              covs = cbind(ef,latv,lonv),
                                              nbins = c(j,j)
   )
-
+  
   rm(yv, xv, clu, latv, lonv, ef, temp)
 }
 
 fig_loop <- names(plist)
 
 for (i in fig_loop) {
-
+  
   fig <- plist[[as.character(i)]]
-
+  
+  
+  # df_poly <- fig$vars_poly %>%
+  #   rename(x = rdplot_x, y = rdplot_y)
+  # 
+  # # split left / right around cutoff x == 0
+  # df_left  <- df_poly %>% filter(x < 0)
+  # df_right <- df_poly %>% filter(x >= 0)
+  # 
+  # # fit quadratic if enough points (need >= 3)
+  # fit_left  <- if (nrow(df_left)  >= 3) lm(y ~ poly(x, 2, raw = TRUE), data = df_left)  else NULL
+  # fit_right <- if (nrow(df_right) >= 3) lm(y ~ poly(x, 2, raw = TRUE), data = df_right) else NULL
+  # 
+  # # prediction grids: use your x_l_sta / x_l_end / x_r_sta / x_r_end as range endpoints
+  # grid_left  <- if (!is.null(fit_left))  tibble(x = seq(x_l_sta, x_l_end, length.out = 200))  else tibble()
+  # grid_right <- if (!is.null(fit_right)) tibble(x = seq(x_r_sta, x_r_end, length.out = 200)) else tibble()
+  # 
+  # if (nrow(grid_left)  > 0) grid_left  <- grid_left  %>% mutate(y = predict(fit_left,  newdata = grid_left))
+  # if (nrow(grid_right) > 0) grid_right <- grid_right %>% mutate(y = predict(fit_right, newdata = grid_right))
+  # 
+  
+  
   # Vetores e valores auxiliares
   fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
   fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
+  
   x_r_sta <- 0
   x_r_end <- max(fig$vars_poly$rdplot_x)
   y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
   y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
+  
   x_l_sta <- min(fig$vars_poly$rdplot_x)
   x_l_end <- 0
-
+  
   y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
   y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
+  
   xtips <- seq(-10*10^5,10*10^5,10^5)
-
+  
   # Gráfico
   fig_gg <- ggplot() +
     geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
@@ -1084,22 +1222,42 @@ for (i in fig_loop) {
                      y = y_r_sta,
                      yend = y_r_end),
                  size = 1, color = "#377EB8") +
+    # left side
+    # geom_smooth(
+    #   data = df_left,
+    #   aes(x = x, y = y),
+    #   method = "lm",
+    #   formula = y ~ poly(x, 2),
+    #   se = FALSE,
+    #   linewidth = 1,
+    #   color = "#E41A4C"
+    # ) +
+    # # right side
+    # geom_smooth(
+    #   data = df_right,
+    #   aes(x = x, y = y),
+    #   method = "lm",
+    #   formula = y ~ poly(x, 2),
+    #   se = FALSE,
+    #   linewidth = 1,
+    #   color = "#377EB8"
+    # )
     labs(x = "Distance to DST Border (km)",
-         y = "Overall ENEM \n average") +
+         y = "Overall ENEM Score") +
     theme_bw() +
     scale_x_continuous(breaks = xtips,
                        labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-      ylim(-15,15) + 
-    theme(axis.title.x = element_text(size = 35),
-          axis.title.y = element_text(size = 35),
-          axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-          axis.text.y = element_text(size = 30))
-
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol1_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol1_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
+    ylim(-15,15) + 
+    theme(axis.title.x = element_text(size = 25),
+          axis.title.y = element_text(size = 25),
+          axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+          axis.text.y = element_text(size = 20))
+  
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol1_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 11)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol1_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 11)
+  
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
+  
 }
 
 
@@ -1109,10 +1267,10 @@ plist <- list()
 bins <- c(5, 10, 25)
 
 for(j in bins) {
-
+  
   temp <- base_a %>%
     mutate(subset = case_when(
-      abs(dist_hv_border) < bw_main_a ~ 1,
+      abs(dist_hv_border) < bw_main_p ~ 1,
       .default = 0
     )
     ) %>%
@@ -1120,45 +1278,45 @@ for(j in bins) {
       !is.na(d.media),
       subset == 1
     )
-
+  
   # Dependent variable
   yv <- temp %>%
     filter(ano == 2019) %>%
     select(d.media) %>%
     rename(vd = 1)
-
+  
   #45696
   # Running variable
   xv <- temp %>%
     filter(ano == 2018) %>%
     select(dist_hv_border)
-
+  
   # Clusters
   clu <- temp %>%
     filter(ano == 2018) %>%
     select(seg)
-
+  
   # Latitude
   latv <- temp %>%
     filter(ano == 2018) %>%
     select(lat)
-
+  
   # Longitude
   lonv <- temp %>%
     filter(ano == 2018) %>%
     select(lon)
-
+  
   ef <- dummy_cols(clu$seg)
   ef <- ef %>% select(-1,-2)
-
+  
   # Estimando parâmetros do gráfico
   plist[[as.character(paste0(j))]] <- rdplot(y = yv$vd,
                                              x = xv$dist_hv_border,
                                              c = 0,
-                                             p = 4,
+                                             p = 2,
                                              #binselect = "esmv",
                                              kernel = "triangular",
-                                             h = bw_main_a,
+                                             h = bw_main_p,
                                              weights = temp$obs[temp$ano == 2018],
                                              subset = temp$subset == 1,
                                              hide = T,
@@ -1166,51 +1324,51 @@ for(j in bins) {
                                              covs = cbind(ef,latv,lonv),
                                              nbins = c(j,j)
   )
-
+  
   rm(yv, xv, clu, latv, lonv, ef, temp)
 }
 
 fig_loop <- names(plist)
 
 for (i in fig_loop) {
-
+  
   fig <- plist[[as.character(i)]]
-
+  
   # Vetores e valores auxiliares
   fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
   fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-
+  
+  
   fig$vars_poly <- fig$vars_poly %>%
     mutate(x = rdplot_x, y = rdplot_y)
-
-
+  
+  
   x_r_sta <- 0
   x_r_end <- fig$vars_poly$rdplot_x
   y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
   y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
+  
   x_l_sta <- min(fig$vars_poly$rdplot_x)
   x_l_end <- 0
-
+  
   y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
   y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
+  
   xtips <- seq(-10*10^5,10*10^5,10^5)
-
-
+  
+  
   vars_poly_left <- fig$vars_poly %>%
     filter(rdplot_x < 0,
            rdplot_x >= min(fig$vars_bins$rdplot_mean_x, na.rm = TRUE))
-
+  
   vars_poly_right <- fig$vars_poly %>%
     filter(rdplot_x > 0,
            rdplot_x <= max(fig$vars_bins$rdplot_mean_x, na.rm = TRUE))
-
+  
   # Gráfico
   fig_gg <- ggplot() +
     geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
@@ -1219,39 +1377,39 @@ for (i in fig_loop) {
     scale_color_brewer(palette = "Set1") +
     geom_line(data = vars_poly_right, aes(x = rdplot_x, y = rdplot_y, color = factor(hv)), size = 1, show.legend = F)+
     geom_line(data = vars_poly_left, aes(x = rdplot_x, y = rdplot_y, color = factor(hv)), size = 1, show.legend = F) +
-
+    
     labs(x = "Distance to DST Border (km)",
          y = "Overall ENEM \n average") +
     theme_bw() +
     scale_x_continuous(breaks = xtips,
                        labels = (xtips /1000 ) %>% formatC(digits = 0, format = "f")) +
-      ylim(-15,15) + 
+    ylim(-15,15) + 
     theme(axis.title.x = element_text(size = 35),
           axis.title.y = element_text(size = 35),
           axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
           axis.text.y = element_text(size = 30))
-
-
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol4_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol4_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
+  
+  
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_notas_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_notas_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+  
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips, vars_poly_left, vars_poly_right)
-
+  
 }
 
 rm(bins, j, plist, fig_loop)
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
-
 ### B. 1917 ----
 #### 2.3.1 POL 1 ------
+# ---------------------------------------------------------------------------- #
 plist <- list()
 
 bins <- c(5, 10, 25)
 
 for(j in bins) {
-
+  
   temp <- base_b %>%
     mutate(subset = case_when(
       abs(dist_hv_border) < bw_main_b ~ 1,
@@ -1262,37 +1420,37 @@ for(j in bins) {
       !is.na(d.media),
       subset == 1
     )
-
+  
   # Dependent variable
   yv <- temp %>%
     filter(ano == 2019) %>%
     select(d.media) %>%
     rename(vd = 1)
-
+  
   #45696
   # Running variable
   xv <- temp %>%
     filter(ano == 2017) %>%
     select(dist_hv_border)
-
+  
   # Clusters
   clu <- temp %>%
     filter(ano == 2017) %>%
     select(seg)
-
+  
   # Latitude
   latv <- temp %>%
     filter(ano == 2017) %>%
     select(lat)
-
+  
   # Longitude
   lonv <- temp %>%
     filter(ano == 2017) %>%
     select(lon)
-
+  
   ef <- dummy_cols(clu$seg)
   ef <- ef %>% select(-1,-2)
-
+  
   # Estimando parâmetros do gráfico
   plist[[as.character(paste0(j))]] <- rdplot(y = yv$vd,
                                              x = xv$dist_hv_border,
@@ -1308,37 +1466,37 @@ for(j in bins) {
                                              covs = cbind(ef,latv,lonv),
                                              nbins = c(j,j)
   )
-
+  
   rm(yv, xv, clu, latv, lonv, ef, temp)
 }
 
 fig_loop <- names(plist)
 
 for (i in fig_loop) {
-
+  
   fig <- plist[[as.character(i)]]
-
+  
   # Vetores e valores auxiliares
   fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
   fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
+  
   x_r_sta <- 0
   x_r_end <- max(fig$vars_poly$rdplot_x)
   y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
   y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
+  
   x_l_sta <- min(fig$vars_poly$rdplot_x)
   x_l_end <- 0
-
+  
   y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
   y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
+  
   xtips <- seq(-10*10^5,10*10^5,10^5)
-
+  
   # Gráfico
   fig_gg <- ggplot() +
     geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
@@ -1360,17 +1518,17 @@ for (i in fig_loop) {
     theme_bw() +
     scale_x_continuous(breaks = xtips,
                        labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-      ylim(-5,25) + 
+    ylim(-5,25) + 
     theme(axis.title.x = element_text(size = 35),
           axis.title.y = element_text(size = 35),
           axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
           axis.text.y = element_text(size = 30))
-
+  
   ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol1_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
   ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol1_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
+  
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
+  
 }
 
 
@@ -1380,10 +1538,10 @@ plist <- list()
 bins <- c(5, 10, 25)
 
 for(j in bins) {
-
+  
   temp <- base_b %>%
     mutate(subset = case_when(
-      abs(dist_hv_border) < bw_main_b ~ 1,
+      abs(dist_hv_border) < bw_main_p ~ 1,
       .default = 0
     )
     ) %>%
@@ -1391,45 +1549,45 @@ for(j in bins) {
       !is.na(d.media),
       subset == 1
     )
-
+  
   # Dependent variable
   yv <- temp %>%
     filter(ano == 2019) %>%
     select(d.media) %>%
     rename(vd = 1)
-
+  
   #45696
   # Running variable
   xv <- temp %>%
     filter(ano == 2017) %>%
     select(dist_hv_border)
-
+  
   # Clusters
   clu <- temp %>%
     filter(ano == 2017) %>%
     select(seg)
-
+  
   # Latitude
   latv <- temp %>%
     filter(ano == 2017) %>%
     select(lat)
-
+  
   # Longitude
   lonv <- temp %>%
     filter(ano == 2017) %>%
     select(lon)
-
+  
   ef <- dummy_cols(clu$seg)
   ef <- ef %>% select(-1,-2)
-
+  
   # Estimando parâmetros do gráfico
   plist[[as.character(paste0(j))]] <- rdplot(y = yv$vd,
                                              x = xv$dist_hv_border,
                                              c = 0,
-                                             p = 4,
+                                             p = 2,
                                              #binselect = "esmv",
                                              kernel = "triangular",
-                                             h = bw_main_b,
+                                             h = bw_main_p,
                                              weights = temp$obs[temp$ano == 2017],
                                              subset = temp$subset == 1,
                                              hide = T,
@@ -1437,51 +1595,51 @@ for(j in bins) {
                                              covs = cbind(ef,latv,lonv),
                                              nbins = c(j,j)
   )
-
+  
   rm(yv, xv, clu, latv, lonv, ef, temp)
 }
 
 fig_loop <- names(plist)
 
 for (i in fig_loop) {
-
+  
   fig <- plist[[as.character(i)]]
-
+  
   # Vetores e valores auxiliares
   fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
   fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-
+  
+  
   fig$vars_poly <- fig$vars_poly %>%
     mutate(x = rdplot_x, y = rdplot_y)
-
-
+  
+  
   x_r_sta <- 0
   x_r_end <- fig$vars_poly$rdplot_x
   y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
   y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
+  
   x_l_sta <- min(fig$vars_poly$rdplot_x)
   x_l_end <- 0
-
+  
   y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
   y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
+  
   xtips <- seq(-10*10^5,10*10^5,10^5)
-
-
+  
+  
   vars_poly_left <- fig$vars_poly %>%
     filter(rdplot_x < 0,
            rdplot_x >= min(fig$vars_bins$rdplot_mean_x, na.rm = TRUE))
-
+  
   vars_poly_right <- fig$vars_poly %>%
     filter(rdplot_x > 0,
            rdplot_x <= max(fig$vars_bins$rdplot_mean_x, na.rm = TRUE))
-
+  
   # Gráfico
   fig_gg <- ggplot() +
     geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
@@ -1490,24 +1648,24 @@ for (i in fig_loop) {
     scale_color_brewer(palette = "Set1") +
     geom_line(data = vars_poly_right, aes(x = rdplot_x, y = rdplot_y, color = factor(hv)), size = 1, show.legend = F)+
     geom_line(data = vars_poly_left, aes(x = rdplot_x, y = rdplot_y, color = factor(hv)), size = 1, show.legend = F) +
-
+    
     labs(x = "Distance to DST Border (km)",
          y = "Overall ENEM \n average") +
     theme_bw() +
     scale_x_continuous(breaks = xtips,
                        labels = (xtips /1000 ) %>% formatC(digits = 0, format = "f")) +
-      ylim(-5,25) + 
-    theme(axis.title.x = element_text(size = 35),
-          axis.title.y = element_text(size = 35),
-          axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-          axis.text.y = element_text(size = 30))
-
-
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol4_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol4_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
+    ylim(-5,25) + 
+    theme(axis.title.x = element_text(size = 25),
+          axis.title.y = element_text(size = 25),
+          axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+          axis.text.y = element_text(size = 20))
+  
+  
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol4_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 11)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol4_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 11)
+  
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips, vars_poly_left, vars_poly_right)
-
+  
 }
 
 rm(bins, j, plist, fig_loop)
@@ -1522,7 +1680,7 @@ plist <- list()
 bins <- c(5, 10, 25)
 
 for(j in bins) {
-
+  
   temp <- base_c %>%
     mutate(subset = case_when(
       abs(dist_hv_border) < bw_main_c ~ 1,
@@ -1533,37 +1691,37 @@ for(j in bins) {
       !is.na(d.media),
       subset == 1
     )
-
+  
   # Dependent variable
   yv <- temp %>%
     filter(ano == 2018) %>%
     select(d.media) %>%
     rename(vd = 1)
-
+  
   #45696
   # Running variable
   xv <- temp %>%
     filter(ano == 2017) %>%
     select(dist_hv_border)
-
+  
   # Clusters
   clu <- temp %>%
     filter(ano == 2017) %>%
     select(seg)
-
+  
   # Latitude
   latv <- temp %>%
     filter(ano == 2017) %>%
     select(lat)
-
+  
   # Longitude
   lonv <- temp %>%
     filter(ano == 2017) %>%
     select(lon)
-
+  
   ef <- dummy_cols(clu$seg)
   ef <- ef %>% select(-1,-2)
-
+  
   # Estimando parâmetros do gráfico
   plist[[as.character(paste0(j))]] <- rdplot(y = yv$vd,
                                              x = xv$dist_hv_border,
@@ -1579,37 +1737,37 @@ for(j in bins) {
                                              covs = cbind(ef,latv,lonv),
                                              nbins = c(j,j)
   )
-
+  
   rm(yv, xv, clu, latv, lonv, ef, temp)
 }
 
 fig_loop <- names(plist)
 
 for (i in fig_loop) {
-
+  
   fig <- plist[[as.character(i)]]
-
+  
   # Vetores e valores auxiliares
   fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
   fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
+  
   x_r_sta <- 0
   x_r_end <- max(fig$vars_poly$rdplot_x)
   y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
   y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
+  
   x_l_sta <- min(fig$vars_poly$rdplot_x)
   x_l_end <- 0
-
+  
   y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
   y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
+  
   xtips <- seq(-10*10^5,10*10^5,10^5)
-
+  
   # Gráfico
   fig_gg <- ggplot() +
     geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
@@ -1631,17 +1789,17 @@ for (i in fig_loop) {
     theme_bw() +
     scale_x_continuous(breaks = xtips,
                        labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-      ylim(-5,25) + 
-    theme(axis.title.x = element_text(size = 35),
-          axis.title.y = element_text(size = 35),
-          axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-          axis.text.y = element_text(size = 30))
-
+    ylim(-5,25) + 
+    theme(axis.title.x = element_text(size = 25),
+          axis.title.y = element_text(size = 25),
+          axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+          axis.text.y = element_text(size = 20))
+  
   ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_pol1_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
   ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_pol1_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
+  
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
+  
 }
 
 
@@ -1651,10 +1809,10 @@ plist <- list()
 bins <- c(5, 10, 25)
 
 for(j in bins) {
-
+  
   temp <- base_c %>%
     mutate(subset = case_when(
-      abs(dist_hv_border) < bw_main_c ~ 1,
+      abs(dist_hv_border) < bw_main_p ~ 1,
       .default = 0
     )
     ) %>%
@@ -1662,45 +1820,45 @@ for(j in bins) {
       !is.na(d.media),
       subset == 1
     )
-
+  
   # Dependent variable
   yv <- temp %>%
     filter(ano == 2018) %>%
     select(d.media) %>%
     rename(vd = 1)
-
+  
   #45696
   # Running variable
   xv <- temp %>%
     filter(ano == 2017) %>%
     select(dist_hv_border)
-
+  
   # Clusters
   clu <- temp %>%
     filter(ano == 2017) %>%
     select(seg)
-
+  
   # Latitude
   latv <- temp %>%
     filter(ano == 2017) %>%
     select(lat)
-
+  
   # Longitude
   lonv <- temp %>%
     filter(ano == 2017) %>%
     select(lon)
-
+  
   ef <- dummy_cols(clu$seg)
   ef <- ef %>% select(-1,-2)
-
+  
   # Estimando parâmetros do gráfico
   plist[[as.character(paste0(j))]] <- rdplot(y = yv$vd,
                                              x = xv$dist_hv_border,
                                              c = 0,
-                                             p = 4,
+                                             p = 2,
                                              #binselect = "esmv",
                                              kernel = "triangular",
-                                             h = bw_main_c,
+                                             h = bw_main_p,
                                              weights = temp$obs[temp$ano == 2017],
                                              subset = temp$subset == 1,
                                              hide = T,
@@ -1708,51 +1866,51 @@ for(j in bins) {
                                              covs = cbind(ef,latv,lonv),
                                              nbins = c(j,j)
   )
-
+  
   rm(yv, xv, clu, latv, lonv, ef, temp)
 }
 
 fig_loop <- names(plist)
 
 for (i in fig_loop) {
-
+  
   fig <- plist[[as.character(i)]]
-
+  
   # Vetores e valores auxiliares
   fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
   fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-
+  
+  
   fig$vars_poly <- fig$vars_poly %>%
     mutate(x = rdplot_x, y = rdplot_y)
-
-
+  
+  
   x_r_sta <- 0
   x_r_end <- fig$vars_poly$rdplot_x
   y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
   y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
+  
   x_l_sta <- min(fig$vars_poly$rdplot_x)
   x_l_end <- 0
-
+  
   y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
   y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                     max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                     min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
+  
   xtips <- seq(-10*10^5,10*10^5,10^5)
-
-
+  
+  
   vars_poly_left <- fig$vars_poly %>%
     filter(rdplot_x < 0,
            rdplot_x >= min(fig$vars_bins$rdplot_mean_x, na.rm = TRUE))
-
+  
   vars_poly_right <- fig$vars_poly %>%
     filter(rdplot_x > 0,
            rdplot_x <= max(fig$vars_bins$rdplot_mean_x, na.rm = TRUE))
-
+  
   # Gráfico
   fig_gg <- ggplot() +
     geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
@@ -1761,29 +1919,28 @@ for (i in fig_loop) {
     scale_color_brewer(palette = "Set1") +
     geom_line(data = vars_poly_right, aes(x = rdplot_x, y = rdplot_y, color = factor(hv)), size = 1, show.legend = F)+
     geom_line(data = vars_poly_left, aes(x = rdplot_x, y = rdplot_y, color = factor(hv)), size = 1, show.legend = F) +
-
+    
     labs(x = "Distance to DST Border (km)",
-         y = "Overall ENEM \n average") +
+         y = "Overall ENEM Score") +
     theme_bw() +
     scale_x_continuous(breaks = xtips,
                        labels = (xtips /1000 ) %>% formatC(digits = 0, format = "f")) +
-      ylim(-5,25) + 
-    theme(axis.title.x = element_text(size = 35),
-          axis.title.y = element_text(size = 35),
-          axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-          axis.text.y = element_text(size = 30))
-
-
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_pol4_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_pol4_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
+    ylim(-5,25) + 
+    theme(axis.title.x = element_text(size = 25),
+          axis.title.y = element_text(size = 25),
+          axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+          axis.text.y = element_text(size = 20))
+  
+  
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_notas_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_notas_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+  
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips, vars_poly_left, vars_poly_right)
-
+  
 }
 
 rm(bins, j, plist, fig_loop, base_c, base_b, bw_bias_b, bw_main_b,
    bw_main_c, bw_bias_c)
-# ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
 # 3. Matérias----
@@ -1967,310 +2124,7 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Materias_v1.tex")
 
-# ---------------------------------------------------------------------------- #
-## 3.3 Gráfico red (19-18) ----
-# ---------------------------------------------------------------------------- #
-
-fig <- list()
-
-temp <- base_a %>% 
-  mutate(subset = case_when(
-    abs(dist_hv_border) < bw_main_a ~ 1,
-    .default = 0
-  )
-  ) %>% 
-  filter(
-    !is.na(d.media_rd)#,
-    #subset == 1
-  )
-
-# Dependent variable
-yv <- temp %>%
-  filter(ano == 2019) %>% 
-  select(d.media_rd) %>% 
-  rename(vd = 1)
-
-#45696
-# Running variable
-xv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(dist_hv_border)
-
-# Clusters
-clu <- temp %>% 
-  filter(ano == 2018) %>% 
-  select(seg)
-
-# Latitude
-latv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(lat)
-
-# Longitude
-lonv <- temp %>% 
-  filter(ano == 2018) %>% 
-  select(lon)
-
-ef <- dummy_cols(clu$seg)
-ef <- ef %>% select(-1,-2)
-
-# Estimando parâmetros do gráfico
-fig <- rdplot(y = yv$vd,
-              x = xv$dist_hv_border,
-              c = 0,
-              p = 1,
-              #binselect = "esmv",
-              kernel = "triangular",
-              #h = bw_main_a,
-              nbins = 25,
-              #b = bw_bias_a,
-              weights = temp$obs[temp$ano == 2018],
-              #subset = temp$subset == 1,
-              hide = T,
-              masspoints= "adjust",
-              covs = cbind(ef,latv,lonv)
-)
-
-rm(yv, xv, clu, latv, lonv, ef, temp)
-
-
-
-# Vetores e valores auxiliares
-fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
-fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-x_r_sta <- 0
-x_r_end <- max(fig$vars_poly$rdplot_x)
-y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
-x_l_sta <- min(fig$vars_poly$rdplot_x)
-x_l_end <- 0
-
-y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
-y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
-
-# Gráfico
-fig_gg <- ggplot() +
-  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-             alpha = 0.5, size = 2, show.legend = FALSE) + 
-  geom_vline(xintercept = 0, linewidth = 1) + 
-  scale_color_brewer(palette = "Set1") + 
-  labs(x = "Distance to DST Border (km)",
-       y = "Average Writing \n Score") + 
-  theme_bw() + 
-  scale_x_continuous(breaks = xtips,
-                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(40,105) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
-
-
-fig_gg
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Redacao.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Redacao.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
-rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
-
-
-
 rm(notas_tab, p_list, result, d_list, latex_table)
-
-
-
-# ---------------------------------------------------------------------------- #
-## 3.4 Gráfico red (18-17) -----
-# ---------------------------------------------------------------------------- #
-### 3.4.1 Dados ----
-# ---------------------------------------------------------------------------- #
-
-
-#Agregando os dados para 2018 e 2017
-base_c <- base_temp[priv0 == 1,.(media_rd = mean(rd, na.rm = T),
-                                 media_cn = mean(cn, na.rm = T),
-                                 media_lc = mean(lc, na.rm = T),
-                                 media_ch = mean(ch, na.rm = T),
-                                 media_mt = mean(mt, na.rm = T),obs = .N),
-                    by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)]  %>%
-  filter(as.numeric(ano) %in% c(2017,2018))
-
-
-#Base C
-base_c <- base_c %>%
-  arrange(mun_prova,ano) %>%
-  group_by(mun_prova) %>%
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    
-    #Redação
-    v1_rd = ifelse(ano == 2017, media_rd, NA),
-    v2_rd = max(v1_rd, na.rm = T),
-    d.media_rd = media_rd - v2_rd,
-    
-    #Ciências Naturais
-    v1_cn = ifelse(ano == 2017, media_cn, NA),
-    v2_cn = max(v1_cn, na.rm = T),
-    d.media_cn = media_cn - v2_cn,
-    
-    #Ciências Humanas
-    v1_ch = ifelse(ano == 2017, media_ch, NA),
-    v2_ch = max(v1_ch, na.rm = T),
-    d.media_ch = media_ch - v2_ch,
-    
-    #Lingua Portuguesa
-    v1_lc = ifelse(ano == 2017, media_lc, NA),
-    v2_lc = max(v1_lc, na.rm = T),
-    d.media_lc = media_lc - v2_lc,
-    
-    #Matematica
-    v1_mt = ifelse(ano == 2017, media_mt, NA),
-    v2_mt = max(v1_mt, na.rm = T),
-    d.media_mt = media_mt - v2_mt
-    
-  ) %>%
-  ungroup() %>%
-  filter(dup2 == 2) %>%
-  select(-c(dup1,dup2,v1_rd,v2_rd,
-            v1_cn, v2_cn, v1_ch,v2_ch,v1_lc,v2_lc,v1_mt,v2_mt))
-
-
-# --------------------------------------------------------------------------- #
-### 3.4.2 Gráfico ----
-# --------------------------------------------------------------------------- #
-
-
-fig <- list()
-
-temp <- base_c %>% 
-  mutate(subset = case_when(
-    abs(dist_hv_border) < bw_main_a ~ 1,
-    .default = 0
-  )
-  ) %>% 
-  filter(
-    !is.na(d.media_rd)#,
-    #subset == 1
-  )
-
-# Dependent variable
-yv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(d.media_rd) %>% 
-  rename(vd = 1)
-
-#45696
-# Running variable
-xv <- temp %>%
-  filter(ano == 2017) %>% 
-  select(dist_hv_border)
-
-# Clusters
-clu <- temp %>% 
-  filter(ano == 2017) %>% 
-  select(seg)
-
-# Latitude
-latv <- temp %>%
-  filter(ano == 2017) %>% 
-  select(lat)
-
-# Longitude
-lonv <- temp %>% 
-  filter(ano == 2017) %>% 
-  select(lon)
-
-ef <- dummy_cols(clu$seg)
-ef <- ef %>% select(-1,-2)
-
-# Estimando parâmetros do gráfico
-fig <- rdplot(y = yv$vd,
-              x = xv$dist_hv_border,
-              c = 0,
-              p = 1,
-              #binselect = "esmv",
-              kernel = "triangular",
-              #h = bw_main_a,
-              nbins = 25,
-              #b = bw_bias_a,
-              weights = temp$obs[temp$ano == 2017],
-              #subset = temp$subset == 1,
-              hide = T,
-              masspoints= "adjust",
-              covs = cbind(ef,latv,lonv)
-)
-
-rm(yv, xv, clu, latv, lonv, ef, temp)
-
-
-
-# Vetores e valores auxiliares
-fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
-fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-x_r_sta <- 0
-x_r_end <- max(fig$vars_poly$rdplot_x)
-y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
-x_l_sta <- min(fig$vars_poly$rdplot_x)
-x_l_end <- 0
-
-y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
-y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
-
-# Gráfico
-fig_gg <- ggplot() +
-  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-             alpha = 0.5, size = 2, show.legend = FALSE) + 
-  geom_vline(xintercept = 0, linewidth = 1) + 
-  #geom_vline(xintercept = bw_main_a, linediwdth = 0.75, alpha = 0.3) +
-  scale_color_brewer(palette = "Set1") + 
-  labs(x = "Distance to DST Border (km)",
-       y = "Average Writing \n Score") + 
-  theme_bw() + 
-  scale_x_continuous(breaks = xtips,
-                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-50, 10) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
-
-
-fig_gg
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Redacao_17.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Redacao_17.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
-rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
-
-
-
-rm(notas_tab, p_list, result, d_list, latex_table, base_c)
-
-
-
-
-
-
 
 
 # ---------------------------------------------------------------------------- #
@@ -3209,7 +3063,7 @@ p_list <- list()
 
 d_list <- c("d.media_d1", "d.media_d2")
 
-## A. TC ----
+### A. TC ----
 
 for (i in d_list){
   
@@ -3315,288 +3169,11 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Dias_v1
 rm(dias, p_list, result, d_list, latex_table)
 
 # ---------------------------------------------------------------------------- #
-## 7.1 Gráfico dias (19-18) ------
-# ---------------------------------------------------------------------------- #
-
-
-fig <- list()
-
-temp <- base_a %>% 
-  mutate(subset = case_when(
-    abs(dist_hv_border) < bw_main_a ~ 1,
-    .default = 0
-  )
-  ) %>% 
-  filter(
-    !is.na(d.media_d1)#,
-    #subset == 1
-  )
-
-# Dependent variable
-yv <- temp %>%
-  filter(ano == 2019) %>% 
-  select(d.media_d1) %>% 
-  rename(vd = 1)
-
-#45696
-# Running variable
-xv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(dist_hv_border)
-
-# Clusters
-clu <- temp %>% 
-  filter(ano == 2018) %>% 
-  select(seg)
-
-# Latitude
-latv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(lat)
-
-# Longitude
-lonv <- temp %>% 
-  filter(ano == 2018) %>% 
-  select(lon)
-
-ef <- dummy_cols(clu$seg)
-ef <- ef %>% select(-1,-2)
-
-# Estimando parâmetros do gráfico
-fig <- rdplot(y = yv$vd,
-              x = xv$dist_hv_border,
-              c = 0,
-              p = 1,
-              #binselect = "esmv",
-              kernel = "triangular",
-              #h = bw_main_a,
-              nbins = 25,
-              #b = bw_bias_a,
-              weights = temp$obs[temp$ano == 2018],
-              #subset = temp$subset == 1,
-              hide = T,
-              masspoints= "adjust",
-              covs = cbind(ef,latv,lonv)
-)
-
-rm(yv, xv, clu, latv, lonv, ef, temp)
-
-
-
-# Vetores e valores auxiliares
-fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
-fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-x_r_sta <- 0
-x_r_end <- max(fig$vars_poly$rdplot_x)
-y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
-x_l_sta <- min(fig$vars_poly$rdplot_x)
-x_l_end <- 0
-
-y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
-y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
-
-# Gráfico
-fig_gg <- ggplot() +
-  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-             alpha = 0.5, size = 2, show.legend = FALSE) + 
-  geom_vline(xintercept = 0, linewidth = 1) + 
-  scale_color_brewer(palette = "Set1") + 
-  labs(x = "Distance to DST Border (km)",
-       y = "Average ENEM \n Score (1st Day)") + 
-  theme_bw() + 
-  scale_x_continuous(breaks = xtips,
-                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  #ylim(-20,50) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
-
-
-fig_gg
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Dias.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Dias.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
-rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
-
-
-
-
-# ---------------------------------------------------------------------------- #
-## 7.2 Gráfico dias (18-17) ------
-# ---------------------------------------------------------------------------- #
-### 7.2.1 Dados ----
-# ---------------------------------------------------------------------------- #
-
-#Agregando os dados para 2018 e 2017
-base_c <- base_temp[priv0 == 1,.(media_dia1 = mean(dia_1, na.rm = T),
-                                 media_dia2 = mean(dia_2, na.rm = T),
-                                 obs = .N),
-                    by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>%
-  filter(as.numeric(ano) %in% c(2017,2018)) #Filtrando para anos relevantes
-
-
-
-
-base_c <- base_c %>%
-  arrange(mun_prova,ano) %>%
-  group_by(mun_prova) %>%
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    
-    
-    #dia1_ 2019 REF
-    v1_d1 = ifelse(ano == 2017, media_dia1, NA), 
-    v2_d1 = max(v1_d1, na.rm = T),
-    d.media_d1 = media_dia1 - v2_d1,
-    
-    v1_d2 = ifelse(ano == 2017, media_dia2, NA), #Note que inverte
-    v2_d2 = max(v1_d2, na.rm = T),
-    d.media_d2 = media_dia2 - v2_d2,
-    
-    
-  ) %>%
-  ungroup() %>%
-  filter(dup2 == 2) %>% 
-  select(-c(v1_d1, v2_d1, v2_d2, v1_d2))
-
-
-# ---------------------------------------------------------------------------- #
-### 7.2.2 Gráfico ----
-# ---------------------------------------------------------------------------- #
-
-
-fig <- list()
-
-temp <- base_c %>% 
-  mutate(subset = case_when(
-    abs(dist_hv_border) < bw_main_a ~ 1,
-    .default = 0
-  )
-  ) %>% 
-  filter(
-    !is.na(d.media_d1)#,
-    #subset == 1
-  )
-
-# Dependent variable
-yv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(d.media_d1) %>% 
-  rename(vd = 1)
-
-#45696
-# Running variable
-xv <- temp %>%
-  filter(ano == 2017) %>% 
-  select(dist_hv_border)
-
-# Clusters
-clu <- temp %>% 
-  filter(ano == 2017) %>% 
-  select(seg)
-
-# Latitude
-latv <- temp %>%
-  filter(ano == 2017) %>% 
-  select(lat)
-
-# Longitude
-lonv <- temp %>% 
-  filter(ano == 2017) %>% 
-  select(lon)
-
-ef <- dummy_cols(clu$seg)
-ef <- ef %>% select(-1,-2)
-
-# Estimando parâmetros do gráfico
-fig <- rdplot(y = yv$vd,
-              x = xv$dist_hv_border,
-              c = 0,
-              p = 1,
-              #binselect = "esmv",
-              kernel = "triangular",
-              #h = bw_main_a,
-              nbins = 25,
-              #b = bw_bias_a,
-              weights = temp$obs[temp$ano == 2017],
-              #subset = temp$subset == 1,
-              hide = T,
-              masspoints= "adjust",
-              covs = cbind(ef,latv,lonv)
-)
-
-rm(yv, xv, clu, latv, lonv, ef, temp)
-
-
-
-# Vetores e valores auxiliares
-fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
-fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-x_r_sta <- 0
-x_r_end <- max(fig$vars_poly$rdplot_x)
-y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
-x_l_sta <- min(fig$vars_poly$rdplot_x)
-x_l_end <- 0
-
-y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
-y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
-
-# Gráfico
-fig_gg <- ggplot() +
-  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-             alpha = 0.5, size = 2, show.legend = FALSE) + 
-  geom_vline(xintercept = 0, linewidth = 1) + 
-  scale_color_brewer(palette = "Set1") + 
-  labs(x = "Distance to DST Border (km)",
-       y = "Average ENEM \n Score (1st Day)") + 
-  theme_bw() + 
-  scale_x_continuous(breaks = xtips,
-                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  #ylim(-30,40) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
-
-
-fig_gg
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Dias_17.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Dias_17.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
-rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
-
-
-
-# ---------------------------------------------------------------------------- #
 # 8.1 Abstenções ----
 # ---------------------------------------------------------------------------- #
 gc()
 
-base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_2019.RDS")) %>%
+base_abs <- base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_2018.RDS"))) %>%
   setDT()
 
@@ -4172,6 +3749,8 @@ c_rlist <- list()
 
 ano_list <- c(2013:2018)
 
+load(file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_p2.RData")
+
 ### A. TC ----
 
 for(ano_ref in ano_list) {
@@ -4210,8 +3789,9 @@ for(ano_ref in ano_list) {
     y = base_t$d.media[base_t$ano == ano_comp],
     x = base_t$dist_hv_border[base_t$ano == ano_ref],
     c = 0,
-    h = bw_main_a,
-    b = bw_bias_a,
+    p = 2, 
+    h = bw_main_p,
+    b = bw_bias_p,
     cluster = base_t$seg[base_t$ano == ano_ref],
     weights = base_t$obs[base_t$ano == ano_ref],
     vce = "hc0",
@@ -5607,7 +5187,11 @@ rm(base_low, result, base_high, rlist, t10cc, df, latex_table, base_a, ano_list,
 
 
 # ---------------------------------------------------------------------------- #
-# 13.Migração ------
+# Mig ----
+# ---------------------------------------------------------------------------- #
+
+# ---------------------------------------------------------------------------- #
+## 7.Migração ------
 # ---------------------------------------------------------------------------- #
 
 base <- base %>% 
@@ -5619,9 +5203,8 @@ base <- base %>%
   )
 
 
-# ---------------------------------------------------------------------------- #
-## 13.1 Regressão ----
-# ---------------------------------------------------------------------------- #
+
+### 7.1 Regressão ----
 rlist <- list()
 
 for (j in c(0:1)){
@@ -5757,305 +5340,11 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/migration_v1.tex")
 
-
-# ---------------------------------------------------------------------------- #
-### 13.1.1 Gráfico 19-18 -----
-# ---------------------------------------------------------------------------- #
-##### 13.1.1.1 Dados ----
-# ---------------------------------------------------------------------------- #
-
-
-base_a <-  base %>% filter(mig_dummy == 0)
-
-base_a <- base_a[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
-                 by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
-  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
-  arrange(mun_prova,ano) %>%
-  group_by(mun_prova) %>%
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    v1_nota = ifelse(ano == 2018, media, NA),
-    v2_nota = max(v1_nota, na.rm = T),
-    d.media = media - v2_nota 
-  ) %>%
-  ungroup() %>% 
-  filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota))
-
-# ---------------------------------------------------------------------------- #
-##### 13.1.1.2 Gráfico ----
-# ---------------------------------------------------------------------------- #
-
-
-fig <- list()
-
-temp <- base_a %>% 
-  mutate(subset = case_when(
-    abs(dist_hv_border) < bw_main_a ~ 1,
-    .default = 0
-  )
-  ) %>% 
-  filter(
-    !is.na(d.media)#,
-    #subset == 1
-  )
-
-# Dependent variable
-yv <- temp %>%
-  filter(ano == 2019) %>% 
-  select(d.media) %>% 
-  rename(vd = 1)
-
-#45696
-# Running variable
-xv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(dist_hv_border)
-
-# Clusters
-clu <- temp %>% 
-  filter(ano == 2018) %>% 
-  select(seg)
-
-# Latitude
-latv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(lat)
-
-# Longitude
-lonv <- temp %>% 
-  filter(ano == 2018) %>% 
-  select(lon)
-
-ef <- dummy_cols(clu$seg)
-ef <- ef %>% select(-1,-2)
-
-# Estimando parâmetros do gráfico
-fig <- rdplot(y = yv$vd,
-              x = xv$dist_hv_border,
-              c = 0,
-              p = 1,
-              #binselect = "esmv",
-              kernel = "triangular",
-              #h = bw_main_a,
-              nbins = 25,
-              #b = bw_bias_a,
-              weights = temp$obs[temp$ano == 2018],
-              #subset = temp$subset == 1,
-              hide = T,
-              masspoints= "adjust",
-              covs = cbind(ef,latv,lonv)
-)
-
-rm(yv, xv, clu, latv, lonv, ef, temp)
-
-
-
-# Vetores e valores auxiliares
-fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
-fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-x_r_sta <- 0
-x_r_end <- max(fig$vars_poly$rdplot_x)
-y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
-x_l_sta <- min(fig$vars_poly$rdplot_x)
-x_l_end <- 0
-
-y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
-y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
-
-# Gráfico
-fig_gg <- ggplot() +
-  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-             alpha = 0.5, size = 2, show.legend = FALSE) + 
-  geom_vline(xintercept = 0, linewidth = 1) + 
-  scale_color_brewer(palette = "Set1") + 
-  labs(x = "Distance to DST Border (km)",
-       y = "Average ENEM \n Score (No Mig.)") + 
-  theme_bw() + 
-  scale_x_continuous(breaks = xtips,
-                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  #ylim(15,160) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
-
-
-fig_gg
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_nomig.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_nomig.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
-rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
+rm(base_a, names, result, rlist, tab, latex_table)
 
 
 # ---------------------------------------------------------------------------- #
-### 13.1.2 Gráfico 18-17 ----
-# ---------------------------------------------------------------------------- #
-#### 13.1.2.1 Dados ----
-# ---------------------------------------------------------------------------- #
-
-#Criando a dummy de migração
-base_temp <- base_temp %>% 
-  mutate(
-    mig_dummy = ifelse(
-      !is.na(mun_prova) & !is.na(mun_res) & mun_prova != mun_res, 1,
-      ifelse(!is.na(mun_prova) & !is.na(mun_res), 0 , NA)
-    )
-  )
-
-
-#Agregando a base de dados
-base_c <-  base_temp %>% filter(mig_dummy == 0)
-base_c <- base_c[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
-                 by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
-  filter(as.numeric(ano) %in% c(2018,2017)) %>% 
-  arrange(mun_prova,ano) %>%
-  group_by(mun_prova) %>%
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    v1_nota = ifelse(ano == 2017, media, NA),
-    v2_nota = max(v1_nota, na.rm = T),
-    d.media = media - v2_nota 
-  ) %>%
-  ungroup() %>% 
-  filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota))
-
-# ---------------------------------------------------------------------------- #
-#### 13.1.2.2 Gráfico ----
-# ---------------------------------------------------------------------------- #
-
-
-fig <- list()
-
-temp <- base_c %>% 
-  mutate(subset = case_when(
-    abs(dist_hv_border) < bw_main_a ~ 1,
-    .default = 0
-  )
-  ) %>% 
-  filter(
-    !is.na(d.media)#,
-    #subset == 1
-  )
-
-# Dependent variable
-yv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(d.media) %>% 
-  rename(vd = 1)
-
-#45696
-# Running variable
-xv <- temp %>%
-  filter(ano == 2017) %>% 
-  select(dist_hv_border)
-
-# Clusters
-clu <- temp %>% 
-  filter(ano == 2017) %>% 
-  select(seg)
-
-# Latitude
-latv <- temp %>%
-  filter(ano == 2017) %>% 
-  select(lat)
-
-# Longitude
-lonv <- temp %>% 
-  filter(ano == 2017) %>% 
-  select(lon)
-
-ef <- dummy_cols(clu$seg)
-ef <- ef %>% select(-1,-2)
-
-# Estimando parâmetros do gráfico
-fig <- rdplot(y = yv$vd,
-              x = xv$dist_hv_border,
-              c = 0,
-              p = 1,
-              #binselect = "esmv",
-              kernel = "triangular",
-              #h = bw_main_a,
-              nbins = 25,
-              #b = bw_bias_a,
-              weights = temp$obs[temp$ano == 2018],
-              #subset = temp$subset == 1,
-              hide = T,
-              masspoints= "adjust",
-              covs = cbind(ef,latv,lonv)
-)
-
-rm(yv, xv, clu, latv, lonv, ef, temp)
-
-
-
-# Vetores e valores auxiliares
-fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
-fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-x_r_sta <- 0
-x_r_end <- max(fig$vars_poly$rdplot_x)
-y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
-x_l_sta <- min(fig$vars_poly$rdplot_x)
-x_l_end <- 0
-
-y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
-y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
-
-# Gráfico
-fig_gg <- ggplot() +
-  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-             alpha = 0.5, size = 2, show.legend = FALSE) + 
-  geom_vline(xintercept = 0, linewidth = 1) + 
-  scale_color_brewer(palette = "Set1") + 
-  labs(x = "Distance to DST Border (km)",
-       y = "Average ENEM \n Score (No Mig.)") + 
-  theme_bw() + 
-  scale_x_continuous(breaks = xtips,
-                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  #ylim(-20,40) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
-
-
-fig_gg
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_nomig_17.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_nomig_17.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
-rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
-
-
-
-
-rm(base_a, base_c, names, result, rlist, tab, latex_table)
-
-# ---------------------------------------------------------------------------- #
-## 13.2 + var ----
+## 7.2 + var ----
 # ---------------------------------------------------------------------------- #
 
 var_list <- c(
@@ -6242,12 +5531,12 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/grupos_
 
 
 # ---------------------------------------------------------------------------- #
-# 14. Falsification ----
+# # 13. Falsification ----
 # # ---------------------------------------------------------------------------- #
 # 
 # # ---------------------------------------------------------------------------- #
 
-## 14.1 Complete -----
+# ## 13.1 Complete -----
 # # ---------------------------------------------------------------------------- #
 # 
 # 
@@ -6268,7 +5557,7 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/grupos_
 #   select(-c(dup2, dup1, v1_nota, v2_nota))
 # 
 # 
-###14.1.1 A TC-----
+# ###13.1.1 A TC-----
 # # Listas para armazenar resultados
 # rlist_cutseg <- list()
 # 
@@ -6438,7 +5727,7 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/grupos_
 # 
 # 
 # 
- ###14.1.1 A TC-----
+# ###13.1.1 A TC-----
 # # Listas para armazenar resultados
 # rlist_cutseg <- list()
 # 
@@ -6611,7 +5900,7 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/grupos_
 # 
 # 
 # # ---------------------------------------------------------------------------- #
-# 15. Seg ---- 
+# 14. Seg ---- 
 # ---------------------------------------------------------------------------- #
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
@@ -6645,14 +5934,12 @@ seg_list <- c("N", "M", "S")
 
 result_seg <- list()
 
-# ---------------------------------------------------------------------------- #
-##15.1 loop ---------
-# ---------------------------------------------------------------------------- #
+###8.5.1 loop ---------
 
 for (i in seg_list){
   
   if (i == "M"){
-    b_temp <- base_a %>%
+    base_temp <- base_a %>%
       group_by(mun_prova, seg) %>% 
       filter(seg %in% c(4,3,2)) %>% 
       arrange(mun_prova, ano) %>% 
@@ -6662,7 +5949,7 @@ for (i in seg_list){
       )
     
   } else if(i == "S"){
-    b_temp <- base_a %>%
+    base_temp <- base_a %>%
       group_by(mun_prova, seg) %>% 
       filter(seg %in% c(6,5,7)) %>% 
       arrange(mun_prova, ano) %>% 
@@ -6671,7 +5958,7 @@ for (i in seg_list){
         lon = as.factor(lon)
       )
   } else {
-    b_temp <- base_a %>%
+    base_temp <- base_a %>%
       group_by(mun_prova, seg) %>% 
       filter(seg %in% c(1)) %>% 
       arrange(mun_prova, ano) %>% 
@@ -6682,55 +5969,55 @@ for (i in seg_list){
   }
   
   
-  summary(b_temp$lat)
-  summary(b_temp$lon)
+  summary(base_temp$lat)
+  summary(base_temp$lon)
   
-  print(paste0("Rows:", nrow(b_temp), " ", i))
+  print(paste0("Rows:", nrow(base_temp), " ", i))
   
   
   
   
   result_seg[[as.character(i)]] <- rdrobust(
-    y = b_temp$d.media[b_temp$ano == 2019],
-    x = b_temp$dist_hv_border[b_temp$ano == 2018],
+    y = base_temp$d.media[base_temp$ano == 2019],
+    x = base_temp$dist_hv_border[base_temp$ano == 2018],
     c = 0,
-    cluster = b_temp$mun_prova[b_temp$ano == 2018],
-    weights = b_temp$obs[b_temp$ano == 2018],
+    cluster = base_temp$mun_prova[base_temp$ano == 2018],
+    weights = base_temp$obs[base_temp$ano == 2018],
     vce = "hc0",
     covs = cbind(
-      b_temp$lat[b_temp$ano == 2018],
-      b_temp$lon[b_temp$ano == 2018]
+      base_temp$lat[base_temp$ano == 2018],
+      base_temp$lon[base_temp$ano == 2018]
     )
   )
   
   
   
-  # yv <- b_temp %>% 
+  # yv <- base_temp %>% 
   #   filter(ano == 2019) %>% 
   #   select(d.media) %>% 
   #   filter(!is.na(d.media)) %>% 
   #   rename(vd = 1)
   # 
   # # Running variable
-  # xv <- b_temp %>% 
+  # xv <- base_temp %>% 
   #   filter(ano == 2018) %>% 
   #   select(dist_hv_border) %>% 
   #   filter(!is.na(2018))
   # 
   # # Latitude
-  # latv <- b_temp %>%
+  # latv <- base_temp %>%
   #   filter(ano == 2018) %>% 
   #   select(lat) %>% 
   #   filter(!is.na(lat))
   # 
   # # Longitude
-  # lonv <- b_temp %>% 
+  # lonv <- base_temp %>% 
   #   filter(ano == 2018) %>% 
   #   select(lon) %>% 
   #   filter(!is.na(lon))
   # 
   # # Clusters
-  # clu <- b_temp %>%
+  # clu <- base_temp %>%
   #   filter(ano == 2018) %>% 
   #   select(seg) %>% 
   #   filter(!is.na(seg))
@@ -6752,8 +6039,8 @@ for (i in seg_list){
   
   
   
-  # base_2018 <- b_temp %>% filter(ano == 2018) %>% arrange(mun_prova)
-  # base_2019 <- b_temp %>% filter(ano == 2019) %>% arrange(mun_prova)
+  # base_2018 <- base_temp %>% filter(ano == 2018) %>% arrange(mun_prova)
+  # base_2019 <- base_temp %>% filter(ano == 2019) %>% arrange(mun_prova)
   # 
   # # Verifica se tem o mesmo número de linhas
   # if (nrow(base_2018) == nrow(base_2019)) {
@@ -6770,7 +6057,7 @@ for (i in seg_list){
   
   
   
-  rm(b_temp)
+  rm(base_temp)
 }
 
 
@@ -6847,274 +6134,10 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/SEG_Res
 rm(result, result_tab, latex_table,i, result_seg, names,
    seg_list)
 
-# ---------------------------------------------------------------------------- #
-## 15.2 Gráfico Seg1 19-18 ----
-# ---------------------------------------------------------------------------- #
-### 15.2.1 Dados ----
-# ---------------------------------------------------------------------------- #
 
-base_a <- base_a %>% filter(seg == 1) #Selecionando apenas o segmento 1
 
 # ---------------------------------------------------------------------------- #
-### 15.2.2. Gráfico ----
-# ---------------------------------------------------------------------------- #
-
-
-fig <- list()
-
-temp <- base_a %>% 
-  mutate(subset = case_when(
-    abs(dist_hv_border) < bw_main_a ~ 1,
-    .default = 0
-  )
-  ) %>% 
-  filter(
-    !is.na(d.media)#,
-    #subset == 1
-  )
-
-# Dependent variable
-yv <- temp %>%
-  filter(ano == 2019) %>% 
-  select(d.media) %>% 
-  rename(vd = 1)
-
-#45696
-# Running variable
-xv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(dist_hv_border)
-
-# Clusters
-clu <- temp %>% 
-  filter(ano == 2018) %>% 
-  select(seg)
-
-# Latitude
-latv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(lat)
-
-# Longitude
-lonv <- temp %>% 
-  filter(ano == 2018) %>% 
-  select(lon)
-
-ef <- dummy_cols(clu$seg)
-ef <- ef %>% select(-1,-2)
-
-# Estimando parâmetros do gráfico
-fig <- rdplot(y = yv$vd,
-              x = xv$dist_hv_border,
-              c = 0,
-              p = 1,
-              #binselect = "esmv",
-              kernel = "triangular",
-              #h = bw_main_a,
-              nbins = 25,
-              #b = bw_bias_a,
-              weights = temp$obs[temp$ano == 2018],
-              #subset = temp$subset == 1,
-              hide = T,
-              masspoints= "adjust",
-              covs = cbind(ef,latv,lonv)
-)
-
-rm(yv, xv, clu, latv, lonv, ef, temp)
-
-
-
-# Vetores e valores auxiliares
-fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
-fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-x_r_sta <- 0
-x_r_end <- max(fig$vars_poly$rdplot_x)
-y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
-x_l_sta <- min(fig$vars_poly$rdplot_x)
-x_l_end <- 0
-
-y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
-y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
-
-# Gráfico
-fig_gg <- ggplot() +
-  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-             alpha = 0.5, size = 2, show.legend = FALSE) + 
-  geom_vline(xintercept = 0, linewidth = 1) + 
-  scale_color_brewer(palette = "Set1") + 
-  labs(x = "Distance to DST Border (km)",
-       y = "Average ENEM \n Score (Seg. 1)") + 
-  theme_bw() + 
-  scale_x_continuous(breaks = xtips,
-                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-20,40) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
-
-
-fig_gg
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_seg1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_seg1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
-rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
-# ---------------------------------------------------------------------------- #
-## 15.3 Gráfico Seg1 18-17 ----
-# ---------------------------------------------------------------------------- #
-### 15.3.1 Dados ----
-# ---------------------------------------------------------------------------- #
-
-base_c <- base_temp[priv0 == 1,.(media = mean(media, na.rm = T),
-                            obs = .N),
-               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
-  filter(as.numeric(ano) %in% c(2018, 2017))
-
-base_c <- base_c %>%
-  arrange(mun_prova,ano) %>%
-  group_by(mun_prova) %>%
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    v1_d1 = ifelse(ano == 2017, media, NA),
-    v2_d1 = max(v1_d1, na.rm = T),
-    d.media = media - v2_d1,
-  ) %>%
-  ungroup() %>%
-  filter(dup2 == 2) %>% 
-  select(-c(v1_d1, v2_d1)) %>% 
-  filter(seg == 1)
-
-# ---------------------------------------------------------------------------- #
-### 15.3.2 Gráfico ----
-# ---------------------------------------------------------------------------- #
-
-
-fig <- list()
-
-temp <- base_c %>% 
-  mutate(subset = case_when(
-    abs(dist_hv_border) < bw_main_a ~ 1,
-    .default = 0
-  )
-  ) %>% 
-  filter(
-    !is.na(d.media)#,
-    #subset == 1
-  )
-
-# Dependent variable
-yv <- temp %>%
-  filter(ano == 2018) %>% 
-  select(d.media) %>% 
-  rename(vd = 1)
-
-#45696
-# Running variable
-xv <- temp %>%
-  filter(ano == 2017) %>% 
-  select(dist_hv_border)
-
-# Clusters
-clu <- temp %>% 
-  filter(ano == 2017) %>% 
-  select(seg)
-
-# Latitude
-latv <- temp %>%
-  filter(ano == 2017) %>% 
-  select(lat)
-
-# Longitude
-lonv <- temp %>% 
-  filter(ano == 2017) %>% 
-  select(lon)
-
-ef <- dummy_cols(clu$seg)
-ef <- ef %>% select(-1,-2)
-
-# Estimando parâmetros do gráfico
-fig <- rdplot(y = yv$vd,
-              x = xv$dist_hv_border,
-              c = 0,
-              p = 1,
-              #binselect = "esmv",
-              kernel = "triangular",
-              #h = bw_main_a,
-              nbins = 25,
-              #b = bw_bias_a,
-              weights = temp$obs[temp$ano == 2017],
-              #subset = temp$subset == 1,
-              hide = T,
-              masspoints= "adjust",
-              covs = cbind(ef,latv,lonv)
-)
-
-rm(yv, xv, clu, latv, lonv, ef, temp)
-
-
-
-# Vetores e valores auxiliares
-fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
-fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
-
-x_r_sta <- 0
-x_r_end <- max(fig$vars_poly$rdplot_x)
-y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
-
-x_l_sta <- min(fig$vars_poly$rdplot_x)
-x_l_end <- 0
-
-y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
-y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
-                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
-                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
-
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
-
-# Gráfico
-fig_gg <- ggplot() +
-  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
-             alpha = 0.5, size = 2, show.legend = FALSE) + 
-  geom_vline(xintercept = 0, linewidth = 1) + 
-  scale_color_brewer(palette = "Set1") + 
-  labs(x = "Distance to DST Border (km)",
-       y = "Average ENEM \n Score (Seg. 1)") + 
-  theme_bw() + 
-  scale_x_continuous(breaks = xtips,
-                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
-  ylim(-20,40) + 
-  theme(axis.title.x = element_text(size = 35),
-        axis.title.y = element_text(size = 35),
-        axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 30))
-
-
-fig_gg
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_seg1_17.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_seg1_17.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
-
-rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
-
-
-rm(base_temp, base_c)
-# ---------------------------------------------------------------------------- #
-# 16. Bandwith ----
+# 15. Bandwith ----
 # ---------------------------------------------------------------------------- #
 
 # Estes valores estão no item 2.
@@ -7195,7 +6218,7 @@ rm(graph, tablist_bw, rlist_bw)
 
 
 # ---------------------------------------------------------------------------- #
-# 17. Comp 17-16 ----
+# 16. Comp 17-16 ----
 # ---------------------------------------------------------------------------- #
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2017.RDS")) %>%
@@ -7336,7 +6359,7 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/DIFF_17
 rm(ef, list, result, t10, latex_table)
 
 # ----------------------------------------------------------------------------- #
-##17.2 Matérias----
+##16.2 Matérias----
 # ----------------------------------------------------------------------------- #
 
 base_a <- base[priv0 == 1,.(media_rd = mean(rd, na.rm = T),
@@ -7508,10 +6531,10 @@ rm(notas_tab, p_list, result, d_list, latex_table, base, base_a, bw_bias_76,
 
 
 # ---------------------------------------------------------------------------- #
-# 18. Balance Figs ----
+# 17. Balance Figs ----
 # ---------------------------------------------------------------------------- #
-## 18.1 (2018) ----
-### 18.1.1 INPE ----
+## 17.1 (2018) ----
+### 17.1.1 INPE ----
 dtb <- read_xls("Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/inpe/DTB_BRASIL_MUNICIPIO.xls") %>%
   mutate(
     nomemun = stri_trans_general(Nome_Município, "Latin-ASCII"),
@@ -7577,7 +6600,7 @@ inpe <- inpe %>%
 rm(dtb)
 # Base de dados
 
-### 18.1.2 Unidos ----
+### 17.1.2 Unidos ----
 base_2018 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS")) %>%
   setDT() %>%
   mutate(codmun = as.character(mun_prova)) %>%
@@ -7604,9 +6627,7 @@ base_2018 <- base_2018 %>%
 
 rm(inpe)
 
-# ---------------------------------------------------------------------------- #
-##18.2 (2019) ----
-# ---------------------------------------------------------------------------- #
+##17.2 (2019) ----
 
 dtb <- read_xls("Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/inpe/DTB_BRASIL_MUNICIPIO.xls") %>%
   mutate(
@@ -7672,10 +6693,7 @@ inpe <- inpe %>%
 
 rm(dtb)
 
-# ---------------------------------------------------------------------------- #
-### 18.2.2 Unidos ----
-# ---------------------------------------------------------------------------- #
-
+### 17.2.2 Unidos ----
 base_2019 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   setDT() %>%
   mutate(codmun = as.character(mun_prova)) %>%
@@ -7703,9 +6721,8 @@ base_2019 <- base_2019 %>%
 rm(inpe)
 
 
-# ---------------------------------------------------------------------------- #
-## 18.3 ALL ----
-# ---------------------------------------------------------------------------- #
+
+## 17.3 ALL ----
 base_inpe <- bind_rows(base_2018,base_2019)
 
 rm(base_2018,base_2019)
@@ -7736,7 +6753,7 @@ base_inpe <- base_inpe %>%
     )
   )
 
-##18.4 REG ----
+##17.4 REG ----
 
 var_list <- c("id18", "fem", "ppi", "escp", "escm", "dom5",
               "renda1", "pibpc", "pai_trab_man", "mae_trab_man",
@@ -7795,7 +6812,7 @@ rm(ef,i, base_y, base_ag)
 
 
 
-##18.5 TABELA --------------------------------------------------------------
+##17.5 TABELA --------------------------------------------------------------
 
 
 vnames <- c(
@@ -8055,12 +7072,10 @@ ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/defin
 rm( covs, plot_covs)
 
 # ---------------------------------------------------------------------------- #
-# 18.6 Match ----
+# 17.6 Match ----
 # ---------------------------------------------------------------------------- #
 
-# ---------------------------------------------------------------------------- #
-## BW Map ----
-# ---------------------------------------------------------------------------- #
+##17.6 MAPA ----
 line <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/line.RDS")
 base <- base_inpe %>%
   filter(ano == 2019) %>% 
@@ -8069,6 +7084,10 @@ base <- base_inpe %>%
   mutate(amostra = 1)
 
 
+
+mun_enem <- base_a %>% 
+  filter(ano == 2019) %>% 
+  select(mun_prova)
 
 
 mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/mun_hv.RDS") %>%
@@ -8133,7 +7152,8 @@ map <- ggplot(mun_hv) +
 
 map
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band.png"),plot = map,device = "png", dpi = 300)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/map_band.png"),plot = map,device = "png", dpi = 300)
+
 
 
 ### Balance -----
@@ -8508,7 +7528,7 @@ rm( covs, plot_covs)
 
 
 # ---------------------------------------------------------------------------- #
-# 18.7 In Border ----
+# 17.7 In Border ----
 # ---------------------------------------------------------------------------- #
 
 mun_border <- readRDS( file = paste0("Z:/Tuffy/Paper - HV/Bases/mun_touching.RDS"))
@@ -8892,7 +7912,7 @@ rm( covs, plot_covs, base_inpe, base_inpe_t, line, map, matched_df,
 
 
 # ---------------------------------------------------------------------------- #
-# 19. Filter + Desc ----
+# 18. Filter + Desc ----
 # ---------------------------------------------------------------------------- #
 
 
@@ -8916,7 +7936,7 @@ summary(base_con$mun_escola)
 summary(base_trei$mun_escola)
 
 # ---------------------------------------------------------------------------- #
-## 19.1 EST C+T ----
+## 18.1 EST C+T ----
 # ---------------------------------------------------------------------------- #
 
 base_con <- base_con[,.(media = mean(media, na.rm = T), obs = .N),
@@ -8953,9 +7973,8 @@ base_trei <- base_trei[,.(media = mean(media, na.rm = T), obs = .N),
   filter(dup2 == 2) %>% 
   select(-c(dup2, dup1, v1_nota, v2_nota))
 
-# ---------------------------------------------------------------------------- #
-### 19.1.1 Regs ----
-# ---------------------------------------------------------------------------- #
+
+### 18.1.1 Regs ----
 
 ef <- dummy_cols(base_con$seg[base_con$ano == 2018])
 ef <- ef %>% select(-1,-2)
@@ -8999,7 +8018,7 @@ list[[as.character(paste0(2019,"-",2018,"C|Trei"))]] <- rdrobust(
 )
 
 # ---------------------------------------------------------------------------- #
-## 19.2. TC ----
+## 18.2. TC ----
 # ---------------------------------------------------------------------------- #
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
@@ -9134,7 +8153,7 @@ base_mun <- base[dep_adm == 3,.(media = mean(media, na.rm = T), obs = .N),
 
 
 # ---------------------------------------------------------------------------- #
-###19.2.1 Reg -----
+###18.2.1 Reg -----
 # ---------------------------------------------------------------------------- #
 
 
@@ -9307,23 +8326,23 @@ t10 <- t10 %>%
 
 
 
-names <- c("Concluded High School",
+names <- c("Já Formados",
            " "," ",
-           "Mock Examinees",
+           "Treineiros",
            " ", " ",
-           "Senior Year",
+           "Todos Concluintes",
            " "," ",
-           "Senior Year Public School",
+           "Conc. Escola Pub.",
            " ", " ",
-           "Senior Year Private School",
+           "Conc. Escola Priv.",
            " "," ",
-           "Senior Municipal + State School",
+           "Conc. Escolas Mun + Estadual",
            " ", " ",
-           "Senior State School",
+           "Conc. Escola Estadual",
            " "," ",
-           "Senior Federal School",
+           "Conc. Escola Federal",
            " ", " ",
-           "Senior Municipal School",
+           "Conc. Escola Municipal",
            " ", " ")
 
 result <- data.frame(
@@ -9368,7 +8387,7 @@ result$con[25] <- t10$coef[[9]]
 result$con[26] <- t10$se[[9]]
 result$con[27] <- t10$N[[9]]
 
-colnames(result) <- c("", "(1)")
+colnames(result) <- c("", "(1)", "(2)")
 
 # Cria a tabela LaTeX
 latex_table <- knitr::kable(
@@ -9392,9 +8411,8 @@ rm(ef, list, result, t10, latex_table)
 saeb_base <- readRDS("Z:/Tuffy/Paper - HV/Bases/saeb_total.RDS")
 
 
-# ---------------------------------------------------------------------------- #
- ##20.1 Base ----
-# ---------------------------------------------------------------------------- #
+
+ ##19.1 Base ----
 base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
                             obs = .N),
                by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
@@ -9436,9 +8454,7 @@ saeb_base <- saeb_base %>%
 
 rm(temp)
 
-# ---------------------------------------------------------------------------- #
-## 20.2 Reg ----
-# ---------------------------------------------------------------------------- #
+## 19.2 Reg ----
 
 # Lista para armazenar resultados
 rlist_saeb <- list()
@@ -9601,9 +8617,7 @@ for (i in c("5","9","3")) {
 }
 rm(clu, latv, lonv, temp, w_lp, w_mt, xv, yv_lp, yv_mt, i)
 
-# ---------------------------------------------------------------------------- #
-## 20.3 Tabelas ----
-# ---------------------------------------------------------------------------- #
+## 19.3 Tabelas ----
 
 tab <- data.frame(
   coef = do.call(rbind,lapply(rlist_saeb, FUN = function(x){x$coef[3]})),
@@ -9690,16 +8704,15 @@ rm(rlist_saeb, saeb_base, tab,result, names)
 
 
 # ---------------------------------------------------------------------------- #
-## 20.4 ALL ----
+# 19.4 ALL ----
 # ---------------------------------------------------------------------------- #
 
 
 saeb_base <- readRDS("Z:/Tuffy/Paper - HV/Bases/saeb_total.RDS")
 
 
-# ---------------------------------------------------------------------------- #
-##20.4.0 Base ----
-# ---------------------------------------------------------------------------- #
+
+##19.1 Base ----
 base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
                             obs = .N),
                by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
@@ -9759,9 +8772,9 @@ summary(saeb_base %>% select(dist_hv_border, lat, lon))
 
 nrow(saeb_base %>% filter(serie == 3, ano == 2017))
 
-# ---------------------------------------------------------------------------- #
-### 20.4.1 Reg ----
-# ---------------------------------------------------------------------------- #
+
+### 19.4.1 Reg ----
+
 # Lista para armazenar resultados
 rlist_saeb <- list()
 
@@ -9898,9 +8911,7 @@ for (i in c("5","9","3")) {
 
 rm(clu, latv, lonv, temp, w_lp, w_mt, xv, yv_lp, yv_mt, i)
 
-# ---------------------------------------------------------------------------- #
-### 20.4.2 Tabelas ----
-# ---------------------------------------------------------------------------- #
+### 19.4.2 Tabelas ----
 
 tab <- data.frame(
   coef = do.call(rbind,lapply(rlist_saeb, FUN = function(x){x$coef[3]})),
@@ -9983,9 +8994,9 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Saeb_all.tex")
 
-# ---------------------------------------------------------------------------- #
-###20.4.3 BW ----
-# ---------------------------------------------------------------------------- #
+
+###19.4.3 BW ----
+
 rlist_saeb <- list()
 
 
@@ -10121,9 +9132,8 @@ for (i in c("5","9","3")) {
 
 rm(clu, latv, lonv, temp, w_lp, w_mt, xv, yv_lp, yv_mt, i)
 
-# ---------------------------------------------------------------------------- #
-### 20.4.4 Tabelas ----
-# ---------------------------------------------------------------------------- #
+### 19.4.2 Tabelas ----
+
 tab <- data.frame(
   coef = do.call(rbind,lapply(rlist_saeb, FUN = function(x){x$coef[3]})),
   se = do.call(rbind,lapply(rlist_saeb, FUN = function(x){x$se[3]})),
@@ -10211,10 +9221,10 @@ rm(rlist_saeb, saeb_base, tab,result, names)
 
 
 # ---------------------------------------------------------------------------- #
-# 21. Base Desc ----
+# 14. Base Desc ----
 # ---------------------------------------------------------------------------- #
-## 21.1 19 ----
-# ---------------------------------------------------------------------------- #
+
+## 14.1 19 ----
 gc()
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2019.RDS"))
@@ -10271,9 +9281,7 @@ nin_em_19 <- nrow(temp %>% filter(conclusao == 2))
 pub_em_19 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))/nrow(temp)
 npub_em_19 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))
 
-# ---------------------------------------------------------------------------- #
-##21.2 18 ----
-# ---------------------------------------------------------------------------- #
+##14.2 18 ----
 gc()
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2018.RDS"))
@@ -10475,5 +9483,4 @@ rm(both_days18, both_days19, conc_18, conc_19,
    in_em_18, in_em_19, latex_table, n_both_days18, n_both_days19,
    names, nconc_18, nconc_19, nin_em_18, nin_em_19, npub_em_18, npub_em_19,
    ntrei_18, ntrei_19, pub_em_18, pub_em_19, total18, total19, trei_18, trei_19)
-
 

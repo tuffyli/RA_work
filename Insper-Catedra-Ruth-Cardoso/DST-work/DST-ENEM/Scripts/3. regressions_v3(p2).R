@@ -767,10 +767,10 @@ fig_gg <- ggplot() +
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
   ylim(-20,20) + 
-  theme(axis.title.x = element_text(size = 18),
-        axis.title.y = element_text(size = 18),
-        axis.text.x = element_text(size = 18,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 18))
+  theme(axis.title.x = element_text(size = 25),
+        axis.title.y = element_text(size = 25),
+        axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 20))
 
 
 fig_gg
@@ -781,7 +781,7 @@ ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/pdf
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
-# #### 2.1.2 19-17 ----
+#### 2.1.2 19-17 ----
 # 
 # 
 base_temp <- base %>%
