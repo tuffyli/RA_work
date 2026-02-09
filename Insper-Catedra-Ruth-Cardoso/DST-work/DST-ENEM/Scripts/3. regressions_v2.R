@@ -1253,8 +1253,8 @@ for (i in fig_loop) {
           axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
           axis.text.y = element_text(size = 20))
   
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol1_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 11)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol1_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 11)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol1_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 13)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol1_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 13)
   
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
   
@@ -1390,8 +1390,8 @@ for (i in fig_loop) {
           axis.text.y = element_text(size = 30))
   
   
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_notas_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_notas_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_notas_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 13)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_notas_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 13)
   
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips, vars_poly_left, vars_poly_right)
   
@@ -1524,8 +1524,8 @@ for (i in fig_loop) {
           axis.text.x = element_text(size = 30,angle = 90,hjust = 1, vjust = 0.5),
           axis.text.y = element_text(size = 30))
   
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol1_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol1_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol1_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 13)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol1_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 13)
   
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
   
@@ -1661,8 +1661,8 @@ for (i in fig_loop) {
           axis.text.y = element_text(size = 20))
   
   
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol4_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 11)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol4_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 11)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol4_1917_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 13)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/2_bins_",i,"_pol4_1917_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 13)
   
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips, vars_poly_left, vars_poly_right)
   
@@ -1795,8 +1795,8 @@ for (i in fig_loop) {
           axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
           axis.text.y = element_text(size = 20))
   
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_pol1_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_pol1_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_pol1_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 13)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_pol1_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 13)
   
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
   
@@ -1932,8 +1932,8 @@ for (i in fig_loop) {
           axis.text.y = element_text(size = 20))
   
   
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_notas_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_notas_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_notas_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 13)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_notas_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 13)
   
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips, vars_poly_left, vars_poly_right)
   
@@ -2028,6 +2028,7 @@ for (i in d_list){
       y = base_a[[i]][base_a$ano == 2019],
       x = base_a$dist_hv_border[base_a$ano == 2018],
       c = 0,
+      p = 1,
       h = bw_main_a,
       b = bw_bias_a,
       cluster = base_a$seg[base_a$ano == 2018],
@@ -2124,7 +2125,310 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Materias_v1.tex")
 
+# ---------------------------------------------------------------------------- #
+## 3.3 Gráfico red (19-18) ----
+# ---------------------------------------------------------------------------- #
+
+fig <- list()
+
+temp <- base_a %>% 
+  mutate(subset = case_when(
+    abs(dist_hv_border) < bw_main_a ~ 1,
+    .default = 0
+  )
+  ) %>% 
+  filter(
+    !is.na(d.media_rd)#,
+    #subset == 1
+  )
+
+# Dependent variable
+yv <- temp %>%
+  filter(ano == 2019) %>% 
+  select(d.media_rd) %>% 
+  rename(vd = 1)
+
+#45696
+# Running variable
+xv <- temp %>%
+  filter(ano == 2018) %>% 
+  select(dist_hv_border)
+
+# Clusters
+clu <- temp %>% 
+  filter(ano == 2018) %>% 
+  select(seg)
+
+# Latitude
+latv <- temp %>%
+  filter(ano == 2018) %>% 
+  select(lat)
+
+# Longitude
+lonv <- temp %>% 
+  filter(ano == 2018) %>% 
+  select(lon)
+
+ef <- dummy_cols(clu$seg)
+ef <- ef %>% select(-1,-2)
+
+# Estimando parâmetros do gráfico
+fig <- rdplot(y = yv$vd,
+              x = xv$dist_hv_border,
+              c = 0,
+              p = 2,
+              #binselect = "esmv",
+              kernel = "triangular",
+              #h = bw_main_a,
+              nbins = 35,
+              #b = bw_bias_a,
+              weights = temp$obs[temp$ano == 2018],
+              #subset = temp$subset == 1,
+              hide = T,
+              masspoints= "adjust",
+              covs = cbind(ef,latv,lonv)
+)
+
+rm(yv, xv, clu, latv, lonv, ef, temp)
+
+
+
+# Vetores e valores auxiliares
+fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
+fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
+
+x_r_sta <- 0
+x_r_end <- max(fig$vars_poly$rdplot_x)
+y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
+                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
+                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
+y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
+
+x_l_sta <- min(fig$vars_poly$rdplot_x)
+x_l_end <- 0
+
+y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
+y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
+                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
+                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
+
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
+
+# Gráfico
+fig_gg <- ggplot() +
+  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
+             alpha = 0.5, size = 2, show.legend = FALSE) + 
+  geom_vline(xintercept = 0, linewidth = 1) + 
+  scale_color_brewer(palette = "Set1") + 
+  labs(x = "Distance to DST Border (km)",
+       y = "Average Writing Score") + 
+  theme_bw() + 
+  scale_x_continuous(breaks = xtips,
+                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
+  ylim(40,105) + 
+  theme(axis.title.x = element_text(size = 18),
+        axis.title.y = element_text(size = 18),
+        axis.text.x = element_text(size = 18,angle = 90,hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 18))
+
+
+fig_gg
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/RDD_Redacao.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/pdf/RDD_Redacao.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+
+rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
+
+
+
+
 rm(notas_tab, p_list, result, d_list, latex_table)
+
+
+
+# ---------------------------------------------------------------------------- #
+## 3.4 Gráfico red (18-17) -----
+# ---------------------------------------------------------------------------- #
+### 3.4.1 Dados ----
+# ---------------------------------------------------------------------------- #
+
+
+#Agregando os dados para 2018 e 2017
+base_c <- base_temp[priv0 == 1,.(media_rd = mean(rd, na.rm = T),
+                                 media_cn = mean(cn, na.rm = T),
+                                 media_lc = mean(lc, na.rm = T),
+                                 media_ch = mean(ch, na.rm = T),
+                                 media_mt = mean(mt, na.rm = T),obs = .N),
+                    by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)]  %>%
+  filter(as.numeric(ano) %in% c(2017,2018))
+
+
+#Base C
+base_c <- base_c %>%
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    
+    #Redação
+    v1_rd = ifelse(ano == 2017, media_rd, NA),
+    v2_rd = max(v1_rd, na.rm = T),
+    d.media_rd = media_rd - v2_rd,
+    
+    #Ciências Naturais
+    v1_cn = ifelse(ano == 2017, media_cn, NA),
+    v2_cn = max(v1_cn, na.rm = T),
+    d.media_cn = media_cn - v2_cn,
+    
+    #Ciências Humanas
+    v1_ch = ifelse(ano == 2017, media_ch, NA),
+    v2_ch = max(v1_ch, na.rm = T),
+    d.media_ch = media_ch - v2_ch,
+    
+    #Lingua Portuguesa
+    v1_lc = ifelse(ano == 2017, media_lc, NA),
+    v2_lc = max(v1_lc, na.rm = T),
+    d.media_lc = media_lc - v2_lc,
+    
+    #Matematica
+    v1_mt = ifelse(ano == 2017, media_mt, NA),
+    v2_mt = max(v1_mt, na.rm = T),
+    d.media_mt = media_mt - v2_mt
+    
+  ) %>%
+  ungroup() %>%
+  filter(dup2 == 2) %>%
+  select(-c(dup1,dup2,v1_rd,v2_rd,
+            v1_cn, v2_cn, v1_ch,v2_ch,v1_lc,v2_lc,v1_mt,v2_mt))
+
+
+# --------------------------------------------------------------------------- #
+### 3.4.2 Gráfico ----
+# --------------------------------------------------------------------------- #
+
+
+fig <- list()
+
+temp <- base_c %>% 
+  mutate(subset = case_when(
+    abs(dist_hv_border) < bw_main_p ~ 1,
+    .default = 0
+  )
+  ) %>% 
+  filter(
+    !is.na(d.media_rd)#,
+    #subset == 1
+  )
+
+# Dependent variable
+yv <- temp %>%
+  filter(ano == 2018) %>% 
+  select(d.media_rd) %>% 
+  rename(vd = 1)
+
+#45696
+# Running variable
+xv <- temp %>%
+  filter(ano == 2017) %>% 
+  select(dist_hv_border)
+
+# Clusters
+clu <- temp %>% 
+  filter(ano == 2017) %>% 
+  select(seg)
+
+# Latitude
+latv <- temp %>%
+  filter(ano == 2017) %>% 
+  select(lat)
+
+# Longitude
+lonv <- temp %>% 
+  filter(ano == 2017) %>% 
+  select(lon)
+
+ef <- dummy_cols(clu$seg)
+ef <- ef %>% select(-1,-2)
+
+# Estimando parâmetros do gráfico
+fig <- rdplot(y = yv$vd,
+              x = xv$dist_hv_border,
+              c = 0,
+              p = 2,
+              #binselect = "esmv",
+              kernel = "triangular",
+              #h = bw_main_a,
+              nbins = 35,
+              #b = bw_bias_a,
+              weights = temp$obs[temp$ano == 2017],
+              #subset = temp$subset == 1,
+              hide = T,
+              masspoints= "adjust",
+              covs = cbind(ef,latv,lonv)
+)
+
+rm(yv, xv, clu, latv, lonv, ef, temp)
+
+
+
+# Vetores e valores auxiliares
+fig$vars_bins$hv <- fig$vars_bins$rdplot_mean_x >= 1
+fig$vars_poly$hv <- fig$vars_poly$rdplot_x >= 1
+
+x_r_sta <- 0
+x_r_end <- max(fig$vars_poly$rdplot_x)
+y_r_sta <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
+                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
+                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
+y_r_end <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == max(fig$vars_poly$rdplot_x)]
+
+x_l_sta <- min(fig$vars_poly$rdplot_x)
+x_l_end <- 0
+
+y_l_sta <- fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == min(fig$vars_poly$rdplot_x)]
+y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2], 
+                  max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
+                  min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
+
+xtips <- seq(-100*10^5,100*10^5,2*10^5)
+
+# Gráfico
+fig_gg <- ggplot() +
+  geom_point(data = fig$vars_bins, aes(x = rdplot_mean_x, y = rdplot_mean_y, color = factor(hv)),
+             alpha = 0.5, size = 2, show.legend = FALSE) + 
+  geom_vline(xintercept = 0, linewidth = 1) + 
+  #geom_vline(xintercept = bw_main_a, linediwdth = 0.75, alpha = 0.3) +
+  scale_color_brewer(palette = "Set1") + 
+  labs(x = "Distance to DST Border (km)",
+       y = "Average Writing Score") + 
+  theme_bw() + 
+  scale_x_continuous(breaks = xtips,
+                     labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
+  ylim(-50, 10) + 
+  theme(axis.title.x = element_text(size = 18),
+        axis.title.y = element_text(size = 18),
+        axis.text.x = element_text(size = 18,angle = 90,hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 18))
+
+
+fig_gg
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/RDD_Redacao_17.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/pdf/RDD_Redacao_17.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+
+rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
+
+
+
+
+rm(notas_tab, p_list, result, d_list, latex_table, base_c)
+
+
+
+
+
+
 
 
 # ---------------------------------------------------------------------------- #
