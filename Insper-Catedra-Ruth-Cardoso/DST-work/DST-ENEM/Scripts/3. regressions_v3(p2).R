@@ -4381,237 +4381,239 @@ base_a <- base[priv0 == 1,.(media_nota = mean(media, na.rm = T),
 
 
 load(file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_p2.RData")
-
-### Reg ----
-
-#2) Criando as listas que irão armazenar os resultados para os RDDS
-c_rlist <- list()
-t_rlist <- list()
-
-w_rlist <- list()
-e_rlist <- list()
-#Anos que serão usados no loop de regressões
-ano_list <- c(2013:2018)
-
-# ### A. TC ----
-
-for(ano_ref in ano_list) {
+load(file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_NF.RData")
 
 
-  ano_comp <- ano_ref + 1
-
-
-  base_t <- base_a %>%
-    filter(as.numeric(ano) %in% c(ano_ref,ano_comp)) %>%
-    arrange(mun_prova,ano) %>%
-    group_by(mun_prova) %>%
-    mutate(
-      dup1 = 1,
-      dup2 = sum(dup1)) %>%
-    ungroup() %>%
-    filter(dup2 == 2) %>%
-    group_by(mun_prova) %>%
-    mutate(
-      v1_nota = ifelse(ano == ano_ref, media_nota, NA),
-      v2_nota = max(v1_nota, na.rm = T),
-      d.media = media_nota - v2_nota
-    ) %>%
-    ungroup() %>%
-    select(-c(dup2, dup1, v1_nota, v2_nota))
-
-
-
-
-
-  #Com controles
-  ef <- dummy_cols(base_t$seg[base_t$ano == ano_ref])
-  ef <- ef %>% select(-1,-2)
-
-  w_rlist[[as.character(paste0(ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
-    y = base_t$d.media[base_t$ano == ano_comp],
-    x = base_t$dist_hv_border[base_t$ano == ano_ref],
-    c = 0,
-    h = bw_main_a,
-    b = bw_bias_a,
-    cluster = base_t$seg[base_t$ano == ano_ref],
-    weights = base_t$obs[base_t$ano == ano_ref],
-    vce = "hc0",
-    covs = cbind(
-      ef,
-      base_t$lat[base_t$ano == ano_ref],
-      base_t$lon[base_t$ano == ano_ref]
-    )
-  )
-  
-  e_rlist[[as.character(paste0(ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
-    y = base_t$d.media[base_t$ano == ano_comp],
-    x = base_t$dist_hv_border[base_t$ano == ano_ref],
-    c = 0,
-    p = 2,
-    h = bw_main_p,
-    b = bw_bias_p,
-    cluster = base_t$seg[base_t$ano == ano_ref],
-    weights = base_t$obs[base_t$ano == ano_ref],
-    vce = "hc0",
-    covs = cbind(
-      ef,
-      base_t$lat[base_t$ano == ano_ref],
-      base_t$lon[base_t$ano == ano_ref]
-    )
-  )
-
-  rm(ano_ref, ano_comp, base_t)
-
-}
-rm(ef)
-
-
-
-
-### Resultados ----
-
-
-t10c3 <- data.frame(
-  coef = do.call(rbind,lapply(w_rlist, FUN = function(x){x$coef[3]})),
-  se = do.call(rbind,lapply(w_rlist, FUN = function(x){x$se[3]})),
-  pv = do.call(rbind,lapply(w_rlist, FUN = function(x){x$pv[3]})),
-  n = do.call(rbind, lapply(w_rlist, FUN = function(x){x$N_h})),
-  t = do.call(rbind, lapply(w_rlist, FUN = function(x){x$N}))
-) %>% 
-  mutate(
-    N = n.1 + n.2,
-    Tot = t.1 + t.2
-  ) %>% 
-  select(-c(n.1, n.2))
-
-t10c4 <- data.frame(
-  coef = do.call(rbind,lapply(e_rlist, FUN = function(x){x$coef[3]})),
-  se = do.call(rbind,lapply(e_rlist, FUN = function(x){x$se[3]})),
-  pv = do.call(rbind,lapply(e_rlist, FUN = function(x){x$pv[3]})),
-  n = do.call(rbind, lapply(e_rlist, FUN = function(x){x$N_h})),
-  t = do.call(rbind, lapply(e_rlist, FUN = function(x){x$N}))
-) %>% 
-  mutate(
-    N = n.1 + n.2,
-    Tot = t.1 + t.2
-  ) %>% 
-  select(-c(n.1, n.2))
-
-
-
-
-names2 <- c("2014 - 2013",
-           " ",
-           " ",
-           "2015 - 2014",
-           " ",
-           " ",
-           "2016 - 2015",
-           " ",
-           " ",
-           "2017 - 2016",
-           " ",
-           " ",
-           "2018 - 2017",
-           " ",
-           " ",
-           "2019 - 2018",
-           " ",
-           " ",
-           "  ",            " ",
-           " ",
-           "Banda")
+# ### Reg ----
 # 
-# result <- data.frame(
-#   var = names,
-#   #tcnc = rep(NA, times = length(names)),
-#   tccc = rep(NA, times = length(names))#,
-#   #jcnc = rep(NA, times = length(names)),
-#   #jccc = rep(NA, times = length(names))
-# )
-
-
-
-#Controles
-t10c3 <- t10c3 %>%
-  mutate(
-    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
-                  ifelse(pv < 0.01, "**",
-                         ifelse(pv < 0.05, "*",
-                                ifelse(pv < 0.1, "", "")
-                         ))),
-    se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
-    pv = formatC(x = pv, digits = 3, format = "f"),
-    N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
-    esp = 1,
-    id = 1:6
-  )
-
-t10c4 <- t10c4 %>%
-  mutate(
-    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
-                  ifelse(pv < 0.01, "**",
-                         ifelse(pv < 0.05, "*",
-                                ifelse(pv < 0.1, "", "")
-                         ))),
-    se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
-    pv = formatC(x = pv, digits = 3, format = "f"),
-    N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
-    esp = 1,
-    id = 1:6
-  )
-# %>%
-#   select(-c(pv,se)) %>%
-#   setDT() %>%
-#   dcast(id ~ esp, value.var = c("coef"),fill = "") %>%
-#   select(-id)
+# #2) Criando as listas que irão armazenar os resultados para os RDDS
+# c_rlist <- list() 
+# w_rlist <- list()
+# e_rlist <- list()
+# #Anos que serão usados no loop de regressões
+# ano_list <- c(2013:2018)
 # 
-# #Base A
-# result$tccc[1] <- t10cc$coef[[1]]
-# result$tccc[2] <- t10cc$se[[1]]
-# result$tccc[3] <- t10cc$N[[1]]
-# result$tccc[4] <- t10cc$coef[[2]]
-# result$tccc[5] <- t10cc$se[[2]]
-# result$tccc[6] <- t10cc$N[[2]]
-# result$tccc[7] <- t10cc$coef[[3]]
-# result$tccc[8] <- t10cc$se[[3]]
-# result$tccc[9] <- t10cc$N[[3]]
-# result$tccc[10] <- t10cc$coef[[4]]
-# result$tccc[11] <- t10cc$se[[4]]
-# result$tccc[12] <- t10cc$N[[4]]
-# result$tccc[13] <- t10cc$coef[[5]]
-# result$tccc[14] <- t10cc$se[[5]]
-# result$tccc[15] <- t10cc$N[[5]]
-# result$tccc[16] <- t10cc$coef[[6]]
-# result$tccc[17] <- t10cc$se[[6]]
-# result$tccc[18] <- t10cc$N[[6]]
+# # ### A. TC ----
 # 
-
-
+# for(ano_ref in ano_list) {
 # 
 # 
-# # t10_final <- cbind(t10nc, t10cc)
+#   ano_comp <- ano_ref + 1
+# 
+# 
+#   base_t <- base_a %>%
+#     filter(as.numeric(ano) %in% c(ano_ref,ano_comp)) %>%
+#     arrange(mun_prova,ano) %>%
+#     group_by(mun_prova) %>%
+#     mutate(
+#       dup1 = 1,
+#       dup2 = sum(dup1)) %>%
+#     ungroup() %>%
+#     filter(dup2 == 2) %>%
+#     group_by(mun_prova) %>%
+#     mutate(
+#       v1_nota = ifelse(ano == ano_ref, media_nota, NA),
+#       v2_nota = max(v1_nota, na.rm = T),
+#       d.media = media_nota - v2_nota
+#     ) %>%
+#     ungroup() %>%
+#     select(-c(dup2, dup1, v1_nota, v2_nota))
+# 
+# 
+# 
+# 
+# 
+#   #Com controles
+#   ef <- dummy_cols(base_t$seg[base_t$ano == ano_ref])
+#   ef <- ef %>% select(-1,-2)
+# 
+#   w_rlist[[as.character(paste0(ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
+#     y = base_t$d.media[base_t$ano == ano_comp],
+#     x = base_t$dist_hv_border[base_t$ano == ano_ref],
+#     c = 0,
+#     h = bw_main_a,
+#     b = bw_bias_a,
+#     cluster = base_t$seg[base_t$ano == ano_ref],
+#     weights = base_t$obs[base_t$ano == ano_ref],
+#     vce = "hc0",
+#     covs = cbind(
+#       ef,
+#       base_t$lat[base_t$ano == ano_ref],
+#       base_t$lon[base_t$ano == ano_ref]
+#     )
+#   )
+#   
+#   e_rlist[[as.character(paste0(ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
+#     y = base_t$d.media[base_t$ano == ano_comp],
+#     x = base_t$dist_hv_border[base_t$ano == ano_ref],
+#     c = 0,
+#     p = 2,
+#     h = bw_main_p,
+#     b = bw_bias_p,
+#     cluster = base_t$seg[base_t$ano == ano_ref],
+#     weights = base_t$obs[base_t$ano == ano_ref],
+#     vce = "hc0",
+#     covs = cbind(
+#       ef,
+#       base_t$lat[base_t$ano == ano_ref],
+#       base_t$lon[base_t$ano == ano_ref]
+#     )
+#   )
+# 
+#   rm(ano_ref, ano_comp, base_t)
+# 
+# }
+# rm(ef)
+# 
+# 
+# 
+# 
+# ### Resultados ----
+# 
+# 
+# t10c3 <- data.frame(
+#   coef = do.call(rbind,lapply(w_rlist, FUN = function(x){x$coef[3]})),
+#   se = do.call(rbind,lapply(w_rlist, FUN = function(x){x$se[3]})),
+#   pv = do.call(rbind,lapply(w_rlist, FUN = function(x){x$pv[3]})),
+#   n = do.call(rbind, lapply(w_rlist, FUN = function(x){x$N_h})),
+#   t = do.call(rbind, lapply(w_rlist, FUN = function(x){x$N}))
+# ) %>% 
+#   mutate(
+#     N = n.1 + n.2,
+#     Tot = t.1 + t.2
+#   ) %>% 
+#   select(-c(n.1, n.2))
+# 
+# t10c4 <- data.frame(
+#   coef = do.call(rbind,lapply(e_rlist, FUN = function(x){x$coef[3]})),
+#   se = do.call(rbind,lapply(e_rlist, FUN = function(x){x$se[3]})),
+#   pv = do.call(rbind,lapply(e_rlist, FUN = function(x){x$pv[3]})),
+#   n = do.call(rbind, lapply(e_rlist, FUN = function(x){x$N_h})),
+#   t = do.call(rbind, lapply(e_rlist, FUN = function(x){x$N}))
+# ) %>% 
+#   mutate(
+#     N = n.1 + n.2,
+#     Tot = t.1 + t.2
+#   ) %>% 
+#   select(-c(n.1, n.2))
+# 
+# 
+# 
+# 
+# names2 <- c("2014 - 2013",
+#            " ",
+#            " ",
+#            "2015 - 2014",
+#            " ",
+#            " ",
+#            "2016 - 2015",
+#            " ",
+#            " ",
+#            "2017 - 2016",
+#            " ",
+#            " ",
+#            "2018 - 2017",
+#            " ",
+#            " ",
+#            "2019 - 2018",
+#            " ",
+#            " ",
+#            "  ",            " ",
+#            " ",
+#            "Banda")
+# # 
+# # result <- data.frame(
+# #   var = names,
+# #   #tcnc = rep(NA, times = length(names)),
+# #   tccc = rep(NA, times = length(names))#,
+# #   #jcnc = rep(NA, times = length(names)),
+# #   #jccc = rep(NA, times = length(names))
+# # )
+# 
+# 
+# 
+# #Controles
+# t10c3 <- t10c3 %>%
+#   mutate(
+#     coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+#                   ifelse(pv < 0.01, "**",
+#                          ifelse(pv < 0.05, "*",
+#                                 ifelse(pv < 0.1, "", "")
+#                          ))),
+#     se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
+#     pv = formatC(x = pv, digits = 3, format = "f"),
+#     N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
+#     esp = 1,
+#     id = 1:6
+#   )
+# 
+# t10c4 <- t10c4 %>%
+#   mutate(
+#     coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+#                   ifelse(pv < 0.01, "**",
+#                          ifelse(pv < 0.05, "*",
+#                                 ifelse(pv < 0.1, "", "")
+#                          ))),
+#     se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
+#     pv = formatC(x = pv, digits = 3, format = "f"),
+#     N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
+#     esp = 1,
+#     id = 1:6
+#   )
+# # %>%
+# #   select(-c(pv,se)) %>%
+# #   setDT() %>%
+# #   dcast(id ~ esp, value.var = c("coef"),fill = "") %>%
+# #   select(-id)
+# # 
+# # #Base A
+# # result$tccc[1] <- t10cc$coef[[1]]
+# # result$tccc[2] <- t10cc$se[[1]]
+# # result$tccc[3] <- t10cc$N[[1]]
+# # result$tccc[4] <- t10cc$coef[[2]]
+# # result$tccc[5] <- t10cc$se[[2]]
+# # result$tccc[6] <- t10cc$N[[2]]
+# # result$tccc[7] <- t10cc$coef[[3]]
+# # result$tccc[8] <- t10cc$se[[3]]
+# # result$tccc[9] <- t10cc$N[[3]]
+# # result$tccc[10] <- t10cc$coef[[4]]
+# # result$tccc[11] <- t10cc$se[[4]]
+# # result$tccc[12] <- t10cc$N[[4]]
+# # result$tccc[13] <- t10cc$coef[[5]]
+# # result$tccc[14] <- t10cc$se[[5]]
+# # result$tccc[15] <- t10cc$N[[5]]
+# # result$tccc[16] <- t10cc$coef[[6]]
+# # result$tccc[17] <- t10cc$se[[6]]
+# # result$tccc[18] <- t10cc$N[[6]]
 # # 
 # 
-# colnames(result) <- c("", "(1)")
 # 
-# # Cria a tabela LaTeX
-# latex_table <- knitr::kable(
-#   result,
-#   format = "latex",
-#   booktabs = TRUE,
-#   align = "lc",
-#   linesep = ""
-# )
+# # 
+# # 
+# # # t10_final <- cbind(t10nc, t10cc)
+# # # 
+# # 
+# # colnames(result) <- c("", "(1)")
+# # 
+# # # Cria a tabela LaTeX
+# # latex_table <- knitr::kable(
+# #   result,
+# #   format = "latex",
+# #   booktabs = TRUE,
+# #   align = "lc",
+# #   linesep = ""
+# # )
+# # 
+# # writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Anos_v1.tex")
 # 
-# writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Anos_v1.tex")
-
-# ---------------------------------------------------------------------------- #
+# # ---------------------------------------------------------------------------- #
 ## 10.1 Nível ----
 # ---------------------------------------------------------------------------- #
 
 #2) Com os resultados da nota em nível:
 c_rlist <- list() #lista para armazenar os resultados
+t_rlist <- list()
+
 
 ano_list <- c(2013:2019) #Lista dos anos que serão comparados no loop
 
@@ -4710,7 +4712,42 @@ names <- c("2013",
            "2019",
            " ", " ",
            "Banda")
+# --------------------------------------------------------------------- #
+### Stata ----
+# --------------------------------------------------------------------- #
 
+# Para o mesmo formato que o stata
+res <- c_rlist[[as.character(paste0(2019,"C|TC"))]]
+summary(res)
+
+print_stata_rd <- function(res, outcome = "dm", running = "dist") {
+  
+  cat("\nCovariate-adjusted Sharp RD estimates using local polynomial regression.\n\n")
+  
+  cat(sprintf("Cutoff c = %s | Left of c  Right of c            Number of obs = %8d\n",
+              res$c, sum(res$N)))
+  
+  cat(sprintf("BW type       = %s\n", res$bws_type))
+  cat(sprintf("Kernel        = %s\n", res$kernel))
+  cat(sprintf("VCE method    = %s\n\n", res$vce))
+  
+  cat(sprintf("Outcome: %s. Running variable: %s.\n", outcome, running))
+  cat("--------------------------------------------------------------------------------\n")
+  cat("                   | Point         | Robust Inference\n")
+  cat("                   | Estimate      | z-stat        P>|z|    [95% Conf. Interval]\n")
+  cat("-------------------+------------------------------------------------------------\n")
+  
+  cat(sprintf("         RD Effect | %8.2f       | %7.4f        %5.3f     %8.5f     %8.5f\n",
+              res$Estimate[1],
+              res$z[1],
+              res$pv[1],
+              res$ci[1,1],
+              res$ci[1,2]))
+  
+  cat("--------------------------------------------------------------------------------\n")
+  cat(sprintf("Covariate-adjusted estimates. Additional covariates included: %d\n",
+              ncol(res$covs)))
+}
 
 # ----------------- #
 ### Tabela ------------------------
