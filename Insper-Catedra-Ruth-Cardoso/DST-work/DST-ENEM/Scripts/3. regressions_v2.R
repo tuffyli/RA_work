@@ -2226,16 +2226,16 @@ fig_gg <- ggplot() +
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
   ylim(40,105) + 
-  theme(axis.title.x = element_text(size = 18),
-        axis.title.y = element_text(size = 18),
-        axis.text.x = element_text(size = 18,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 18))
+  theme(axis.title.x = element_text(size = 25),
+        axis.title.y = element_text(size = 25),
+        axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 20))
 
 
 fig_gg
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/RDD_Redacao.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/pdf/RDD_Redacao.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Redacao.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Redacao.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
@@ -2406,16 +2406,16 @@ fig_gg <- ggplot() +
   scale_x_continuous(breaks = xtips,
                      labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
   ylim(-50, 10) + 
-  theme(axis.title.x = element_text(size = 18),
-        axis.title.y = element_text(size = 18),
-        axis.text.x = element_text(size = 18,angle = 90,hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 18))
+  theme(axis.title.x = element_text(size = 25),
+        axis.title.y = element_text(size = 25),
+        axis.text.x = element_text(size = 20,angle = 90,hjust = 1, vjust = 0.5),
+        axis.text.y = element_text(size = 20))
 
 
 fig_gg
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/RDD_Redacao_17.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/pol2/img/pdf/RDD_Redacao_17.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/RDD_Redacao_17.png"),plot = fig_gg, device = "png",dpi = 300, height = 6, width = 9)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/RDD_Redacao_17.pdf"),plot = fig_gg, device = "pdf",height = 7, width = 10)
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
@@ -2423,11 +2423,6 @@ rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xt
 
 
 rm(notas_tab, p_list, result, d_list, latex_table, base_c)
-
-
-
-
-
 
 
 
@@ -2483,7 +2478,7 @@ base_a <- base_a %>%
   filter(dup2 == 2) %>%
   select(-c(dup1,dup2,v1_rd1,v2_rd1,v1_rd2,v2_rd2,v1_rd3,v2_rd3,v1_rd4,v2_rd4,v1_rd5,v2_rd5))
 
-
+# ---------------------------------------------------------------------------- #
 ##4.1 Reg ----
 
 p_list <- list()
@@ -2612,359 +2607,362 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Redacao
 rm(p_list, red_tab, result, d_list, latex_table, row)
 
 
+# ---------------------------------------------------------------------------- #
+# 5. Dificuldade ----
+# ---------------------------------------------------------------------------- #
+gc()
+# Agregados dos critérios
+base_a <- base[priv0 == 1,.(media_ac_bl_ch = mean(acerto_bl_ch, na.rm = T),
+                            media_ac_bh_ch = mean(acerto_bh_ch, na.rm = T),
+                            media_ac_bl_cn = mean(acerto_bl_cn, na.rm = T),
+                            media_ac_bh_cn = mean(acerto_bh_cn, na.rm = T),
+                            media_ac_bl_lc = mean(acerto_bl_lc, na.rm = T),
+                            media_ac_bh_lc = mean(acerto_bh_lc, na.rm = T),
+                            media_ac_bl_mt = mean(acerto_bl_mt, na.rm = T),
+                            media_ac_bh_mt = mean(acerto_bh_mt, na.rm = T),
+                            mediabl = mean(acerto_pbl, na.rm = T),
+                            mediabh = mean(acerto_pbh, na.rm = T),
+                            obs = .N),
+               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)]
+
+
+#Calculando as diferenças
+base_a <- base_a %>%
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1)) %>%
+  ungroup() %>%
+  filter(dup2 == 2) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    
+    #TOTAL
+    
+    v1_pbl = ifelse(ano == 2018, mediabl, NA),
+    v2_pbl = max(v1_pbl, na.rm = T),
+    d.mediabl = mediabl - v2_pbl,
+    
+    v1_pbh = ifelse(ano == 2018, mediabh, NA),
+    v2_pbh = max(v1_pbh, na.rm = T),
+    d.mediabh = mediabh - v2_pbh,
+    
+    # Ciências Humanas
+    ## Facil
+    v1_bl_ch = ifelse(ano == 2018, media_ac_bl_ch, NA),
+    v2_bl_ch = max(v1_bl_ch, na.rm = T),
+    d.media_bl_ch = media_ac_bl_ch - v2_bl_ch,
+    
+    ## Dificil
+    v1_bh_ch = ifelse(ano == 2018, media_ac_bh_ch, NA),
+    v2_bh_ch = max(v1_bh_ch, na.rm = T),
+    d.media_bh_ch = media_ac_bh_ch - v2_bh_ch,
+    
+    
+    # Ciências Naturais
+    ## Facil
+    v1_bl_cn = ifelse(ano == 2018, media_ac_bl_cn, NA),
+    v2_bl_cn = max(v1_bl_cn, na.rm = T),
+    d.media_bl_cn = media_ac_bl_cn - v2_bl_cn,
+    
+    ## Dificil
+    v1_bh_cn = ifelse(ano == 2018, media_ac_bh_cn, NA),
+    v2_bh_cn = max(v1_bh_cn, na.rm = T),
+    d.media_bh_cn = media_ac_bh_cn - v2_bh_cn,
+    
+    
+    # Lingua
+    ## Facil
+    v1_bl_lc = ifelse(ano == 2018, media_ac_bl_lc, NA),
+    v2_bl_lc = max(v1_bl_lc, na.rm = T),
+    d.media_bl_lc = media_ac_bl_lc - v2_bl_lc,
+    
+    ## Dificil
+    v1_bh_lc = ifelse(ano == 2018, media_ac_bh_lc, NA),
+    v2_bh_lc = max(v1_bh_lc, na.rm = T),
+    d.media_bh_lc = media_ac_bh_lc - v2_bh_lc,
+    
+    
+    # Matematica
+    ## Facil
+    v1_bl_mt = ifelse(ano == 2018, media_ac_bl_mt, NA),
+    v2_bl_mt = max(v1_bl_mt, na.rm = T),
+    d.media_bl_mt = media_ac_bl_mt - v2_bl_mt,
+    
+    ## Dificil
+    v1_bh_mt = ifelse(ano == 2018, media_ac_bh_mt, NA),
+    v2_bh_mt = max(v1_bh_mt, na.rm = T),
+    d.media_bh_mt = media_ac_bh_mt - v2_bh_mt
+    
+  ) %>%
+  ungroup() %>%
+  filter(dup2 == 2) %>%
+  select(-c(dup1,dup2,
+            v1_bl_ch,v2_bl_ch, v1_bh_ch, v2_bh_ch,
+            v1_bl_cn,v2_bl_cn, v1_bh_cn, v2_bh_cn,
+            v1_bl_lc,v2_bl_lc, v1_bh_lc, v2_bh_lc,
+            v1_bl_mt,v2_bl_mt, v1_bh_mt, v2_bh_mt,
+            v1_pbh, v1_pbl, v2_pbl, v2_pbh))
+
+# ---------------------------------------------------------------------------- #
+##5.1 Reg ----
+# ---------------------------------------------------------------------------- #
+rp_list <- list()
+
+d_list <- c("d.mediabl", "d.mediabh", "d.media_bl_lc", "d.media_bh_lc",
+            "d.media_bl_ch", "d.media_bh_ch", "d.media_bl_cn", "d.media_bh_cn",
+            "d.media_bl_mt", "d.media_bh_mt")
+
+for (i in d_list){
+  
+  #Com Controles
+  
+  ef <- dummy_cols(base_a$seg[base_a$ano == 2018])
+  ef <- ef %>% select(-1,-2)
+  
+  
+  rp_list[[as.character(paste0("cc_",i,"|TC"))]] <-
+    rdrobust(
+      y = base_a[[i]][base_a$ano == 2019],
+      x = base_a$dist_hv_border[base_a$ano == 2018],
+      c = 0,
+      h = bw_main_a,
+      b = bw_bias_a,
+      cluster = base_a$seg[base_a$ano == 2018],
+      weights = base_a$obs[base_a$ano == 2018],
+      vce = "hc0",
+      covs = cbind(
+        ef,
+        base_a$lat[base_a$ano == 2018],
+        base_a$lon[base_a$ano == 2018]
+      )
+    )
+  
+  
+}
+rm(ef,i)
+
+
+# ---------------------------------------------------------------------------- #
+###5.1.1 Dif (Easy - Hard)----
+# ---------------------------------------------------------------------------- #
+base_a <- base_a %>%
+  group_by(mun_prova,
+           ano) %>%
+  mutate(
+    dif_avg = d.mediabl - d.mediabh,
+    dif_lc = d.media_bl_lc - d.media_bh_lc,
+    dif_ch = d.media_bl_ch - d.media_bh_ch,
+    dif_cn = d.media_bl_cn - d.media_bh_cn,
+    dif_mt = d.media_bl_mt - d.media_bh_mt
+  )
+
+new_list <- c("dif_avg", "dif_lc", "dif_ch", "dif_cn", "dif_mt")
+dif_list <- list()
+
+for (i in new_list){
+  
+  
+  
+  
+  
+  #Com Controles
+  
+  ef <- dummy_cols(base_a$seg[base_a$ano == 2018])
+  ef <- ef %>% select(-1,-2)
+  
+  
+  dif_list[[as.character(paste0("cc_",i,"|TC"))]] <-
+    rdrobust(
+      y = base_a[[i]][base_a$ano == 2019],
+      x = base_a$dist_hv_border[base_a$ano == 2018],
+      c = 0,
+      h = bw_main_a,
+      b = bw_bias_a,
+      cluster = base_a$seg[base_a$ano == 2018],
+      weights = base_a$obs[base_a$ano == 2018],
+      vce = "hc0",
+      covs = cbind(
+        ef,
+        base_a$lat[base_a$ano == 2018],
+        base_a$lon[base_a$ano == 2018]
+      )
+    )
+  
+  
+}
+rm(ef,i, new_list)
+
+
+# ---------------------------------------------------------------------------- #
+##5.2 Tab ----
+# ---------------------------------------------------------------------------- #
+
+
+mat_nota <- data.frame(
+  coef = do.call(rbind,lapply(rp_list, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(rp_list, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(rp_list, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind,lapply(rp_list, FUN = function(x){x$N_h}))
+)
+
+
+
+
+
+mat_nota <- mat_nota %>%
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**",
+                         ifelse(pv < 0.05, "*",
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0(" (",formatC(x = se, digits = 2, format = "f"),")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ", n.1 + n.2, "]"),
+    #esp = 1:20,
+    id = 1
+  ) %>%
+  select(-c(pv))
+
+
+
+# ---------------------------------------------------------------------------- #
+### 5.2.1 DIF TAB ----
+#
+
+dif_tab <- data.frame(
+  coef = do.call(rbind,lapply(dif_list, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(dif_list, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(dif_list, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind,lapply(dif_list, FUN = function(x){x$N_h}))
+)
+
+
+dif_tab <- dif_tab %>%
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**",
+                         ifelse(pv < 0.05, "*",
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0(" (",formatC(x = se, digits = 2, format = "f"),")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ", n.1 + n.2, "]"),
+    #esp = 1:10,
+    id = 1
+  ) %>%
+  select(-c(pv))
+
+
+
+row1 <- c("Easier",
+          " "," ",
+          "More Difficult",
+          " ", " ",
+          "Difference",
+          " ", " ")
+
+
+
+
+result <- data.frame(
+  var = row1,
+  
+  avg = rep(NA, times = length(row1)),
+  lc = rep(NA, times = length(row1)),
+  ch = rep(NA, times = length(row1)),
+  cn = rep(NA, times = length(row1)),
+  mt = rep(NA, times = length(row1))
+)
+
+####### TC ----
+#AVG
+result$avg[1] <- mat_nota$coef[[1]]
+result$avg[2] <- mat_nota$se[[1]]
+result$avg[3] <- mat_nota$N[[1]]
+result$avg[4] <- mat_nota$coef[[2]]
+result$avg[5] <- mat_nota$se[[2]]
+result$avg[6] <- mat_nota$N[[2]]
+
+result$avg[7] <- dif_tab$coef[[1]]
+result$avg[8] <- dif_tab$se[[1]]
+result$avg[9] <- dif_tab$N[[1]]
+
+#Lang
+result$lc[1] <- mat_nota$coef[[3]]
+result$lc[2] <- mat_nota$se[[3]]
+result$lc[3] <- mat_nota$N[[3]]
+result$lc[4] <- mat_nota$coef[[4]]
+result$lc[5] <- mat_nota$se[[4]]
+result$lc[6] <- mat_nota$N[[4]]
+
+result$lc[7] <- dif_tab$coef[[2]]
+result$lc[8] <- dif_tab$se[[2]]
+result$lc[9] <- dif_tab$N[[2]]
+
+
+#Cien Humanas
+result$ch[1] <- mat_nota$coef[[5]]
+result$ch[2] <- mat_nota$se[[5]]
+result$ch[3] <- mat_nota$N[[5]]
+result$ch[4] <- mat_nota$coef[[6]]
+result$ch[5] <- mat_nota$se[[6]]
+result$ch[6] <- mat_nota$N[[6]]
+
+result$ch[7] <- dif_tab$coef[[3]]
+result$ch[8] <- dif_tab$se[[3]]
+result$ch[9] <- dif_tab$N[[3]]
+
+
+#Cien Nat
+result$cn[1] <- mat_nota$coef[[7]]
+result$cn[2] <- mat_nota$se[[7]]
+result$cn[3] <- mat_nota$N[[7]]
+result$cn[4] <- mat_nota$coef[[8]]
+result$cn[5] <- mat_nota$se[[8]]
+result$cn[6] <- mat_nota$N[[8]]
+
+result$cn[7] <- dif_tab$coef[[4]]
+result$cn[8] <- dif_tab$se[[4]]
+result$cn[9] <- dif_tab$N[[4]]
+
+
+#MT
+result$mt[1] <- mat_nota$coef[[9]]
+result$mt[2] <- mat_nota$se[[9]]
+result$mt[3] <- mat_nota$N[[9]]
+result$mt[4] <- mat_nota$coef[[10]]
+result$mt[5] <- mat_nota$se[[10]]
+result$mt[6] <- mat_nota$N[[10]]
+
+result$mt[7] <- dif_tab$coef[[5]]
+result$mt[8] <- dif_tab$se[[5]]
+result$mt[9] <- dif_tab$N[[5]]
+
+
+colnames(result) <- c(" ", "(1)", "(2)", "(3)", "(4)", "(5)")
+
+
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lccccc",
+  linesep = ""
+)
+
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Dificuldade_v1.tex")
+
+
+rm(dif_list, dif_tab, mat_nota, result, rp_list, latex_table, d_list, row1)
+
+
+# 
 # # ---------------------------------------------------------------------------- #
-# # 5. Dificuldade ----
-# # ---------------------------------------------------------------------------- #
-# gc()
-# # Agregados dos critérios
-# base_a <- base[priv0 == 1,.(media_ac_bl_ch = mean(acerto_bl_ch, na.rm = T),
-#                             media_ac_bh_ch = mean(acerto_bh_ch, na.rm = T),
-#                             media_ac_bl_cn = mean(acerto_bl_cn, na.rm = T),
-#                             media_ac_bh_cn = mean(acerto_bh_cn, na.rm = T),
-#                             media_ac_bl_lc = mean(acerto_bl_lc, na.rm = T),
-#                             media_ac_bh_lc = mean(acerto_bh_lc, na.rm = T),
-#                             media_ac_bl_mt = mean(acerto_bl_mt, na.rm = T),
-#                             media_ac_bh_mt = mean(acerto_bh_mt, na.rm = T),
-#                             mediabl = mean(acerto_pbl, na.rm = T),
-#                             mediabh = mean(acerto_pbh, na.rm = T),
-#                             obs = .N),
-#                by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] 
-# 
-# 
-# #Calculando as diferenças
-# base_a <- base_a %>%
-#   arrange(mun_prova,ano) %>%
-#   group_by(mun_prova) %>%
-#   mutate(
-#     dup1 = 1,
-#     dup2 = sum(dup1)) %>% 
-#   ungroup() %>% 
-#   filter(dup2 == 2) %>%
-#   group_by(mun_prova) %>% 
-#   mutate(
-#     
-#     #TOTAL
-#     
-#     v1_pbl = ifelse(ano == 2018, mediabl, NA),
-#     v2_pbl = max(v1_pbl, na.rm = T),
-#     d.mediabl = mediabl - v2_pbl,
-#     
-#     v1_pbh = ifelse(ano == 2018, mediabh, NA),
-#     v2_pbh = max(v1_pbh, na.rm = T),
-#     d.mediabh = mediabh - v2_pbh,
-#     
-#     # Ciências Humanas
-#     ## Facil
-#     v1_bl_ch = ifelse(ano == 2018, media_ac_bl_ch, NA),
-#     v2_bl_ch = max(v1_bl_ch, na.rm = T),
-#     d.media_bl_ch = media_ac_bl_ch - v2_bl_ch,
-#     
-#     ## Dificil
-#     v1_bh_ch = ifelse(ano == 2018, media_ac_bh_ch, NA),
-#     v2_bh_ch = max(v1_bh_ch, na.rm = T),
-#     d.media_bh_ch = media_ac_bh_ch - v2_bh_ch,
-#     
-#     
-#     # Ciências Naturais
-#     ## Facil
-#     v1_bl_cn = ifelse(ano == 2018, media_ac_bl_cn, NA),
-#     v2_bl_cn = max(v1_bl_cn, na.rm = T),
-#     d.media_bl_cn = media_ac_bl_cn - v2_bl_cn,
-#     
-#     ## Dificil
-#     v1_bh_cn = ifelse(ano == 2018, media_ac_bh_cn, NA),
-#     v2_bh_cn = max(v1_bh_cn, na.rm = T),
-#     d.media_bh_cn = media_ac_bh_cn - v2_bh_cn,
-#     
-#     
-#     # Lingua
-#     ## Facil
-#     v1_bl_lc = ifelse(ano == 2018, media_ac_bl_lc, NA),
-#     v2_bl_lc = max(v1_bl_lc, na.rm = T),
-#     d.media_bl_lc = media_ac_bl_lc - v2_bl_lc,
-#     
-#     ## Dificil
-#     v1_bh_lc = ifelse(ano == 2018, media_ac_bh_lc, NA),
-#     v2_bh_lc = max(v1_bh_lc, na.rm = T),
-#     d.media_bh_lc = media_ac_bh_lc - v2_bh_lc,
-#     
-#     
-#     # Matematica
-#     ## Facil
-#     v1_bl_mt = ifelse(ano == 2018, media_ac_bl_mt, NA),
-#     v2_bl_mt = max(v1_bl_mt, na.rm = T),
-#     d.media_bl_mt = media_ac_bl_mt - v2_bl_mt,
-#     
-#     ## Dificil
-#     v1_bh_mt = ifelse(ano == 2018, media_ac_bh_mt, NA),
-#     v2_bh_mt = max(v1_bh_mt, na.rm = T),
-#     d.media_bh_mt = media_ac_bh_mt - v2_bh_mt
-#     
-#   ) %>%
-#   ungroup() %>%
-#   filter(dup2 == 2) %>%
-#   select(-c(dup1,dup2,
-#             v1_bl_ch,v2_bl_ch, v1_bh_ch, v2_bh_ch,
-#             v1_bl_cn,v2_bl_cn, v1_bh_cn, v2_bh_cn,
-#             v1_bl_lc,v2_bl_lc, v1_bh_lc, v2_bh_lc,
-#             v1_bl_mt,v2_bl_mt, v1_bh_mt, v2_bh_mt,
-#             v1_pbh, v1_pbl, v2_pbl, v2_pbh))
-# 
-# 
-# ##5.1 Reg ----
-# rp_list <- list()
-# 
-# d_list <- c("d.mediabl", "d.mediabh", "d.media_bl_lc", "d.media_bh_lc",
-#             "d.media_bl_ch", "d.media_bh_ch", "d.media_bl_cn", "d.media_bh_cn",
-#             "d.media_bl_mt", "d.media_bh_mt")
-# 
-# ### A. TC ----
-# for (i in d_list){
-#   
-#   #Com Controles
-#   
-#   ef <- dummy_cols(base_a$seg[base_a$ano == 2018])
-#   ef <- ef %>% select(-1,-2)
-#   
-#   
-#   rp_list[[as.character(paste0("CC_",i,"|TC"))]] <-
-#     rdrobust(
-#       y = base_a[[i]][base_a$ano == 2019],
-#       x = base_a$dist_hv_border[base_a$ano == 2018],
-#       c = 0,
-#       h = bw_main_a,
-#       b = bw_bias_a,
-#       cluster = base_a$seg[base_a$ano == 2018],
-#       weights = base_a$obs[base_a$ano == 2018],
-#       vce = "hc0",
-#       covs = cbind(
-#         ef, 
-#         base_a$lat[base_a$ano == 2018], 
-#         base_a$lon[base_a$ano == 2018]
-#       )
-#     )
-#   
-#   
-# }
-# rm(ef,i)
-# 
-# 
-# 
-# ###5.1.1DIF----
-# #### A. TC ----
-# base_a <- base_a %>% 
-#   group_by(mun_prova,
-#            ano) %>% 
-#   mutate(
-#     dif_avg = d.mediabl - d.mediabh,
-#     dif_lc = d.media_bl_lc - d.media_bh_lc,
-#     dif_ch = d.media_bl_ch - d.media_bh_ch,
-#     dif_cn = d.media_bl_cn - d.media_bh_cn,
-#     dif_mt = d.media_bl_mt - d.media_bh_mt
-#   )
-# 
-# new_list <- c("dif_avg", "dif_lc", "dif_ch", "dif_cn", "dif_mt")
-# dif_list <- list()
-# 
-# for (i in new_list){
-#   
-#   
-#   
-#   
-#   
-#   #Com Controles
-#   
-#   ef <- dummy_cols(base_a$seg[base_a$ano == 2018])
-#   ef <- ef %>% select(-1,-2)
-#   
-#   
-#   dif_list[[as.character(paste0("cc_",i,"|TC"))]] <-
-#     rdrobust(
-#       y = base_a[[i]][base_a$ano == 2019],
-#       x = base_a$dist_hv_border[base_a$ano == 2018],
-#       c = 0,
-#       h = bw_main_a,
-#       b = bw_bias_a,
-#       cluster = base_a$seg[base_a$ano == 2018],
-#       weights = base_a$obs[base_a$ano == 2018],
-#       vce = "hc0",
-#       covs = cbind(
-#         ef, 
-#         base_a$lat[base_a$ano == 2018], 
-#         base_a$lon[base_a$ano == 2018]
-#       )
-#     )
-#   
-#   
-# }
-# rm(ef,i, new_list)
-# 
-# 
-# 
-# ##5.2 Tab ----
-# 
-# 
-# mat_nota <- data.frame(
-#   coef = do.call(rbind,lapply(rp_list, FUN = function(x){x$coef[3]})),
-#   se = do.call(rbind,lapply(rp_list, FUN = function(x){x$se[3]})),
-#   pv = do.call(rbind,lapply(rp_list, FUN = function(x){x$pv[3]})),
-#   n = do.call(rbind,lapply(rp_list, FUN = function(x){x$N_h}))
-# )
-# 
-# 
-# 
-# 
-# 
-# mat_nota <- mat_nota %>% 
-#   mutate(
-#     coef = paste0(formatC(x = coef, digits = 2, format = "f"),
-#                   ifelse(pv < 0.01, "**", 
-#                          ifelse(pv < 0.05, "*", 
-#                                 ifelse(pv < 0.1, "", "")
-#                          ))),
-#     se = paste0(" (",formatC(x = se, digits = 2, format = "f"),")"),
-#     pv = formatC(x = pv, digits = 3, format = "f"),
-#     N = paste0("[N = ", n.1 + n.2, "]"),
-#     #esp = 1:20,
-#     id = 1
-#   ) %>%
-#   select(-c(pv))
-# 
-# 
-# 
-# 
-# ## DIF TAB ----
-# 
-# dif_tab <- data.frame(
-#   coef = do.call(rbind,lapply(dif_list, FUN = function(x){x$coef[3]})),
-#   se = do.call(rbind,lapply(dif_list, FUN = function(x){x$se[3]})),
-#   pv = do.call(rbind,lapply(dif_list, FUN = function(x){x$pv[3]})),
-#   n = do.call(rbind,lapply(dif_list, FUN = function(x){x$N_h}))
-# ) 
-# 
-# 
-# dif_tab <- dif_tab %>% 
-#   mutate(
-#     coef = paste0(formatC(x = coef, digits = 2, format = "f"),
-#                   ifelse(pv < 0.01, "**", 
-#                          ifelse(pv < 0.05, "*", 
-#                                 ifelse(pv < 0.1, "", "")
-#                          ))),
-#     se = paste0(" (",formatC(x = se, digits = 2, format = "f"),")"),
-#     pv = formatC(x = pv, digits = 3, format = "f"),
-#     N = paste0("[N = ", n.1 + n.2, "]"),
-#     #esp = 1:10,
-#     id = 1
-#   ) %>%
-#   select(-c(pv))
-# 
-# 
-# 
-# row1 <- c("Easier",
-#           " "," ",
-#           "More Difficult",
-#           " ", " ",
-#           "Difference",
-#           " ", " ")
-# 
-# 
-# 
-# 
-# result <- data.frame(
-#   var = row1,
-#   
-#   avg = rep(NA, times = length(row1)),
-#   lc = rep(NA, times = length(row1)),
-#   ch = rep(NA, times = length(row1)),
-#   cn = rep(NA, times = length(row1)),
-#   mt = rep(NA, times = length(row1))
-# )
-# 
-# ####### TC ----
-# #AVG
-# result$avg[1] <- mat_nota$coef[[1]]
-# result$avg[2] <- mat_nota$se[[1]]
-# result$avg[3] <- mat_nota$N[[1]]
-# result$avg[4] <- mat_nota$coef[[2]]
-# result$avg[5] <- mat_nota$se[[2]]
-# result$avg[6] <- mat_nota$N[[2]]
-# 
-# result$avg[7] <- dif_tab$coef[[1]]
-# result$avg[8] <- dif_tab$se[[1]]
-# result$avg[9] <- dif_tab$N[[1]]
-# 
-# #Lang
-# result$lc[1] <- mat_nota$coef[[3]]
-# result$lc[2] <- mat_nota$se[[3]]
-# result$lc[3] <- mat_nota$N[[3]]
-# result$lc[4] <- mat_nota$coef[[4]]
-# result$lc[5] <- mat_nota$se[[4]]
-# result$lc[6] <- mat_nota$N[[4]]
-# 
-# result$lc[7] <- dif_tab$coef[[2]]
-# result$lc[9] <- dif_tab$se[[2]]
-# result$lc[9] <- dif_tab$N[[2]]
-# 
-# 
-# #Cien Humanas
-# result$ch[1] <- mat_nota$coef[[5]]
-# result$ch[2] <- mat_nota$se[[5]]
-# result$ch[3] <- mat_nota$N[[5]]
-# result$ch[4] <- mat_nota$coef[[6]]
-# result$ch[5] <- mat_nota$se[[6]]
-# result$ch[6] <- mat_nota$N[[6]]
-# 
-# result$ch[7] <- dif_tab$coef[[3]]
-# result$ch[8] <- dif_tab$se[[3]]
-# result$ch[9] <- dif_tab$N[[3]]
-# 
-# 
-# #Cien Nat
-# result$cn[1] <- mat_nota$coef[[7]]
-# result$cn[2] <- mat_nota$se[[7]]
-# result$cn[3] <- mat_nota$N[[7]]
-# result$cn[4] <- mat_nota$coef[[8]]
-# result$cn[5] <- mat_nota$se[[8]]
-# result$cn[6] <- mat_nota$N[[8]]
-# 
-# result$cn[7] <- dif_tab$coef[[4]]
-# result$cn[8] <- dif_tab$se[[4]]
-# result$cn[9] <- dif_tab$N[[4]]
-# 
-# 
-# #MT
-# result$mt[1] <- mat_nota$coef[[9]]
-# result$mt[2] <- mat_nota$se[[9]]
-# result$mt[3] <- mat_nota$N[[9]]
-# result$mt[4] <- mat_nota$coef[[10]]
-# result$mt[5] <- mat_nota$se[[10]]
-# result$mt[6] <- mat_nota$N[[10]]
-# 
-# result$mt[7] <- dif_tab$coef[[5]]
-# result$mt[8] <- dif_tab$se[[5]]
-# result$mt[9] <- dif_tab$N[[5]]
-# 
-# 
-# colnames(result) <- c(" ", "(1)", "(2)", "(3)", "(4)", "(5)")
-# 
-# 
-# latex_table <- knitr::kable(
-#   result,
-#   format = "latex",
-#   booktabs = TRUE,
-#   align = "lccccc",
-#   linesep = ""
-# )
-# 
-# 
-# 
-# writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Dificuldade_v1.tex")
-# 
-# 
-# rm(dif_list, dif_tab, mat_nota, result, rp_list, latex_table, d_list, row1)
-# 
-# 
-# 
 # # ---------------------------------------------------------------------------- #
 # # 6. Ini vs. Fim ----
 # # ---------------------------------------------------------------------------- #
@@ -4053,7 +4051,9 @@ c_rlist <- list()
 
 ano_list <- c(2013:2018)
 
+
 load(file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_p2.RData")
+load(file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_NF.RData")
 
 ### A. TC ----
 
