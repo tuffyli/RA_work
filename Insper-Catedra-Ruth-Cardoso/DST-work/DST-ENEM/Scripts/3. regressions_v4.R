@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 10/02/2026
+# Date: 11/02/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -138,10 +138,10 @@ base <- base %>%
 base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
                             idade = mean(id18, na.rm = T),
                             esc_mae = mean(escm, na.rm = T),
-                            h13 = h13[ano == 2019],
-                            h12 = h12[ano == 2019],
-                            h11 = h11[ano == 2019],
-                            h10 = h10[ano == 2019],
+                            h13 = first(h13),
+                            h12 = first(h12),
+                            h11 = first(h11),
+                            h10 = first(h10),
                             obs = .N),
                by = .(mun_prova,ano,dist_hv_border,new_dist,seg,lat,lon)] %>% 
   filter(as.numeric(ano) %in% c(2018,2019)) %>% 
@@ -592,11 +592,12 @@ rm(base_a, names, result, rlist, tab, latex_table)
 
 
 # ---------------------------------------------------------------------------- #
-#2. Gráfico ----
+#2. Gráficos ----
 ## 2.1 Principal ----
 # ---------------------------------------------------------------------------- #
 
-base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
+                            obs = .N),
                by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
   filter(as.numeric(ano) %in% c(2018,2019)) %>% 
   arrange(mun_prova,ano) %>%
@@ -613,7 +614,7 @@ base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
   select(-c(dup2, dup1, v1_nota, v2_nota))
 
 # ---------------------------------------------------------------------------- #
-#### 2.1.1 19-18 ----
+### 2.1.1 19-18 ----
 # ---------------------------------------------------------------------------- #
 fig <- list()
 
@@ -698,7 +699,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
+xtips <- seq(-160*10^5,160*10^5,4*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -737,7 +738,78 @@ ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pd
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
 # ---------------------------------------------------------------------------- #
-#### 2.1.2 19-17 ----
+#### 2.1.1.1 Lowess (19 e 18) ----
+# ---------------------------------------------------------------------------- #
+
+base_a <- base_a %>% 
+  mutate(trat = ifelse(dist_hv_border > 0, 1, 0))
+
+years <- c(2018, 2019)
+cutoff <- 0.5
+span_val <- 0.5   # loess span ~ Stata bw
+
+for (y in years) {
+  options(scipen = 999)
+  d <- subset(base_a, ano == y)
+  d$dist_km <- d$dist_hv_border/1000
+  
+  # compute lowess for treated and control (if they exist)
+  d1 <- subset(d, trat == 1)
+  d0 <- subset(d, trat == 0)
+  
+  lw1 <- if (nrow(d1) > 1) stats::lowess(d1$dist_km, d1$media, f = span_val) else NULL
+  lw0 <- if (nrow(d0) > 1) stats::lowess(d0$dist_km, d0$media, f = span_val) else NULL
+  
+  png_filename <- paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/lowess/media_rdd", y, "_base_lowess.png")
+  png(png_filename, width = 1200, height = 800, res = 150)
+  par(mar = c(5,5,4,2) + 0.1)
+  
+  
+  # Scatter
+  plot(d$dist_km, d$media,
+       pch = 20, cex = 0.6,
+       xlab = "Distance to DST Border (km)", ylab = "ENEM Score",
+       #main = paste("Lowess —", y),
+       xlim = range(d$dist_km, na.rm = TRUE),
+       ylim = range(d$media, na.rm = TRUE),
+       xaxt = "n")
+  
+  # vertical cutoff line
+  abline(v = cutoff, lty = 2, col = "darkgray", lwd = 3)
+  
+  x_range <- range(d$dist_km, na.rm = TRUE)
+  ticks <- seq(floor(x_range[1] / 400) * 400,
+               ceiling(x_range[2] / 400) * 400,
+               by = 400)
+  
+  axis(1,
+       at = ticks,
+       labels = format(ticks, scientific = FALSE),
+       las = 2)
+  
+  
+  
+  # add lowess lines (use different colors)
+  if (!is.null(lw1)) lines(lw1, col = "red", lwd = 2)
+  if (!is.null(lw0)) lines(lw0, col = "red", lwd = 2)
+  
+  dev.off()
+  message("Wrote: ", png_filename)
+}
+
+rm(d, d0, d1, lw0, lw1, cutoff, png_filename, x_range, ticks, years, span_val,)
+
+
+# ---------------------------------------------------------------------------- #
+####2.1.1.2 19-18 Lowess e CMOGRAM -----
+# ---------------------------------------------------------------------------- #
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+### 2.1.2 19-17 ----
 # ---------------------------------------------------------------------------- #
 
 
@@ -913,7 +985,7 @@ rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xt
 
 
 # ---------------------------------------------------------------------------- #
-#### 2.1.3 18-17 ----
+### 2.1.3 18-17 ----
 # ---------------------------------------------------------------------------- #
 
 
@@ -1044,7 +1116,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
+xtips <- seq(-160*10^5,160*10^5,4*10^5)
 
 # Gráfico
 
@@ -1083,7 +1155,67 @@ ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pd
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
+# ---------------------------------------------------------------------------- #
+#### 2.1.2.3 Lowess (2017) ----
+# ---------------------------------------------------------------------------- #
 
+base_c <- base_c %>% 
+  mutate(trat = ifelse(dist_hv_border > 0, 1, 0))
+
+years <- c(2017)
+cutoff <- 0.5
+span_val <- 0.5   # loess span ~ Stata bw
+
+for (y in years) {
+  options(scipen = 999)
+  d <- subset(base_c, ano == y)
+  d$dist_km <- d$dist_hv_border/1000
+  
+  # compute lowess for treated and control (if they exist)
+  d1 <- subset(d, trat == 1)
+  d0 <- subset(d, trat == 0)
+  
+  lw1 <- if (nrow(d1) > 1) stats::lowess(d1$dist_km, d1$media, f = span_val) else NULL
+  lw0 <- if (nrow(d0) > 1) stats::lowess(d0$dist_km, d0$media, f = span_val) else NULL
+  
+  png_filename <- paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/lowess/media_rdd", y, "_base_lowess.png")
+  png(png_filename, width = 1200, height = 800, res = 150)
+  par(mar = c(5,5,4,2) + 0.1)
+  
+  
+  # Scatter
+  plot(d$dist_km, d$media,
+       pch = 20, cex = 0.6,
+       xlab = "Distance to DST Border (km)", ylab = "ENEM Score",
+       #main = paste("Lowess —", y),
+       xlim = range(d$dist_km, na.rm = TRUE),
+       ylim = range(d$media, na.rm = TRUE),
+       xaxt = "n")
+  
+  # vertical cutoff line
+  abline(v = cutoff, lty = 2, col = "darkgray", lwd = 3)
+  
+  x_range <- range(d$dist_km, na.rm = TRUE)
+  ticks <- seq(floor(x_range[1] / 400) * 400,
+               ceiling(x_range[2] / 400) * 400,
+               by = 400)
+  
+  axis(1,
+       at = ticks,
+       labels = format(ticks, scientific = FALSE),
+       las = 2)
+  
+  
+  
+  # add lowess lines (use different colors)
+  if (!is.null(lw1)) lines(lw1, col = "red", lwd = 2)
+  if (!is.null(lw0)) lines(lw0, col = "red", lwd = 2)
+  
+  dev.off()
+  message("Wrote: ", png_filename)
+}
+
+rm(d, d0, d1, lw0, lw1, cutoff, png_filename, x_range, ticks, years, span_val,)
 
 # ---------------------------------------------------------------------------- #
 ## 2.2 Bins ----
@@ -1379,7 +1511,7 @@ for (i in fig_loop) {
     geom_line(data = vars_poly_left, aes(x = rdplot_x, y = rdplot_y, color = factor(hv)), size = 1, show.legend = F) +
     
     labs(x = "Distance to DST Border (km)",
-         y = "Overall ENEM \n average") +
+         y = "Overall ENEM Score") +
     theme_bw() +
     scale_x_continuous(breaks = xtips,
                        labels = (xtips /1000 ) %>% formatC(digits = 0, format = "f")) +
@@ -1390,8 +1522,8 @@ for (i in fig_loop) {
           axis.text.y = element_text(size = 20))
   
   
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_notas_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 13)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_notas_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 13)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol2_1918_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 13)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/1_bins_",i,"_pol2_1918_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 13)
   
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips, vars_poly_left, vars_poly_right)
   
@@ -1785,7 +1917,7 @@ for (i in fig_loop) {
                      yend = y_r_end),
                  size = 1, color = "#377EB8") +
     labs(x = "Distance to DST Border (km)",
-         y = "Overall ENEM \n average") +
+         y = "Overall ENEM Score") +
     theme_bw() +
     scale_x_continuous(breaks = xtips,
                        labels = (xtips / 1000) %>% formatC(digits = 0,format = "f")) +
@@ -1932,8 +2064,8 @@ for (i in fig_loop) {
           axis.text.y = element_text(size = 20))
   
   
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_notas_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 13)
-  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_notas_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 13)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_pol2_1817_v1.png"),plot = fig_gg, device = "png",dpi = 300, height = 9, width = 13)
+  ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bins/3_bins_",i,"_pol2_1817_v1.pdf"),plot = fig_gg, device = "pdf",height = 9, width = 13)
   
   rm(i,fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips, vars_poly_left, vars_poly_right)
   
@@ -2212,7 +2344,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
+xtips <- seq(-160*10^5,160*10^5,4*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -2391,7 +2523,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
+xtips <- seq(-160*10^5,160*10^5,4*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -3560,7 +3692,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
+xtips <- seq(-160*10^5,160*10^5,4*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -3719,7 +3851,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
+xtips <- seq(-160*10^5,160*10^5,4*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -6405,7 +6537,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
+xtips <- seq(-160*10^5,160*10^5,4*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -6559,7 +6691,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
+xtips <- seq(-160*10^5,160*10^5,4*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -7486,7 +7618,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
+xtips <- seq(-160*10^5,160*10^5,4*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
@@ -7627,7 +7759,7 @@ y_l_end <- ifelse(fig$coef[1,1] > fig$coef[1,2],
                   max(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]),
                   min(fig$vars_poly$rdplot_y[fig$vars_poly$rdplot_x == 0]))
 
-xtips <- seq(-100*10^5,100*10^5,2*10^5)
+xtips <- seq(-160*10^5,160*10^5,4*10^5)
 
 # Gráfico
 fig_gg <- ggplot() +
