@@ -7332,9 +7332,9 @@ rm(base_a, base_c, names, result, rlist, tab, latex_table)
 
 var_list <- c(
   "nonmig1", # MUN PROVA = RESIDENCIA = ESCOLA
-  "nonmig2", # Mun PROVA = RESIDENCIA != ESCOLA
-  "nonmig3", # MUN PROVA != RESIDENCIA = ESCOLA
-  "nonmig4"  # Mun PROVA = ESCOLA != RESIDENCIA
+  #"nonmig2", # Mun PROVA = RESIDENCIA != ESCOLA
+  "nonmig3" #, # MUN PROVA != RESIDENCIA = ESCOLA
+  #"nonmig4"  # Mun PROVA = ESCOLA != RESIDENCIA
 )
 
 rlist  <- list()
@@ -7436,12 +7436,12 @@ tab <- tab %>%
 row <- c(
   "Group 1 (None)",
   " "," ",
-  "Group 2 (School)",
-  " "," ",
+  # "Group 2 (School)",
+  # " "," ",
   "Group 3 (Exam)",
-  " ", " ",
-  "Group 4 (Residency)",
-  " ", " "
+  " ", " " #,
+  # "Group 4 (Residency)",
+  # " ", " "
 )
 
 result <- data.frame(
@@ -7473,27 +7473,27 @@ result$bw[4] <- tab$coef[[4]]
 result$bw[5] <- tab$se[[4]]
 result$bw[6] <- tab$N[[4]]
 
-#NonMig3
-
-
-result$cc[7] <- tab$coef[[5]]
-result$cc[8] <- tab$se[[5]]
-result$cc[9] <- tab$N[[5]]
-
-result$bw[7] <- tab$coef[[6]]
-result$bw[8] <- tab$se[[6]]
-result$bw[9] <- tab$N[[6]]
-
-#NonMig4
-
-
-result$cc[10] <- tab$coef[[7]]
-result$cc[11] <- tab$se[[7]]
-result$cc[12] <- tab$N[[7]]
-
-result$bw[10] <- tab$coef[[8]]
-result$bw[11] <- tab$se[[8]]
-result$bw[12] <- tab$N[[8]]
+# #NonMig3
+# 
+# 
+# result$cc[7] <- tab$coef[[5]]
+# result$cc[8] <- tab$se[[5]]
+# result$cc[9] <- tab$N[[5]]
+# 
+# result$bw[7] <- tab$coef[[6]]
+# result$bw[8] <- tab$se[[6]]
+# result$bw[9] <- tab$N[[6]]
+# 
+# #NonMig4
+# 
+# 
+# result$cc[10] <- tab$coef[[7]]
+# result$cc[11] <- tab$se[[7]]
+# result$cc[12] <- tab$N[[7]]
+# 
+# result$bw[10] <- tab$coef[[8]]
+# result$bw[11] <- tab$se[[8]]
+# result$bw[12] <- tab$N[[8]]
 
 
 colnames(result) <- c("", "(1)", "(2)")
@@ -7508,7 +7508,7 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/grupos_mig_v1.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/grupos_mig_v2.tex")
 
 
 
