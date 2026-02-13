@@ -1,5 +1,8 @@
 # ---------------------------------------------------------------------------- #
-# Descrição da base de dados + Anexo
+# Data description
+# Last edited by: Tuffy Licciardi Issa
+# Date: 13/02/2026
+# ---------------------------------------------------------------------------- #
 # Library -----
 # ---------------------------------------------------------------------------- #
 
@@ -31,6 +34,41 @@ base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2
   setDT() %>% 
   filter(conclusao == 2)
 
+
+base <- base %>% 
+  mutate(
+    
+    escm = case_when(
+      esc_mae %in% c("D","E","F") ~ 0,
+      esc_mae %in% c("A","B","C") ~ 1,
+      .default = NA),
+    
+    mae_trab_man = case_when(
+      emp_mae %in% c("A","B","C") ~ 1,
+      emp_mae %in% c("D","E","F") ~ 0,
+      .default = NA
+    ),
+    
+    pai_trab_man = case_when(
+      emp_pai %in% c("A","B","C") ~ 1,
+      emp_pai %in% c("D","E","F") ~ 0,
+      .default = NA
+    )
+  ) %>%
+  mutate(
+    old = ifelse(
+      idade > 18 & conclusao == 2, 1,
+      ifelse( idade %in% c(17, 18), 0, NA))
+  ) %>% 
+  mutate(
+    mig_dummy = ifelse(
+      !is.na(mun_prova) & !is.na(mun_res) & mun_prova != mun_res, 1,
+      ifelse(!is.na(mun_prova) & !is.na(mun_res), 0 , NA)
+    )
+  ) %>% 
+  filter(conclusao == 2)
+
+#Absence database
 base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",2018,".RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",2019,".RDS"))) %>%
   select(id_enem,priv, hv, ano, abs) %>% 
@@ -53,6 +91,9 @@ vlist <- c(
   "fem",
   "ppi",
   "escp",
+  "escm",
+  "pai_trab_man",
+  "mae_trab_man",
   "dom5",
   "renda1",
   "pibpc"
@@ -173,32 +214,32 @@ medias <- data.frame(
     format(x = medias1[1:8], digits = 1, scientific = F),
     format(x = medias1[9:10], digits = 2, scientific = F),
     format(x = medias1[11], digits = 1, scientific = F),
-    format(x = medias1[12:17], digits = 2, scientific = F),
-    format(x = medias1[18], digits = 1, scientific = F, big.mark = ",")
+    format(x = medias1[12:20], digits = 2, scientific = F),
+    format(x = medias1[21], digits = 1, scientific = F, big.mark = ",")
   ),
   dps1 = c(
     format(x = dps1[1:8], digits = 1, scientific = F),
     format(x = dps1[9:10], digits = 1, scientific = F),
     format(x = dps1[11], digits = 1, scientific = F),
-    format(x = dps1[12:17], digits = 2, scientific = F),
-    format(x = dps1[18], digits = 1, scientific = F, big.mark = ",")
+    format(x = dps1[12:20], digits = 2, scientific = F),
+    format(x = dps1[21], digits = 1, scientific = F, big.mark = ",")
   ),
-  obs1 = format(x = obs1[1:18], digits = 1, scientific = F, big.mark = ","),
+  obs1 = format(x = obs1[1:21], digits = 1, scientific = F, big.mark = ","),
   medias0 = c(
     format(x = medias0[1:8], digits = 1, scientific = F),
     format(x = medias0[9:10], digits = 2, scientific = F),
     format(x = medias0[11], digits = 1, scientific = F),
-    format(x = medias0[12:17], digits = 2, scientific = F),
-    format(x = medias0[18], digits = 1, scientific = F, big.mark = ",")
+    format(x = medias0[12:20], digits = 2, scientific = F),
+    format(x = medias0[21], digits = 1, scientific = F, big.mark = ",")
   ),
   dps0 = c(
     format(x = dps0[1:8], digits = 1, scientific = F),
     format(x = dps0[9:10], digits = 1, scientific = F),
     format(x = dps0[11], digits = 1, scientific = F),
-    format(x = dps0[12:17], digits = 2, scientific = F),
-    format(x = dps0[18], digits = 1, scientific = F, big.mark = ",")
+    format(x = dps0[12:20], digits = 2, scientific = F),
+    format(x = dps0[21], digits = 1, scientific = F, big.mark = ",")
   ),
-  obs0 = format(x = obs0[1:18], digits = 1, scientific = F, big.mark = ",")
+  obs0 = format(x = obs0[1:21], digits = 1, scientific = F, big.mark = ",")
 )
 
 
@@ -209,32 +250,32 @@ medias <- data.frame(
     format(x = medias1[1:8], digits = 1, scientific = F),
     format(x = medias1[9:10], digits = 2, scientific = F),
     format(x = medias1[11], digits = 1, scientific = F),
-    format(x = medias1[12:17], digits = 2, scientific = F),
-    format(x = medias1[18], digits = 1, scientific = F, big.mark = ",")
+    format(x = medias1[12:20], digits = 2, scientific = F),
+    format(x = medias1[21], digits = 1, scientific = F, big.mark = ",")
   ),
   dps1 = c(
     format(x = dps1[1:8], digits = 1, scientific = F),
     format(x = dps1[9:10], digits = 1, scientific = F),
     format(x = dps1[11], digits = 1, scientific = F),
-    format(x = dps1[12:17], digits = 2, scientific = F),
-    format(x = dps1[18], digits = 1, scientific = F, big.mark = ",")
+    format(x = dps1[12:20], digits = 2, scientific = F),
+    format(x = dps1[21], digits = 1, scientific = F, big.mark = ",")
   ),
-  obs1 = format(x = obs1[1:18], digits = 1, scientific = F, big.mark = ","),
+  obs1 = format(x = obs1[1:21], digits = 1, scientific = F, big.mark = ","),
   medias0 = c(
     format(x = medias0[1:8], digits = 1, scientific = F),
     format(x = medias0[9:10], digits = 2, scientific = F),
     format(x = medias0[11], digits = 1, scientific = F),
-    format(x = medias0[12:17], digits = 2, scientific = F),
-    format(x = medias0[18], digits = 1, scientific = F, big.mark = ",")
+    format(x = medias0[12:20], digits = 2, scientific = F),
+    format(x = medias0[21], digits = 1, scientific = F, big.mark = ",")
   ),
   dps0 = c(
     format(x = dps0[1:8], digits = 1, scientific = F),
     format(x = dps0[9:10], digits = 1, scientific = F),
     format(x = dps0[11], digits = 1, scientific = F),
-    format(x = dps0[12:17], digits = 2, scientific = F),
-    format(x = dps0[18], digits = 1, scientific = F, big.mark = ",")
+    format(x = dps0[12:20], digits = 2, scientific = F),
+    format(x = dps0[21], digits = 1, scientific = F, big.mark = ",")
   ),
-  obs0 = format(x = obs0[1:18], digits = 1, scientific = F, big.mark = ",")
+  obs0 = format(x = obs0[1:21], digits = 1, scientific = F, big.mark = ",")
 )
 
 
@@ -249,6 +290,7 @@ row.names(medias) <- c(
   "Absence",
   "Distance to DST border (km)",
   "Age", "Female", "African Brazilian or native", "Father completed middle school",
+  "Mother completed middle school", "Father in manual labor", "Mother in manual labor",
   "Big household", "Household income up to 1 MW", "Municipal per capita GDP"
 )
 
@@ -282,8 +324,8 @@ gc()
 
 
 
-base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/Bases/No_age_filt/base_nota_2019.RDS")) %>%
-  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
   setDT()
 
 
@@ -316,6 +358,15 @@ base <- base %>%
     mig_dummy = ifelse(
       !is.na(mun_prova) & !is.na(mun_res) & mun_prova != mun_res, 1,
       ifelse(!is.na(mun_prova) & !is.na(mun_res), 0 , NA)
+    ),
+    
+    school_no_enem = ifelse(
+      !is.na(mun_prova) & !is.na(mun_escola) & mun_prova != mun_escola, 1,
+      ifelse(!is.na(mun_prova) & !is.na(mun_escola), 0, NA)),
+    
+    school_wt_enem = ifelse(
+      !is.na(mun_prova) & !is.na(mun_escola) & mun_prova == mun_escola, 1,
+      ifelse(!is.na(mun_prova) & !is.na(mun_escola), 0, NA)
     )
   ) %>% filter(conclusao == 2)
 
@@ -330,6 +381,8 @@ base_desc <- base %>%
   rename(Year = ano) %>% 
   summarise(
     `Total Students` = n(),
+    `School Mun. with ENEM` = sum(school_wt_enem, na.rm = T),
+    `School Mun. without ENEM` = sum(school_no_enem, na.rm = T),
     Migration = sum(mig_dummy, na.rm = T),
     `Group 1 (None)` = sum(nonmig1, na.rm = T),
     `Group 2 (School)`  = sum(nonmig2, na.rm = T),
@@ -361,7 +414,7 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/migration_desc.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/migration_desc.tex")
 
 
 
