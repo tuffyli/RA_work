@@ -1873,7 +1873,7 @@ for (j in seq_along(cols)) {
   # -----------------------------#
   # PREPARE DATA
   # -----------------------------#
-  d <- df_cmo %>%
+  d <- base_c %>%
     filter(ano == 2018) %>%
     mutate(x_km = dist_hv_border / 1000,
            xc = x_km ) %>%
@@ -1900,7 +1900,7 @@ for (j in seq_along(cols)) {
   bins$side <- factor(bins$side, levels = c("left", "right"))
   
   #Temporary base
-  df18 <- df_cmo %>% filter(ano == 2018)
+  df18 <- base_c %>% filter(ano == 2018)
   
   # Make a treatment indicator like in your Stata: dist > 0 treated
   df18 <- df18 %>% mutate(trat = ifelse(dist_hv_border > 0, 1, 0))
@@ -1958,12 +1958,14 @@ for (j in seq_along(cols)) {
   p_low_loess_w <- base_p +
     geom_smooth(
       data = filter(df18, dist_hv_border <= 0),
-      aes(x = dist_hv_border / 1000, y = .data[[yvar]], weight = obs_r),
+      aes(x = dist_hv_border / 1000, y = .data[[yvar]],
+          weight = base_c$obs_r[base_c$ano == 2017 & base_c$dist_hv_border <= 0]),
       method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
     ) +
     geom_smooth(
       data = filter(df18, dist_hv_border > 0),
-      aes(x = dist_hv_border / 1000, y = .data[[yvar]], weight = obs_r),
+      aes(x = dist_hv_border / 1000, y = .data[[yvar]],
+          weight = base_c$obs_r[base_c$ano == 2017 & base_c$dist_hv_border > 0]),
       method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
     ) +
     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
