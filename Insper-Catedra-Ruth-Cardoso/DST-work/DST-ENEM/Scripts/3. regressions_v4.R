@@ -3761,92 +3761,101 @@ dif_tab <- dif_tab %>%
 
 
 
-row1 <- c("Easier",
-          " "," ",
-          "More Difficult",
+row1 <- c("Average",
           " ", " ",
-          "Difference",
+          "Language",
+          " ", " ",
+          "Human S.", 
+          " ", " ",
+          "Natural S.",
+          " ", " ",
+          "Math",
           " ", " ")
-
 
 
 
 result <- data.frame(
   var = row1,
   
-  avg = rep(NA, times = length(row1)),
-  lc = rep(NA, times = length(row1)),
-  ch = rep(NA, times = length(row1)),
-  cn = rep(NA, times = length(row1)),
-  mt = rep(NA, times = length(row1))
+  ea = rep(NA, times = length(row1)),
+  md = rep(NA, times = length(row1)),
+  df = rep(NA, times = length(row1))
 )
 
 ####### TC ----
 #AVG
-result$avg[1] <- mat_nota$coef[[1]]
-result$avg[2] <- mat_nota$se[[1]]
-result$avg[3] <- mat_nota$N[[1]]
-result$avg[4] <- mat_nota$coef[[2]]
-result$avg[5] <- mat_nota$se[[2]]
-result$avg[6] <- mat_nota$N[[2]]
+result$ea[1] <- mat_nota$coef[[1]]
+result$ea[2] <- mat_nota$se[[1]]
+result$ea[3] <- mat_nota$N[[1]]
 
-result$avg[7] <- dif_tab$coef[[1]]
-result$avg[8] <- dif_tab$se[[1]]
-result$avg[9] <- dif_tab$N[[1]]
+result$md[1] <- mat_nota$coef[[2]]
+result$md[2] <- mat_nota$se[[2]]
+result$md[3] <- mat_nota$N[[2]]
+
+result$df[1] <- dif_tab$coef[[1]]
+result$df[2] <- dif_tab$se[[1]]
+result$df[3] <- dif_tab$N[[1]]
+
 
 #Lang
-result$lc[1] <- mat_nota$coef[[3]]
-result$lc[2] <- mat_nota$se[[3]]
-result$lc[3] <- mat_nota$N[[3]]
-result$lc[4] <- mat_nota$coef[[4]]
-result$lc[5] <- mat_nota$se[[4]]
-result$lc[6] <- mat_nota$N[[4]]
+result$ea[4] <- mat_nota$coef[[3]]
+result$ea[5] <- mat_nota$se[[3]]
+result$ea[6] <- mat_nota$N[[3]]
 
-result$lc[7] <- dif_tab$coef[[2]]
-result$lc[8] <- dif_tab$se[[2]]
-result$lc[9] <- dif_tab$N[[2]]
+result$md[4] <- mat_nota$coef[[4]]
+result$md[5] <- mat_nota$se[[4]]
+result$md[6] <- mat_nota$N[[4]]
+
+result$df[4] <- dif_tab$coef[[2]]
+result$df[5] <- dif_tab$se[[2]]
+result$df[6] <- dif_tab$N[[2]]
 
 
 #Cien Humanas
-result$ch[1] <- mat_nota$coef[[5]]
-result$ch[2] <- mat_nota$se[[5]]
-result$ch[3] <- mat_nota$N[[5]]
-result$ch[4] <- mat_nota$coef[[6]]
-result$ch[5] <- mat_nota$se[[6]]
-result$ch[6] <- mat_nota$N[[6]]
+result$ea[7] <- mat_nota$coef[[5]]
+result$ea[8] <- mat_nota$se[[5]]
+result$ea[9] <- mat_nota$N[[5]]
 
-result$ch[7] <- dif_tab$coef[[3]]
-result$ch[8] <- dif_tab$se[[3]]
-result$ch[9] <- dif_tab$N[[3]]
+result$md[7] <- mat_nota$coef[[6]]
+result$md[8] <- mat_nota$se[[6]]
+result$md[9] <- mat_nota$N[[6]]
+
+result$df[7] <- dif_tab$coef[[3]]
+result$df[8] <- dif_tab$se[[3]]
+result$df[9] <- dif_tab$N[[3]]
+
 
 
 #Cien Nat
-result$cn[1] <- mat_nota$coef[[7]]
-result$cn[2] <- mat_nota$se[[7]]
-result$cn[3] <- mat_nota$N[[7]]
-result$cn[4] <- mat_nota$coef[[8]]
-result$cn[5] <- mat_nota$se[[8]]
-result$cn[6] <- mat_nota$N[[8]]
+result$ea[10] <- mat_nota$coef[[7]]
+result$ea[11] <- mat_nota$se[[7]]
+result$ea[12] <- mat_nota$N[[7]]
 
-result$cn[7] <- dif_tab$coef[[4]]
-result$cn[8] <- dif_tab$se[[4]]
-result$cn[9] <- dif_tab$N[[4]]
+result$md[10] <- mat_nota$coef[[8]]
+result$md[11] <- mat_nota$se[[8]]
+result$md[12] <- mat_nota$N[[8]]
+
+result$df[10] <- dif_tab$coef[[4]]
+result$df[11] <- dif_tab$se[[4]]
+result$df[12] <- dif_tab$N[[4]]
+
 
 
 #MT
-result$mt[1] <- mat_nota$coef[[9]]
-result$mt[2] <- mat_nota$se[[9]]
-result$mt[3] <- mat_nota$N[[9]]
-result$mt[4] <- mat_nota$coef[[10]]
-result$mt[5] <- mat_nota$se[[10]]
-result$mt[6] <- mat_nota$N[[10]]
+result$ea[13] <- mat_nota$coef[[9]]
+result$ea[14] <- mat_nota$se[[9]]
+result$ea[15] <- mat_nota$N[[9]]
 
-result$mt[7] <- dif_tab$coef[[5]]
-result$mt[8] <- dif_tab$se[[5]]
-result$mt[9] <- dif_tab$N[[5]]
+result$md[13] <- mat_nota$coef[[10]]
+result$md[14] <- mat_nota$se[[10]]
+result$md[15] <- mat_nota$N[[10]]
+
+result$df[13] <- dif_tab$coef[[5]]
+result$df[14] <- dif_tab$se[[5]]
+result$df[15] <- dif_tab$N[[5]]
 
 
-colnames(result) <- c(" ", "(1)", "(2)", "(3)", "(4)", "(5)")
+colnames(result) <- c(" ", "(1)", "(2)", "(3)")
 
 
 latex_table <- knitr::kable(
@@ -3863,8 +3872,6 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Dificul
 
 
 rm(dif_list, dif_tab, mat_nota, result, rp_list, latex_table, d_list, row1)
-
-t, dif_tab, mat_nota, result, rp_list, latex_table, d_list, row1)
 
 
 # 
