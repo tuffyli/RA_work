@@ -1666,10 +1666,11 @@ for (j in seq_along(vars)) {
     # 
     message("Finshed for: ", yvar," and filter: ",i)
     
-    rm(yvar, ylab, d, j, rd_out, bins, df18, bins_left, bins_right, base_p, p_low_loess_w, p_low_loess)
-    
+
   }
 
+  rm(yvar, ylab, d, j, rd_out, bins, df18, bins_left, bins_right, base_p, p_low_loess_w, p_low_loess)
+  
 }
 
 
