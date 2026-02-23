@@ -806,6 +806,7 @@ rm(d, d0, d1, lw0, lw1, cutoff, png_filename, x_range, ticks, years, span_val,)
 ###### 2.1.1.2.1 Data -----
 # ---------------------------------------------------------------------------- #
 
+
 df_cmo <- base[priv0 == 1,.(media = mean(media, na.rm = T),
                             media_dia1 = mean(dia_1, na.rm = T),
                             media_dia2 = mean(dia_2, na.rm = T),
@@ -814,6 +815,10 @@ df_cmo <- base[priv0 == 1,.(media = mean(media, na.rm = T),
                             media_lc = mean(lc, na.rm = T),
                             media_ch = mean(ch, na.rm = T),
                             media_mt = mean(mt, na.rm = T),
+                            
+                            #Dificulty
+                            mediabl = mean(acerto_pbl, na.rm = T),
+                            mediabh = mean(acerto_pbh, na.rm = T),
                             obs = .N),
                by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
   filter(as.numeric(ano) %in% c(2018,2019)) %>% 
@@ -858,7 +863,18 @@ df_cmo <- base[priv0 == 1,.(media = mean(media, na.rm = T),
     
     v1_d2 = ifelse(ano == 2018, media_dia2, NA), #Note que inverte
     v2_d2 = max(v1_d2, na.rm = T),
-    dmedia_d2 = media_dia2 - v2_d2
+    dmedia_d2 = media_dia2 - v2_d2,
+    
+    #Dificulty
+    
+    v1_pbl = ifelse(ano == 2018, mediabl, NA),
+    v2_pbl = max(v1_pbl, na.rm = T),
+    d.mediabl = mediabl - v2_pbl,
+    
+    v1_pbh = ifelse(ano == 2018, mediabh, NA),
+    v2_pbh = max(v1_pbh, na.rm = T),
+    d.mediabh = mediabh - v2_pbh
+    
   ) %>%
   ungroup() %>% 
   filter(dup2 == 2) %>% 
@@ -870,7 +886,8 @@ df_cmo <- base[priv0 == 1,.(media = mean(media, na.rm = T),
   ungroup() %>% 
   select(-c(dup2, dup1, v1_nota, v2_nota,
             v1_rd,v2_rd,v1_cn, v2_cn, v1_ch,v2_ch,v1_lc,v2_lc,v1_mt,v2_mt,
-            v1_d1, v2_d1, v2_d2, v1_d2))
+            v1_d1, v2_d1, v2_d2, v1_d2, v1_pbl, v2_pbl, v1_pbh, v2_pbh))
+
 
 
 # -------------------------------------------- #
@@ -952,7 +969,7 @@ df_cmo <- base[priv0 == 1,.(media = mean(media, na.rm = T),
 
 #For the loop
 cols <- c("dmedia", "dmedia_rd", "dmedia_lc", "dmedia_ch", "dmedia_cn", "dmedia_mt",
-          "dmedia_d1", "dmedia_d2")
+          "dmedia_d1", "dmedia_d2", "d.mediabl", "d.mediabh")
 
 ylabel <- c("Average ENEM Score",
             "Average Writing Score",
@@ -961,7 +978,9 @@ ylabel <- c("Average ENEM Score",
             "Average Natural S. Score",
             "Average Math Score",
             "Average ENEM Score (Day 1)",
-            "Average ENEM Score (Day 2)")
+            "Average ENEM Score (Day 2)",
+            "Average Easier Questions Score",
+            "Average More Difficult \n Questions Score")
 
 
 for (j in seq_along(cols)) {
@@ -1030,6 +1049,14 @@ for (j in seq_along(cols)) {
     theme_minimal()
 
   
+  if(yvar == "d.mediabh") {
+    base_p <- base_p +
+      coord_cartesian(ylim = c(-5, 5))
+  } else if (yvar == "d.mediabl") {
+    base_p <- base_p +
+      coord_cartesian(ylim = c(0,10))
+  }
+  
   
     # ------------------------ #
     #No weights
@@ -1047,8 +1074,12 @@ for (j in seq_along(cols)) {
     ) +
     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
     labs(x = "Distance to DST Border (km)", y = y_lab) +
-    theme_minimal(base_size = 15) +
-    theme(legend.position = "none")
+    theme_minimal(base_size = 18) +
+    theme(legend.position = "none",
+          axis.title.x = element_text(size = 20),
+          axis.title.y = element_text(size = 20),
+          axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
+          axis.text.y = element_text(size = 15))
   
   
   
@@ -1070,8 +1101,12 @@ for (j in seq_along(cols)) {
     ) +
     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
     labs(x = "Distance to DST Border (km)", y = y_lab) +
-    theme_minimal(base_size = 15) +
-    theme(legend.position = "none")
+    theme_minimal(base_size = 18) +
+    theme(legend.position = "none",
+          axis.title.x = element_text(size = 20),
+          axis.title.y = element_text(size = 20),
+          axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
+          axis.text.y = element_text(size = 15))
   
   
   print(p_low_loess)
@@ -1082,6 +1117,7 @@ for (j in seq_along(cols)) {
   ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/weight_cmogram_low_binned_", 2019, "_", yvar, ".png"),
          p_low_loess_w, width = 10, height = 6, dpi = 200)
   
+  message("Finshed for: ", yvar)
   
   rm(yvar, ylab, d, j, rd_out, bins, df18, bins_left, bins_right, base_p, p_low_loess_w, p_low_loess)
    
@@ -1440,6 +1476,194 @@ rm(cols, ylabel)
 # 
 #     message("Finished for: ", yvar)
 # }
+
+# ---------------------------------------------------------------------------- #
+##### 2.1.1.2.3 Filters -----
+# ---------------------------------------------------------------------------- #
+
+#Filtering the data for every specification:
+
+vars <- c("escm", "time13")
+
+
+for (j in seq_along(vars)) {
+  
+  yvar     <- vars[j]
+  y_lab    <- "Average ENEM Score"
+  
+  if (j == 2) { #creating the timezone filter variable
+    base <- base %>% 
+      group_by(mun_prova) %>% 
+      mutate( time13 = case_when(
+        
+        uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS", "BA", "SE",
+                  "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP") ~ 1,
+        
+        uf %in% c("MT", "MS", "RO", "RR") | uf == "AM" &
+          !mun_prova %in%
+          c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+            1302306, 1302405, 1303502, 1303908, 1304062) ~ 0,
+        
+        T ~ NA
+      )) %>% ungroup()
+  }
+  
+  for(i in c(0:1)){
+  
+    temp <- base %>% 
+      filter(.data[[yvar]] == i)
+    
+    #Filtering the database
+    df_cmo <- temp[priv0 == 1,.(media = mean(media, na.rm = T),
+                              obs = .N),
+                 by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+      filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+      arrange(mun_prova,ano) %>%
+      group_by(mun_prova) %>%
+      mutate(
+        dup1 = 1,
+        dup2 = sum(dup1),
+        v1_nota = ifelse(ano == 2018, media, NA),
+        v2_nota = max(v1_nota, na.rm = T),
+        dmedia = media - v2_nota
+      ) %>%
+      ungroup() %>% 
+      filter(dup2 == 2) %>% 
+      select(-c(dup2, dup1, v1_nota, v2_nota))
+    
+    
+    rm(temp)
+    #Now run the steps
+    options(scipen = 999)
+    # -----------------------------#
+    # PREPARE DATA
+    # -----------------------------#
+    d <- df_cmo %>%
+      filter(ano == 2019) %>%
+      mutate(x_km = dist_hv_border / 1000,
+             xc = x_km ) %>%
+      filter(!is.na(.data[[yvar]]), !is.na(xc))
+    
+    d <- d %>% filter(!is.na(obs_r))
+    
+    
+    # -----------------------------#
+    # RDPLOT (fixed-width)
+    # -----------------------------#
+    rd_out <- rdplot(
+      y = d[[yvar]],
+      x = d$xc,
+      weights = d$obs,   #2018 weights
+      c = 0
+    )
+    
+    #extract bins
+    bins <- rd_out$vars_bins
+    
+    # create side variable: left (<0) and right (>=0)
+    bins$side <- ifelse(bins$rdplot_mean_x < 0, "left", "right")
+    bins$side <- factor(bins$side, levels = c("left", "right"))
+    
+    #Temporary base
+    df18 <- df_cmo %>% filter(ano == 2019)
+    
+    # Make a treatment indicator like in your Stata: dist > 0 treated
+    df18 <- df18 %>% mutate(trat = ifelse(dist_hv_border > 0, 1, 0))
+    
+    
+    # -----------------------------#
+    # LOESS FITS ON BINNED MEANS
+    # -----------------------------#
+    bins_left  <- subset(bins, rdplot_mean_x < 0)
+    bins_right <- subset(bins, rdplot_mean_x >= 0)
+    
+    
+    # ----------------------------- #
+    # Plot 
+    # ----------------------------- #
+    bins$side <- factor(bins$side, levels = c("left","right"))
+    
+    bins$side <- factor(bins$side, levels = c("left", "right"))
+    
+    # Use rdplot_mean_* names for points and ensure colors for fill and border match Set1
+    base_p <- ggplot() +
+      # binned points colored by side (shape 21 uses fill + colour)
+      geom_point(data = bins,
+                 aes(x = rdplot_mean_x, y = rdplot_mean_y, fill = side, colour = side),
+                 alpha = 0.8, size = 2.5) +
+      scale_fill_brewer(palette = "Set1") + 
+      theme_minimal()
+    
+    
+    
+        # ------------------------ #
+    #No weights
+    # ------------------------ #
+    p_low_loess <- base_p +
+      geom_smooth(
+        data = filter(df18, dist_hv_border <= 0),
+        aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
+        method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
+      ) +
+      geom_smooth(
+        data = filter(df18, dist_hv_border > 0),
+        aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
+        method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
+      ) +
+      geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
+      labs(x = "Distance to DST Border (km)", y = y_lab) +
+      theme_minimal(base_size = 18) +
+      theme(legend.position = "none",
+            axis.title.x = element_text(size = 20),
+            axis.title.y = element_text(size = 20),
+            axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
+            axis.text.y = element_text(size = 15))
+    
+    
+    
+    # ------------------------ #
+    #With weights
+    # ------------------------ #
+    p_low_loess_w <- base_p +
+      geom_smooth(
+        data = filter(df18, dist_hv_border <= 0),
+        aes(x = dist_hv_border / 1000, y = .data[[yvar]],
+            weight = df_cmo$obs_r[df_cmo$ano == 2018 & df_cmo$dist_hv_border <= 0]),
+        method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
+      ) +
+      geom_smooth(
+        data = filter(df18, dist_hv_border > 0),
+        aes(x = dist_hv_border / 1000, y = .data[[yvar]],
+            weight = df_cmo$obs_r[df_cmo$ano == 2018 & df_cmo$dist_hv_border > 0]),
+        method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
+      ) +
+      geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
+      labs(x = "Distance to DST Border (km)", y = y_lab) +
+      theme_minimal(base_size = 18) +
+      theme(legend.position = "none",
+            axis.title.x = element_text(size = 20),
+            axis.title.y = element_text(size = 20),
+            axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
+            axis.text.y = element_text(size = 15))
+    
+    
+    print(p_low_loess)
+    print(p_low_loess_w)
+    # optionally save:
+    ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/cmogram_low_binned_", 2019, "_", yvar,"_", i, ".png"),
+           p_low_loess, width = 10, height = 6, dpi = 200)
+    # ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/weight_cmogram_low_binned_", 2019, "_", yvar, ".png"),
+    #        p_low_loess_w, width = 10, height = 6, dpi = 200)
+    # 
+    message("Finshed for: ", yvar," and filter: ",i)
+    
+    rm(yvar, ylab, d, j, rd_out, bins, df18, bins_left, bins_right, base_p, p_low_loess_w, p_low_loess)
+    
+  }
+
+}
+
+
 # ---------------------------------------------------------------------------- #
 ### 2.1.2 19-17 ----
 # ---------------------------------------------------------------------------- #
@@ -1947,8 +2171,12 @@ for (j in seq_along(cols)) {
     ) +
     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
     labs(x = "Distance to DST Border (km)", y = y_lab) +
-    theme_minimal(base_size = 15) +
-    theme(legend.position = "none")
+    theme_minimal(base_size = 18) +
+    theme(legend.position = "none",
+          axis.title.x = element_text(size = 20),
+          axis.title.y = element_text(size = 20),
+          axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
+          axis.text.y = element_text(size = 15))
   
   
   
@@ -1970,8 +2198,12 @@ for (j in seq_along(cols)) {
     ) +
     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
     labs(x = "Distance to DST Border (km)", y = y_lab) +
-    theme_minimal(base_size = 15) +
-    theme(legend.position = "none")
+    theme_minimal(base_size = 18) +
+    theme(legend.position = "none",
+          axis.title.x = element_text(size = 20),
+          axis.title.y = element_text(size = 20),
+          axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
+          axis.text.y = element_text(size = 15))
   
   
   print(p_low_loess)
