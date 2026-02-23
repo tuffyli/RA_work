@@ -1510,7 +1510,16 @@ for (j in seq_along(vars)) {
   
   for(i in c(0:1)){
   
-    temp <- base %>% 
+    if(yvar == "escm"){
+      temp <- base %>% ungroup() %>%
+        filter(!is.na(escm))
+    } else {
+      temp <- base %>% ungroup() %>%
+        filter(!is.na(time13))
+    }
+    
+    
+    temp <- base %>% ungroup() %>% 
       filter(.data[[yvar]] == i)
     
     #Filtering the database
@@ -1542,16 +1551,16 @@ for (j in seq_along(vars)) {
       filter(ano == 2019) %>%
       mutate(x_km = dist_hv_border / 1000,
              xc = x_km ) %>%
-      filter(!is.na(.data[[yvar]]), !is.na(xc))
+      filter(!is.na(xc))
     
-    d <- d %>% filter(!is.na(obs_r))
+    d <- d %>% filter(!is.na(obs))
     
     
     # -----------------------------#
     # RDPLOT (fixed-width)
     # -----------------------------#
     rd_out <- rdplot(
-      y = d[[yvar]],
+      y = d$dmedia,
       x = d$xc,
       weights = d$obs,   #2018 weights
       c = 0
@@ -1602,12 +1611,12 @@ for (j in seq_along(vars)) {
     p_low_loess <- base_p +
       geom_smooth(
         data = filter(df18, dist_hv_border <= 0),
-        aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
+        aes(x = dist_hv_border / 1000, y = dmedia),
         method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
       ) +
       geom_smooth(
         data = filter(df18, dist_hv_border > 0),
-        aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
+        aes(x = dist_hv_border / 1000, y = dmedia),
         method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
       ) +
       geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
@@ -1627,14 +1636,14 @@ for (j in seq_along(vars)) {
     p_low_loess_w <- base_p +
       geom_smooth(
         data = filter(df18, dist_hv_border <= 0),
-        aes(x = dist_hv_border / 1000, y = .data[[yvar]],
-            weight = df_cmo$obs_r[df_cmo$ano == 2018 & df_cmo$dist_hv_border <= 0]),
+        aes(x = dist_hv_border / 1000, y = dmedia,
+            weight = df_cmo$obs[df_cmo$ano == 2018 & df_cmo$dist_hv_border <= 0]),
         method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
       ) +
       geom_smooth(
         data = filter(df18, dist_hv_border > 0),
-        aes(x = dist_hv_border / 1000, y = .data[[yvar]],
-            weight = df_cmo$obs_r[df_cmo$ano == 2018 & df_cmo$dist_hv_border > 0]),
+        aes(x = dist_hv_border / 1000, y = dmedia,
+            weight = df_cmo$obs[df_cmo$ano == 2018 & df_cmo$dist_hv_border > 0]),
         method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
       ) +
       geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
