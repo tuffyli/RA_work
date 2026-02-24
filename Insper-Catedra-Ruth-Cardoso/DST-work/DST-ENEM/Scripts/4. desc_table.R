@@ -328,6 +328,9 @@ base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
   setDT()
 
+#Mun. with enem
+mun_list19 <- unique(base$mun_prova[base$ano == 2019])
+mun_list18 <- unique(base$mun_prova[base$ano == 2018])
 
 base <- base %>% 
   mutate(
@@ -360,13 +363,16 @@ base <- base %>%
       ifelse(!is.na(mun_prova) & !is.na(mun_res), 0 , NA)
     ),
     
-    school_no_enem = ifelse(
-      !is.na(mun_prova) & !is.na(mun_escola) & mun_prova != mun_escola, 1,
-      ifelse(!is.na(mun_prova) & !is.na(mun_escola), 0, NA)),
+    school_no_enem = case_when(
+      ano == 2019 & !is.na(mun_escola) & !mun_escola %in% mun_list19 ~ 1,
+      ano == 2018 & !is.na(mun_escola) & !mun_escola %in% mun_list18 ~ 1,
+      TRUE ~ 0
+    ),
     
-    school_wt_enem = ifelse(
-      !is.na(mun_prova) & !is.na(mun_escola) & mun_prova == mun_escola, 1,
-      ifelse(!is.na(mun_prova) & !is.na(mun_escola), 0, NA)
+    school_wt_enem = case_when(
+      ano == 2019 & !is.na(mun_escola) & mun_escola %in% mun_list19 ~ 1,
+      ano == 2018 & !is.na(mun_escola) & mun_escola %in% mun_list18 ~ 1,
+      TRUE ~ 0
     )
   ) %>% filter(conclusao == 2)
 
@@ -416,5 +422,268 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/migration_desc.tex")
 
+# ---------------------------------------------------------------------------- #
+# 21. Base Desc ----
+# ---------------------------------------------------------------------------- #
+## 21.1 19 ----
+# ---------------------------------------------------------------------------- #
+gc()
+
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2019.RDS"))
+summary(base %>% select(conclusao, treineiro))
+
+in_both <- unique(base$id_enem)
+
+both_days19 <- nrow(base %>% filter(ano == 2019))
+
+base <- base %>% 
+  select(treineiro, conclusao, mun_prova, id_enem)
+
+temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_2019_v4.RDS"))
+
+temp <- temp %>% 
+  mutate(
+    abs = ifelse(
+      abs_rd == 1 &
+        abs_cn == 1 &
+        abs_ch == 1 &
+        abs_lc == 1 &
+        abs_mt == 1,
+      1,
+      0),
+    priv = ifelse(dep_adm == 4, 1, 0),
+    priv0 = ifelse(priv == 0, 1, NA),
+    test = ifelse(id_enem %in% in_both, 1, 0))
+
+total19 <- nrow(temp)
+
+summary(base %>% select(conclusao, treineiro))
 
 
+
+
+base <- base %>% 
+  mutate(presente = ifelse(id_enem %in% in_both, 1, 0))
+
+nrow(base %>% filter(presente == 1))
+gc()
+
+trei_19 <- sum(temp$treineiro == 1)/nrow(temp)
+ntrei_19 <- nrow(temp %>% filter(treineiro == 1))
+
+conc_19 <- sum(temp$conclusao == 1)/nrow(temp)
+nconc_19 <- nrow(temp %>% filter(conclusao == 1))
+
+both_days19 <- nrow(base)/nrow(temp)
+n_both_days19 <- nrow(base)
+
+in_em_19 <- sum(temp$conclusao == 2)/nrow(temp)
+nin_em_19 <- nrow(temp %>% filter(conclusao == 2))
+
+pub_em_19 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))/nrow(temp)
+npub_em_19 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))
+
+# ---------------------------------------------------------------------------- #
+##21.2 18 ----
+# ---------------------------------------------------------------------------- #
+gc()
+
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2018.RDS"))
+summary(base %>% select(conclusao, treineiro))
+
+in_both <- unique(base$id_enem)
+
+both_days18 <- nrow(base %>% filter(ano == 2018))
+
+base <- base %>% 
+  select(treineiro, conclusao, mun_prova, id_enem)
+
+temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_2018_v4.RDS"))
+
+temp <- temp %>% 
+  mutate(
+    abs = ifelse(
+      abs_rd == 1 &
+        abs_cn == 1 &
+        abs_ch == 1 &
+        abs_lc == 1 &
+        abs_mt == 1,
+      1,
+      0),
+    priv = ifelse(dep_adm == 4, 1, 0),
+    priv0 = ifelse(priv == 0, 1, NA),
+    test = ifelse(id_enem %in% in_both, 1, 0))
+
+total18 <- nrow(temp)
+
+summary(base %>% select(conclusao, treineiro))
+
+
+
+
+base <- base %>% 
+  mutate(presente = ifelse(id_enem %in% in_both, 1, 0))
+
+nrow(base %>% filter(presente == 1))
+gc()
+
+trei_18 <- sum(temp$treineiro == 1)/nrow(temp)
+ntrei_18 <- nrow(temp %>% filter(treineiro == 1))
+
+both_days18 <- nrow(base)/nrow(temp)
+n_both_days18 <- nrow(base)
+
+conc_18 <- sum(temp$conclusao == 1)/nrow(temp)
+nconc_18 <- nrow(temp %>% filter(conclusao == 1))
+
+in_em_18 <- sum(temp$conclusao == 2)/nrow(temp)
+nin_em_18 <- nrow(temp %>% filter(conclusao == 2))
+
+pub_em_18 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))/nrow(temp)
+npub_em_18 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))
+
+
+
+
+
+#Amostras TC e JC
+# > View(base)
+# > nrow(base %>% filter(ano == 2018))
+# [1] 1130696
+# > nrow(base %>% filter(ano == 2019))
+# [1] 953912
+# > nrow(base %>% filter(ano == 2018))/5513747
+# [1] 0.2050685
+# > nrow(base %>% filter(ano == 2019))/5513747
+# [1] 0.1730061
+# > nrow(base %>% filter(ano == 2018, idade %in% c(17:18)))
+# [1] 921311
+# > nrow(base %>% filter(ano == 2019, idade %in% c(17:18)))
+# [1] 794091
+# > nrow(base %>% filter(ano == 2018, idade %in% c(17:18)))/5513747
+# [1] 0.1670934
+# > nrow(base %>% filter(ano == 2019, idade %in% c(17:18)))/5513747
+# [1] 0.1440202
+
+
+##13.3 Tabela
+
+names <- c(
+  "Total",
+  "Presence in Both Days",
+  "Senior Year",
+  "Senior Year (Public Schools)",
+  "Senior Year (PS + Both days)",
+  "Senior Year (Final Filtering)",
+  "Concluded High School",
+  "Mock Applicant")
+
+result <- data.frame(
+  var = names,
+  #y18 = rep(NA, times = length(names)),
+  n18 = rep(NA, times = length(names)),
+  #y19 = rep(NA, times = length(names)),
+  n19 = rep(NA, times = length(names))
+)
+
+#result$y18[1] <- 1.00
+#result$y19[1] <- 1.00
+result$n18[1] <- total18
+result$n19[1] <- total19
+
+#result$y18[2] <- both_days18
+#result$y19[2] <- both_days19
+result$n18[2] <- n_both_days18
+result$n19[2] <- n_both_days19
+
+#result$y18[3] <- in_em_18
+#result$y19[3] <- in_em_19
+result$n18[3] <- nin_em_18
+result$n19[3] <- nin_em_19
+
+#result$y18[4] <- pub_em_18
+#result$y19[4] <- pub_em_19
+result$n18[4] <- npub_em_18
+result$n19[4] <- npub_em_19
+
+#result$y18[7] <- conc_18
+#result$y19[7] <- conc_19
+result$n18[7] <- nconc_18
+result$n19[7] <- nconc_19
+
+#result$y18[8] <- trei_18
+#result$y19[8] <- trei_19
+result$n18[8] <- ntrei_18
+result$n19[8] <- ntrei_19
+
+
+
+
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
+  setDT() %>% 
+  filter(conclusao == 2)
+
+no_age_18 <- nrow(base %>% filter(ano == 2018, priv0 == 1))
+no_age_19 <- nrow(base %>% filter(ano == 2019, priv0 == 1))
+
+
+base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+
+final_18 <- sum(base_a$obs[base_a$ano == 2018])
+final_19 <- sum(base_a$obs[base_a$ano == 2019])
+
+#result$y18[3] <- in_em_18
+#result$y19[3] <- in_em_19
+result$n18[5] <- no_age_18
+result$n19[5] <- no_age_19
+
+#result$y18[4] <- pub_em_18
+#result$y19[4] <- pub_em_19
+result$n18[6] <- final_18
+result$n19[6] <- final_19
+
+(final_18 + final_19)/ (1196984+983079)
+
+
+print(result)
+
+options(scipen = 999)  # discourage scientific notation globally
+result[, -1] <- round(result[, -1], 3)  # assuming 1st column is text
+print(result)
+
+
+
+colnames(result) <- c("",  "N",  "N")
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/disc_v4.tex")
+
+rm(both_days18, both_days19, conc_18, conc_19,
+   in_em_18, in_em_19, latex_table, n_both_days18, n_both_days19,
+   names, nconc_18, nconc_19, nin_em_18, nin_em_19, npub_em_18, npub_em_19,
+   ntrei_18, ntrei_19, pub_em_18, pub_em_19, total18, total19, trei_18, trei_19)
