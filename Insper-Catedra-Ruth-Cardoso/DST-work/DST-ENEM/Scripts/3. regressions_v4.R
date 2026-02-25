@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 11/02/2026
+# Date: 25/02/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -34,18 +34,16 @@ library(readxl)
 library(knitr)
 library(stargazer)
 
+# ---------------------------------------------------------------------------- #
+## 1.0 Data -----
+# ---------------------------------------------------------------------------- #
 
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2017.RDS"))) %>%
   setDT() %>% 
-  filter(conclusao == 2) #%>% 
-# select(mun_prova,uf, ano, seg, lat, lon, dist_hv_border, pibpc,  #Municipal
-#        #Alunos
-#        id_enem, conclusao, mun_res, mun_escola, idade, media, lc, ch, mt, cn, rd,
-#        rd1, rd2, rd3, rd4, rd5, dia_1, dia_2, priv0, old, escm, escp, mae_trab_man, pai_trab_man,
-#        ppi, fem, mig_dummy, nonmig1, nonmig2, nonmig3, nonmig4, renda1, dom5, id18)
-
+  filter(conclusao == 2)
 
 #Exam start time dummies
 base <- base %>% 
@@ -115,7 +113,7 @@ base <- base %>%
   mutate(
     
     escm = case_when(
-      esc_mae %in% c("D","E","F") ~ 1,
+      esc_mae %in% c("D","E","F") ~ 1, #With high school
       esc_mae %in% c("A","B","C") ~ 0,
       .default = NA),
     
@@ -142,12 +140,83 @@ base <- base %>%
             acerto_fim10_ch, acerto_fim10_cn, acerto_fim10_lc, acerto_fim10_mt,
             branco_ch, branco_cn, branco_lc, branco_mt, dupla_mt,
             dupla_ch, dupla_cn, dupla_lc, total,
+            
+            #Only param. B captures difficulty
             acerto_pal, acerto_pah, acerto_pcl, acerto_pch,
+            
             acerto_ini5_d1, acerto_ini10_d1, acerto_fim5_d1, acerto_fim10_d1,
             acerto_ini5_d2, acerto_ini10_d2, acerto_fim5_d2, acerto_fim10_d2,
             141:165, #acertos
-            167:179 #pradonizadas
-            ))
+            167:179 #padronizadas
+            )) 
+
+
+
+
+# ---------------------------------------------------------------------------- #
+### 1.0.2 Dist ----
+# ---------------------------------------------------------------------------- #
+
+# Base de distâncias
+mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/mun_hv.RDS")
+
+# Coordenadas
+coordenadas <- mun_hv$centroid %>%
+  st_coordinates() %>%
+  as_tibble() %>%
+  rename(
+    lon = X,
+    lat = Y
+  )
+
+mun_hv <- mun_hv %>%
+  bind_cols(coordenadas) %>%
+  st_drop_geometry() %>%
+  select(co_municipio, lon, lat, dist_hv_border, seg, hv)
+rm(coordenadas)
+
+
+mun_hv <- mun_hv %>%
+  mutate(dist_hv_border = ifelse(hv == 1, dist_hv_border, -dist_hv_border)) %>% 
+  select(co_municipio, dist_hv_border, lat, lon, seg) 
+
+#Res. Dist.
+base <- base %>% 
+  left_join(mun_hv %>% rename(dist_hv_res = dist_hv_border) %>% #Coordinates of Residency 
+              rename(lat_res = lat, 
+                     lon_res = lon,
+                     seg_res = seg)
+            , by = c("mun_res" = "co_municipio")) #%>% 
+
+#School Dist.
+base <- base %>% 
+  mutate(dist_hv_esc = case_when(
+    nonmig1 == 1 ~ dist_hv_border,
+    nonmig3 == 1 ~ dist_hv_res,
+    nonmig4 == 1 ~ dist_hv_border,
+    TRUE ~ mun_hv$dist_hv_border[match(mun_escola, mun_hv$co_municipio)]),
+    
+    lat_esc = case_when(
+      nonmig1 == 1 ~ lat,
+      nonmig3 == 1 ~ lat_res,
+      nonmig4 == 1 ~ lat,
+      TRUE ~ mun_hv$lat[match(mun_escola, mun_hv$co_municipio)]),
+    
+    lon_esc = case_when(
+      nonmig1 == 1 ~ lon,
+      nonmig3 == 1 ~ lon_res,
+      nonmig4 == 1 ~ lon,
+      TRUE ~ mun_hv$lon[match(mun_escola, mun_hv$co_municipio)]),
+    
+    seg_esc = case_when(
+      nonmig1 == 1 ~ seg,
+      nonmig3 == 1 ~ seg_res,
+      nonmig4 == 1 ~ seg,
+      TRUE ~ mun_hv$seg[match(mun_escola, mun_hv$co_municipio)]),
+    
+  )
+
+rm(mun_hv)
 
 # ---------------------------------------------------------------------------- #
 ## 1.1 Base agregada ----
@@ -215,19 +284,7 @@ bw_bias_a  <- list[["2019-2018C|NF"]]$bws[2]
 save(bw_main_a, bw_bias_a,
      file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_NF.RData")
 # ---------------------------------------------------------------------------- #
-#rm(ef,list,base_a)
 
-# 
-# 
-# hv18 <- weighted.mean(base_a$media[base_a$ano == 2018 & base_a$dist_hv_border > 0 & abs(base_a$dist_hv_border) <= bw_main_a],
-#                       w = base_a$obs[base_a$ano == 2018 & base_a$dist_hv_border > 0 & abs(base_a$dist_hv_border) <= bw_main_a])
-# hv18_out <- weighted.mean(base_a$media[base_a$ano == 2018 & base_a$dist_hv_border < 0 & abs(base_a$dist_hv_border) <= bw_main_a],
-#                           w = base_a$obs[base_a$ano == 2018 & base_a$dist_hv_border < 0 & abs(base_a$dist_hv_border) <= bw_main_a])
-# 
-# 
-# hv18 - hv18_out
-# 
-# 9.28/(hv18-hv18_out)
 
 
 # ---------------------------------------------------------------------------- #
@@ -340,7 +397,7 @@ list[[as.character(paste0(2019,"-",2018,"|pol+fuso+C"))]] <- rdrobust(
 )
 
 # ---------------------------------------------------------------------------- #
-## 1.2 Tabela  ----
+### 1.7.1 Tabela  ----
 # ---------------------------------------------------------------------------- #
 
 t10 <- data.frame(
@@ -434,9 +491,390 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/DIFF_Pr
 rm(ef, list, result, t10, latex_table)
 
 # ---------------------------------------------------------------------------- #
-# ##1.3 Comparação Young vs. Old ----
+## 1.2 Dists -----
+# ---------------------------------------------------------------------------- #
+
+# Storing results
+rlist <- list()
+
+
+
+# ---------------------------------------------------------------------------- #
+### 1.2.1 2019-2018 ----
+#### 1.2.1.1 Data ----
+# ---------------------------------------------------------------------------- #
+
+# ---------- #
+#Res
+# ---------- #
+base_res <- base[priv0 == 1,.(media = mean(media, na.rm = T),
+                            obs = .N),
+               by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota)) 
+
+# --------- #
+# School 
+# --------- #
+
+#Res
+base_esc <- base[priv0 == 1,.(media = mean(media, na.rm = T),
+                              obs = .N),
+                 by = .(mun_escola,ano,dist_hv_esc,seg_esc,lat_esc,lon_esc)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_escola,ano) %>%
+  group_by(mun_escola) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+
+# ---------------------------------------------------------------------------- #
+#### 1.2.1.2 Regression ----
+# ---------------------------------------------------------------------------- #
+
+# ----------- #
+# --- Res ---
+# ----------- #
+
+#Controls
+ef <- dummy_cols(base_res$seg_res[base_res$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+#With Bandwidth
+rlist[[as.character(paste0(2019,"-",2018,"res|bwa"))]] <- rdrobust(
+  y = base_res$d.media[base_res$ano == 2019],
+  x = base_res$dist_hv_res[base_res$ano == 2018],
+  c = 0,
+  h = bw_main_a,
+  b = bw_bias_a,
+  cluster = base_res$seg_res[base_res$ano == 2018],
+  weights = base_res$obs[base_res$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_res$lat_res[base_res$ano == 2018],
+    base_res$lon_res[base_res$ano == 2018]
+  )
+)
+
+
+#without
+rlist[[as.character(paste0(2019,"-",2018,"res|0"))]] <- rdrobust(
+  y = base_res$d.media[base_res$ano == 2019],
+  x = base_res$dist_hv_res[base_res$ano == 2018],
+  c = 0,
+  cluster = base_res$seg_res[base_res$ano == 2018],
+  weights = base_res$obs[base_res$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_res$lat_res[base_res$ano == 2018],
+    base_res$lon_res[base_res$ano == 2018]
+  )
+)
+
+# ----------- #
+# --- Esc ---
+# ----------- #
+
+#Controls
+ef <- dummy_cols(base_esc$seg_esc[base_esc$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+#With Bandwidth
+rlist[[as.character(paste0(2019,"-",2018,"esc|bwa"))]] <- rdrobust(
+  y = base_esc$d.media[base_esc$ano == 2019],
+  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
+  c = 0,
+  h = bw_main_a,
+  b = bw_bias_a,
+  cluster = base_esc$seg_esc[base_esc$ano == 2018],
+  weights = base_esc$obs[base_esc$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_esc$lat_esc[base_esc$ano == 2018],
+    base_esc$lon_esc[base_esc$ano == 2018]
+  )
+)
+
+
+#without
+rlist[[as.character(paste0(2019,"-",2018,"esc|0"))]] <- rdrobust(
+  y = base_esc$d.media[base_esc$ano == 2019],
+  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
+  c = 0,
+  cluster = base_esc$seg_esc[base_esc$ano == 2018],
+  weights = base_esc$obs[base_esc$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_esc$lat_esc[base_esc$ano == 2018],
+    base_esc$lon_esc[base_esc$ano == 2018]
+  )
+)
+
+
+# ---------------------------------------------------------------------------- #
+### 1.2.2 2018-2017 ----
+#### 1.2.2.1 Data ----
+# ---------------------------------------------------------------------------- #
+
+# ---------- #
+#Res
+# ---------- #
+base_res <- base[priv0 == 1,.(media = mean(media, na.rm = T),
+                              obs = .N),
+                 by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+  filter(as.numeric(ano) %in% c(2017,2018)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2017, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota)) 
+
+# --------- #
+# School 
+# --------- #
+
+#Res
+base_esc <- base[priv0 == 1,.(media = mean(media, na.rm = T),
+                              obs = .N),
+                 by = .(mun_escola,ano,dist_hv_esc,seg_esc,lat_esc,lon_esc)] %>% 
+  filter(as.numeric(ano) %in% c(2017,2018)) %>% 
+  arrange(mun_escola,ano) %>%
+  group_by(mun_escola) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2017, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+
+# ---------------------------------------------------------------------------- #
+#### 1.2.2.2 Regression ----
+# ---------------------------------------------------------------------------- #
+
+# ----------- #
+# --- Res ---
+# ----------- #
+
+#Controls
+ef <- dummy_cols(base_res$seg_res[base_res$ano == 2017])
+ef <- ef %>% select(-1,-2)
+
+#With Bandwidth
+rlist[[as.character(paste0(2018,"-",2017,"res|bwa"))]] <- rdrobust(
+  y = base_res$d.media[base_res$ano == 2018],
+  x = base_res$dist_hv_res[base_res$ano == 2017],
+  c = 0,
+  h = bw_main_a,
+  b = bw_bias_a,
+  cluster = base_res$seg_res[base_res$ano == 2017],
+  weights = base_res$obs[base_res$ano == 2017],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_res$lat_res[base_res$ano == 2017],
+    base_res$lon_res[base_res$ano == 2017]
+  )
+)
+
+
+#without
+rlist[[as.character(paste0(2018,"-",2017,"res|0"))]] <- rdrobust(
+  y = base_res$d.media[base_res$ano == 2018],
+  x = base_res$dist_hv_res[base_res$ano == 2017],
+  c = 0,
+  cluster = base_res$seg_res[base_res$ano == 2017],
+  weights = base_res$obs[base_res$ano == 2017],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_res$lat_res[base_res$ano == 2017],
+    base_res$lon_res[base_res$ano == 2017]
+  )
+)
+
+# ----------- #
+# --- Esc ---
+# ----------- #
+
+#Controls
+ef <- dummy_cols(base_esc$seg_esc[base_esc$ano == 2017])
+ef <- ef %>% select(-1,-2)
+
+#With Bandwidth
+rlist[[as.character(paste0(2018,"-",2017,"esc|bwa"))]] <- rdrobust(
+  y = base_esc$d.media[base_esc$ano == 2018],
+  x = base_esc$dist_hv_esc[base_esc$ano == 2017],
+  c = 0,
+  h = bw_main_a,
+  b = bw_bias_a,
+  cluster = base_esc$seg_esc[base_esc$ano == 2017],
+  weights = base_esc$obs[base_esc$ano == 2017],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_esc$lat_esc[base_esc$ano == 2017],
+    base_esc$lon_esc[base_esc$ano == 2017]
+  )
+)
+
+
+#without
+rlist[[as.character(paste0(2018,"-",2017,"esc|0"))]] <- rdrobust(
+  y = base_esc$d.media[base_esc$ano == 2018],
+  x = base_esc$dist_hv_esc[base_esc$ano == 2017],
+  c = 0,
+  cluster = base_esc$seg_esc[base_esc$ano == 2017],
+  weights = base_esc$obs[base_esc$ano == 2017],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_esc$lat_esc[base_esc$ano == 2017],
+    base_esc$lon_esc[base_esc$ano == 2017]
+  )
+)
+
+# ---------------------------------------------------------------------------- #
+### 1.2.3 Table ----
+# ---------------------------------------------------------------------------- #
+
+t10 <- data.frame(
+  coef = do.call(rbind,lapply(rlist, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(rlist, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(rlist, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind,lapply(rlist, FUN = function(x){x$N_h}))
+)
+print(t10)
+
+
+t10 <- t10 %>%
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se =  paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
+    N = paste0("[N = ", n.1 + n.2, "]")
+  ) %>%
+  select( coef, se, N ) %>%
+  setDT()
+
+
+
+names2 <- c("Residency",
+           " "," ",
+           "School",
+           " ", " ")
+
+result <- data.frame(
+  var = names2,
+  b07 = rep(NA, times = length(names2)),
+  b09 = rep(NA, times = length(names2)),
+  bw7 = rep(NA, times = length(names2)),
+  bw9 = rep(NA, times = length(names2))
+)
+
+
+
+# ---------------- #
+#Building result table
+# ---------------- #
+
+#BW Res.
+result$bw7[1] <- t10$coef[[5]] #18-17
+result$bw7[2] <- t10$se[[5]]
+result$bw7[3] <- t10$N[[5]]
+
+result$bw9[1] <- t10$coef[[1]] #19-18
+result$bw9[2] <- t10$se[[1]]
+result$bw9[3] <- t10$N[[1]]
+
+#BW Esc.
+result$bw7[4] <- t10$coef[[7]] #18-17
+result$bw7[5] <- t10$se[[7]]
+result$bw7[6] <- t10$N[[7]]
+
+result$bw9[4] <- t10$coef[[3]] #19-18
+result$bw9[5] <- t10$se[[3]]
+result$bw9[6] <- t10$N[[3]]
+
+#0 Res.
+result$b07[1] <- t10$coef[[6]] #18-17
+result$b07[2] <- t10$se[[6]]
+result$b07[3] <- t10$N[[6]]
+
+result$b09[1] <- t10$coef[[2]] #19-18
+result$b09[2] <- t10$se[[2]]
+result$b09[3] <- t10$N[[2]]
+
+#0 Esc.
+result$b07[4] <- t10$coef[[8]] #18-17
+result$b07[5] <- t10$se[[8]]
+result$b07[6] <- t10$N[[8]]
+
+result$b09[4] <- t10$coef[[4]] #19-18
+result$b09[5] <- t10$se[[4]]
+result$b09[6] <- t10$N[[4]]
+
+# ------------------ #
+#### 1.2.3.1 Saving to latex ----
+# ----------------- #
+
+colnames(result) <- c("", "(1)", "(2)","(3)", "(4)")
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcccc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/DIFF_dists_res_esc.tex")
+rm(ef, rlist, result, t10, latex_table, base_res, base_esc)
+
+# ---------------------------------------------------------------------------- #
+##1.3 Comparação Young vs. Old ----
 # # ---------------------------------------------------------------------------- #
 
+#Age filter dummy
 base <- base %>%
   mutate(
     old = ifelse(
@@ -445,7 +883,9 @@ base <- base %>%
   )
 
 
-
+# ------------------------ #
+#Reg.
+# ------------------------ #
 rlist <- list()
 
 for (j in c(0:1)){
@@ -609,7 +1049,7 @@ rm(base_a, names, result, rlist, tab, latex_table)
 
 
 # ---------------------------------------------------------------------------- #
-#2. Gráficos ----
+#2. Gráficos + Reg ----
 ## 2.1 Principal ----
 # ---------------------------------------------------------------------------- #
 
@@ -837,7 +1277,7 @@ df_cmo <- base[priv0 == 1,.(media = mean(media, na.rm = T),
                             mediabl = mean(acerto_pbl, na.rm = T),
                             mediabh = mean(acerto_pbh, na.rm = T),
                             obs = .N),
-               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+               by = .(mun_prova,ano,dist_hv_border)] %>% 
   filter(as.numeric(ano) %in% c(2018,2019)) %>% 
   arrange(mun_prova,ano) %>%
   group_by(mun_prova) %>%
@@ -883,7 +1323,6 @@ df_cmo <- base[priv0 == 1,.(media = mean(media, na.rm = T),
     dmedia_d2 = media_dia2 - v2_d2,
     
     #Dificulty
-    
     v1_pbl = ifelse(ano == 2018, mediabl, NA),
     v2_pbl = max(v1_pbl, na.rm = T),
     d.mediabl = mediabl - v2_pbl,
@@ -907,345 +1346,30 @@ df_cmo <- base[priv0 == 1,.(media = mean(media, na.rm = T),
 
 
 
-# -------------------------------------------- #
-#Testing
-# -------------------------------------------- #
-# 
-# # Example: use your data.frame instead of df
-# # df <- read.csv("your_data.csv")  # or import from Stata via haven::read_dta()
-# 
-# # Filter for year (example 2018)
-# df18 <- df_cmo %>% filter(ano == 2019)
-# 
-# # Make a treatment indicator like in your Stata: dist > 0 treated
-# df18 <- df18 %>% mutate(trat = ifelse(dist_hv_border > 0, 1, 0))
-# 
-# # Common base ggplot: points + vertical cut line at 0
-# base_p <- ggplot(df18, aes(x = dist_hv_border, y = dmedia)) +
-#   geom_jitter(width = 0.01, height = 0, size = 0.8, alpha = 0.6) +
-#   geom_vline(xintercept = 0, linetype = "dashed") +
-#   labs(x = "Distance", y = "Nota (media)", title = "cmogram-style plots (cut = 0)") +
-#   theme_minimal()
-# 
-# # # 1) lfit: linear on each side
-# # p_lfit <- base_p +
-# #   geom_smooth(data = filter(df18, dist <= 0),
-# #               method = "lm", formula = y ~ x, se = FALSE, color = "blue") +
-# #   geom_smooth(data = filter(df18, dist > 0),
-# #               method = "lm", formula = y ~ x, se = FALSE, color = "red") +
-# #   ggtitle("Linear fit (lfit) by side of cut")
-# # 
-# # # 2) qfit: quadratic on each side
-# # p_qfit <- base_p +
-# #   geom_smooth(data = filter(df18, dist <= 0),
-# #               method = "lm", formula = y ~ poly(x,2), se = FALSE, color = "blue") +
-# #   geom_smooth(data = filter(df18, dist > 0),
-# #               method = "lm", formula = y ~ poly(x,2), se = FALSE, color = "red") +
-# #   ggtitle("Quadratic fit (qfit) by side of cut")
-# 
-# # 3) low: lowess / loess on each side
-# # Option A: using geom_smooth(loess) with span ~ 0.5 (close to Stata bw(0.5))
-# p_low_loess <- base_p +
-#   geom_smooth(data = filter(df18, dist_hv_border <= 0),
-#               #mapping = aes(weight = df_cmo$obs_r[df_cmo$ano == 2018 & df_cmo$dist_hv_border <= 0]),
-#               method = "loess", se = FALSE, color = "blue") +
-#   geom_smooth(data = filter(df18, dist_hv_border > 0),
-#               #mapping = aes(weight = df_cmo$obs_r[df_cmo$ano == 2018 & df_cmo$dist_hv_border > 0]),
-#               method = "loess", se = FALSE, color = "red") +
-#   ggtitle("Lowess (loess) span=0.5 by side of cut")
-# 
-#   
-# p_low2 <- p_low_loess +
-#     coord_cartesian(ylim = c(-10, 14))
-#   
-# # Option B: use base lowess() for each side (gives you exact control over f)
-# low_left  <- with(filter(df18, dist_hv_border <= 0), lowess(dist_hv_border, dmedia, f = 0.6))
-# low_right <- with(filter(df18, dist_hv_border > 0),  lowess(dist_hv_border, dmedia, f = 0.6))
-# 
-# # Turn lowess outputs into data frames and add to a plot
-# df_low_left  <- data.frame(dist = low_left$x,  media = low_left$y, side = "left")
-# df_low_right <- data.frame(dist = low_right$x, media = low_right$y, side = "right")
-# 
-# p_low_lowess_base <- base_p +
-#   geom_line(data = df_low_left,  aes(x = dist, y = media), size = 0.9, color = "blue") +
-#   geom_line(data = df_low_right, aes(x = dist, y = media), size = 0.9, color = "red") +
-#   ggtitle("Lowess (base::lowess, f=0.6) by side of cut") +
-#   coord_cartesian(ylim = c(-10, 10))
-# 
-# 
-# # Print the plots
-# p_lfit
-# p_qfit
-# p_low_loess
-# p_low_lowess_base
+
+
 
 
 # ---------------------------------------------------------------------------- #
-###### 2.1.1.2.2 Loop ----
-# ---------------------------------------------------------------------------- #
-
-#For the loop
-cols <- c("dmedia", "dmedia_rd", "dmedia_lc", "dmedia_ch", "dmedia_cn", "dmedia_mt",
-          "dmedia_d1", "dmedia_d2", "d.mediabl", "d.mediabh")
-
-ylabel <- c("Average ENEM Score",
-            "Average Writing Score",
-            "Average Language Score",
-            "Average Human S. Score",
-            "Average Natural S. Score",
-            "Average Math Score",
-            "Average ENEM Score (Day 1)",
-            "Average ENEM Score (Day 2)",
-            "Average Easier Questions Score",
-            "Average More Difficult \n Questions Score")
-
-
-for (j in seq_along(cols)) {
-  
-  yvar     <- cols[j]
-  y_lab    <- ylabel[j]
-  
-  options(scipen = 999)
-  # -----------------------------#
-  # PREPARE DATA
-  # -----------------------------#
-  d <- df_cmo %>%
-    filter(ano == 2019) %>%
-    mutate(x_km = dist_hv_border / 1000,
-           xc = x_km ) %>%
-    filter(!is.na(.data[[yvar]]), !is.na(xc))
-  
-  d <- d %>% filter(!is.na(obs_r))
-  
-  
-  # -----------------------------#
-  # RDPLOT (fixed-width)
-  # -----------------------------#
-  rd_out <- rdplot(
-    y = d[[yvar]],
-    x = d$xc,
-    weights = d$obs_r,   #2018 weights
-    c = 0
-  )
-  
-  #extract bins
-  bins <- rd_out$vars_bins
-  
-  # create side variable: left (<0) and right (>=0)
-  bins$side <- ifelse(bins$rdplot_mean_x < 0, "left", "right")
-  bins$side <- factor(bins$side, levels = c("left", "right"))
-  
-  #Temporary base
-  df18 <- df_cmo %>% filter(ano == 2019)
-  
-  # Make a treatment indicator like in your Stata: dist > 0 treated
-  df18 <- df18 %>% mutate(trat = ifelse(dist_hv_border > 0, 1, 0))
-  
-  
-  # -----------------------------#
-  # LOESS FITS ON BINNED MEANS
-  # -----------------------------#
-  bins_left  <- subset(bins, rdplot_mean_x < 0)
-  bins_right <- subset(bins, rdplot_mean_x >= 0)
-  
-
-  # ----------------------------- #
-  # Plot 
-  # ----------------------------- #
-  bins$side <- factor(bins$side, levels = c("left","right"))
-  
-  bins$side <- factor(bins$side, levels = c("left", "right"))
-  
-  # Use rdplot_mean_* names for points and ensure colors for fill and border match Set1
-  base_p <- ggplot() +
-    # binned points colored by side (shape 21 uses fill + colour)
-    geom_point(data = bins,
-               aes(x = rdplot_mean_x, y = rdplot_mean_y, fill = side, colour = side),
-               alpha = 0.8, size = 2.5) +
-    scale_fill_brewer(palette = "Set1") + 
-    theme_minimal()
-
-  
-  if(yvar == "d.mediabh") {
-    base_p <- base_p +
-      coord_cartesian(ylim = c(-5, 5))
-  } else if (yvar == "d.mediabl") {
-    base_p <- base_p +
-      coord_cartesian(ylim = c(0,10))
-  }
-  
-  
-    # ------------------------ #
-    #No weights
-    # ------------------------ #
-  p_low_loess <- base_p +
-    geom_smooth(
-      data = filter(df18, dist_hv_border <= 0),
-      aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
-      method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
-    ) +
-    geom_smooth(
-      data = filter(df18, dist_hv_border > 0),
-      aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
-      method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
-    ) +
-    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
-    labs(x = "Distance to DST Border (km)", y = y_lab) +
-    theme_minimal(base_size = 18) +
-    theme(legend.position = "none",
-          axis.title.x = element_text(size = 20),
-          axis.title.y = element_text(size = 20),
-          axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
-          axis.text.y = element_text(size = 15))
-  
-  
-  
-  # ------------------------ #
-  #With weights
-  # ------------------------ #
-  p_low_loess_w <- base_p +
-    geom_smooth(
-      data = filter(df18, dist_hv_border <= 0),
-      aes(x = dist_hv_border / 1000, y = .data[[yvar]],
-          weight = df_cmo$obs_r[df_cmo$ano == 2018 & df_cmo$dist_hv_border <= 0]),
-      method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
-    ) +
-    geom_smooth(
-      data = filter(df18, dist_hv_border > 0),
-      aes(x = dist_hv_border / 1000, y = .data[[yvar]],
-      weight = df_cmo$obs_r[df_cmo$ano == 2018 & df_cmo$dist_hv_border > 0]),
-      method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
-    ) +
-    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
-    labs(x = "Distance to DST Border (km)", y = y_lab) +
-    theme_minimal(base_size = 18) +
-    theme(legend.position = "none",
-          axis.title.x = element_text(size = 20),
-          axis.title.y = element_text(size = 20),
-          axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
-          axis.text.y = element_text(size = 15))
-  
-  
-  print(p_low_loess)
-  print(p_low_loess_w)
-  # optionally save:
-  ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/cmogram_low_binned_", 2019, "_", yvar, ".png"),
-         p_low_loess, width = 10, height = 6, dpi = 200)
-  ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/weight_cmogram_low_binned_", 2019, "_", yvar, ".png"),
-         p_low_loess_w, width = 10, height = 6, dpi = 200)
-  
-  
-  #Lowess test
-  if(j == 1) {
-    
-    my_span <- 0.66
-    
-    
-    p_low_lowess <- base_p +
-      geom_smooth(
-        data = filter(df18, dist_hv_border <= 0),
-        aes(x = dist_hv_border / 1000, y = .data[[yvar]]),  # include weight if desired
-        method = "loess",
-        method.args = list(span = my_span, degree = 1, family = "symmetric"),
-        se = FALSE,
-        color = "#E41A4C",
-        inherit.aes = FALSE
-      ) +
-      
-      # right side (x > 0)
-      geom_smooth(
-        data = filter(df18, dist_hv_border > 0),
-        aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
-        method = "loess",
-        method.args = list(span = my_span, degree = 1, family = "symmetric"),
-        se = FALSE,
-        color = "#377EB8",
-        inherit.aes = FALSE
-      ) +
-      geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
-      labs(x = "Distance to DST Border (km)", y = y_lab) +
-      theme_minimal(base_size = 18) +
-      theme(legend.position = "none",
-            axis.title.x = element_text(size = 20),
-            axis.title.y = element_text(size = 20),
-            axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
-            axis.text.y = element_text(size = 15))
-    
-    
-    print(p_low_lowess)
-    
-    # Running variable in km
-    df18 <- df18 %>%
-      mutate(x_km = dist_hv_border / 1000)
-    
-    # ----------------------------- #
-    # LEFT SIDE (x <= 0) 
-    # ----------------------------- #
-    df_left <- df18 %>% filter(x_km <= 0)
-    
-    lw_left <- lowess(
-      x = df_left$x_km,
-      y = df_left[[yvar]],
-      f = 0.8
-    )
-    
-    # ----------------------------- #
-    # RIGHT SIDE (x > 0)
-    # ----------------------------- #
-    df_right <- df18 %>% filter(x_km > 0)
-    
-    lw_right <- lowess(
-      x = df_right$x_km,
-      y = df_right[[yvar]],
-      f = 0.8
-    )
-    
-    # ----------------------------- #
-    # Plot
-    # ----------------------------- #
-    p_low_lowess_real <- base_p +
-      geom_line(
-        inherit.aes = FALSE,
-        data = data.frame(x = lw_left$x, y = lw_left$y),
-        aes(x = x, y = y),
-        color = "#E41A4C"
-      ) +
-      
-      geom_line(
-        inherit.aes = FALSE,
-        data = data.frame(x = lw_right$x, y = lw_right$y),
-        aes(x = x, y = y),
-        color = "#377EB8"
-      ) +
-      
-      geom_vline(xintercept = 0, linetype = "dashed") +
-      labs(x = "Distance to DST Border (km)", y = y_lab) +
-      theme_minimal(base_size = 18) +
-      theme(legend.position = "none",
-            axis.title.x = element_text(size = 20),
-            axis.title.y = element_text(size = 20),
-            axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
-            axis.text.y = element_text(size = 15))
-    
-    print(p_low_lowess_real)
-    
-    ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/lowess_", 2019, "_", yvar, ".png"),
-           p_low_lowess, width = 10, height = 6, dpi = 200)
-    ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/lowess_real_", 2019, "_", yvar, ".png"),
-           p_low_lowess_real, width = 10, height = 6, dpi = 200)
-    
-    rm(p_low_lowess, p_low_lowess_real, lw_right, df_right, lw_left, df_left, my_span)
-    
-  }
-  
-  message("Finshed for: ", yvar)
-  
-  rm(yvar, ylab, d, j, rd_out, bins, df18, bins_left, bins_right, base_p, p_low_loess_w, p_low_loess)
-   
-}
-
-rm(cols, ylabel)
-
+# ###### 2.1.1.2.2 Loop ---- #
+# # ---------------------------------------------------------------------------- #
+# 
+# #For the loop
+# cols <- c("dmedia", "dmedia_rd", "dmedia_lc", "dmedia_ch", "dmedia_cn", "dmedia_mt",
+#           "dmedia_d1", "dmedia_d2", "d.mediabl", "d.mediabh")
+# 
+# ylabel <- c("Average ENEM Score",
+#             "Average Writing Score",
+#             "Average Language Score",
+#             "Average Human S. Score",
+#             "Average Natural S. Score",
+#             "Average Math Score",
+#             "Average ENEM Score (Day 1)",
+#             "Average ENEM Score (Day 2)",
+#             "Average Easier Questions Score",
+#             "Average More Difficult \n Questions Score")
+# 
+# 
 # for (j in seq_along(cols)) {
 #   
 #   yvar     <- cols[j]
@@ -1262,7 +1386,7 @@ rm(cols, ylabel)
 #     filter(!is.na(.data[[yvar]]), !is.na(xc))
 #   
 #   d <- d %>% filter(!is.na(obs_r))
-# 
+#   
 #   
 #   # -----------------------------#
 #   # RDPLOT (fixed-width)
@@ -1277,10 +1401,15 @@ rm(cols, ylabel)
 #   #extract bins
 #   bins <- rd_out$vars_bins
 #   
-#   bins <- rd_out$vars_bins
 #   # create side variable: left (<0) and right (>=0)
 #   bins$side <- ifelse(bins$rdplot_mean_x < 0, "left", "right")
 #   bins$side <- factor(bins$side, levels = c("left", "right"))
+#   
+#   #Temporary base
+#   df18 <- df_cmo %>% filter(ano == 2019)
+#   
+#   # Make a treatment indicator like in your Stata: dist > 0 treated
+#   df18 <- df18 %>% mutate(trat = ifelse(dist_hv_border > 0, 1, 0))
 #   
 #   
 #   # -----------------------------#
@@ -1289,71 +1418,7 @@ rm(cols, ylabel)
 #   bins_left  <- subset(bins, rdplot_mean_x < 0)
 #   bins_right <- subset(bins, rdplot_mean_x >= 0)
 #   
-#   fit_left  <- loess(rdplot_mean_y ~ rdplot_mean_x,
-#                      data = bins_left,
-#                      weights = bins_left$rdplot_N,
-#                      span = 0.6)
-#   
-#   fit_right <- loess(rdplot_mean_y ~ rdplot_mean_x,
-#                      data = bins_right,
-#                      weights = bins_right$rdplot_N,
-#                      span = 0.6)
-#   
-#   
-#   # left grid
-#   if (nrow(bins_left) >= 0) {
-#     xg_left <- seq(min(bins_left$rdplot_mean_x, na.rm = TRUE),
-#                    max(bins_left$rdplot_mean_x, na.rm = TRUE),
-#                    length.out = 200)
-#     yg_left <- tryCatch(predict(fit_left, newdata = data.frame(rdplot_mean_x = xg_left)),
-#                         error = function(e) rep(NA_real_, length(xg_left)))
-#     # try direct prediction at 0; fallback to last predicted y (closest-to-zero on left)
-#     y0_left_try <- tryCatch(as.numeric(predict(fit_left, newdata = data.frame(rdplot_mean_x = 0))),
-#                             error = function(e) NA_real_)
-#     if (is.na(y0_left_try)) {
-#       # choose nearest grid value (the one with largest x because left xg <= 0)
-#       idx_closest <- which.max(xg_left)
-#       y0_left <- yg_left[idx_closest]
-#     } else y0_left <- y0_left_try
-#     # ensure 0 included at the end
-#     if (!any(abs(xg_left - 0) < .Machine$double.eps^0.5)) {
-#       xg_left <- c(xg_left, 0)
-#       yg_left <- c(yg_left, y0_left)
-#     } else {
-#       yg_left[which.min(abs(xg_left - 0))] <- y0_left
-#     }
-#     grid_left <- data.frame(x = xg_left, y = yg_left) %>% arrange(x)
-#   } else {
-#     grid_left <- data.frame(x = numeric(0), y = numeric(0))
-#     y0_left <- NA_real_
-#   }
-#   
-#   # right grid
-#   if (nrow(bins_right) >= 0) {
-#     xg_right <- seq(min(bins_right$rdplot_mean_x, na.rm = TRUE),
-#                     max(bins_right$rdplot_mean_x, na.rm = TRUE),
-#                     length.out = 200)
-#     yg_right <- tryCatch(predict(fit_right, newdata = data.frame(rdplot_mean_x = xg_right)),
-#                          error = function(e) rep(NA_real_, length(xg_right)))
-#     # try direct prediction at 0; fallback to first predicted y (closest-to-zero on right)
-#     y0_right_try <- tryCatch(as.numeric(predict(fit_right, newdata = data.frame(rdplot_mean_x = 0))),
-#                              error = function(e) NA_real_)
-#     if (is.na(y0_right_try)) {
-#       idx_closest <- which.min(xg_right)  # smallest x in right grid (closest to 0)
-#       y0_right <- yg_right[idx_closest]
-#     } else y0_right <- y0_right_try
-#     # ensure 0 included at the start
-#     if (!any(abs(xg_right - 0) < .Machine$double.eps^0.5)) {
-#       xg_right <- c(0, xg_right)
-#       yg_right <- c(y0_right, yg_right)
-#     } else {
-#       yg_right[which.min(abs(xg_right - 0))] <- y0_right
-#     }
-#     grid_right <- data.frame(x = xg_right, y = yg_right) %>% arrange(x)
-#   } else {
-#     grid_right <- data.frame(x = numeric(0), y = numeric(0))
-#     y0_right <- NA_real_
-#   }
+# 
 #   # ----------------------------- #
 #   # Plot 
 #   # ----------------------------- #
@@ -1362,244 +1427,549 @@ rm(cols, ylabel)
 #   bins$side <- factor(bins$side, levels = c("left", "right"))
 #   
 #   # Use rdplot_mean_* names for points and ensure colors for fill and border match Set1
-#   p <- ggplot() +
+#   base_p <- ggplot() +
 #     # binned points colored by side (shape 21 uses fill + colour)
 #     geom_point(data = bins,
 #                aes(x = rdplot_mean_x, y = rdplot_mean_y, fill = side, colour = side),
 #                alpha = 0.8, size = 2.5) +
-#     scale_fill_brewer(palette = "Set1") +
+#     scale_fill_brewer(palette = "Set1") + 
+#     theme_minimal()
 # 
-#     # left loess line (only if grid_left exists and has rows)
-#     { if (exists("grid_left") && nrow(grid_left) > 0)
-#       geom_line(data = grid_left, aes(x = x, y = y), colour = "#E41A4C", size = 1) } +
-#     
-#     # right loess line (only if grid_right exists and has rows)
-#     { if (exists("grid_right") && nrow(grid_right) > 0)
-#       geom_line(data = grid_right, aes(x = x, y = y), colour = "#377EB8", size = 1) } +
-#     
-#     # optional points where lines meet the cutoff (if available)
-#     { if (exists("y0_left") && !is.na(y0_left))  geom_point(aes(x = 0, y = y0_left), colour = "#E41A4C", size = 1) } +
-#     { if (exists("y0_right") && !is.na(y0_right)) geom_point(aes(x = 0, y = y0_right), colour = "#377EB8", size = 1) } +
-#     
+#   
+#   if(yvar == "d.mediabh") {
+#     base_p <- base_p +
+#       coord_cartesian(ylim = c(-5, 5))
+#   } else if (yvar == "d.mediabl") {
+#     base_p <- base_p +
+#       coord_cartesian(ylim = c(0,10))
+#   }
+#   
+#   
+#     # ------------------------ #
+#     #No weights
+#     # ------------------------ #
+#   p_low_loess <- base_p +
+#     geom_smooth(
+#       data = filter(df18, dist_hv_border <= 0),
+#       aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
+#       method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
+#     ) +
+#     geom_smooth(
+#       data = filter(df18, dist_hv_border > 0),
+#       aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
+#       method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
+#     ) +
 #     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
 #     labs(x = "Distance to DST Border (km)", y = y_lab) +
-#     theme_minimal(base_size = 15) +
-#     theme(legend.position = "none")
+#     theme_minimal(base_size = 18) +
+#     theme(legend.position = "none",
+#           axis.title.x = element_text(size = 20),
+#           axis.title.y = element_text(size = 20),
+#           axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
+#           axis.text.y = element_text(size = 15))
 #   
-#   print(p)
+#   
+#   
+#   # ------------------------ #
+#   #With weights
+#   # ------------------------ #
+#   p_low_loess_w <- base_p +
+#     geom_smooth(
+#       data = filter(df18, dist_hv_border <= 0),
+#       aes(x = dist_hv_border / 1000, y = .data[[yvar]],
+#           weight = df_cmo$obs_r[df_cmo$ano == 2018 & df_cmo$dist_hv_border <= 0]),
+#       method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
+#     ) +
+#     geom_smooth(
+#       data = filter(df18, dist_hv_border > 0),
+#       aes(x = dist_hv_border / 1000, y = .data[[yvar]],
+#       weight = df_cmo$obs_r[df_cmo$ano == 2018 & df_cmo$dist_hv_border > 0]),
+#       method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
+#     ) +
+#     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
+#     labs(x = "Distance to DST Border (km)", y = y_lab) +
+#     theme_minimal(base_size = 18) +
+#     theme(legend.position = "none",
+#           axis.title.x = element_text(size = 20),
+#           axis.title.y = element_text(size = 20),
+#           axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
+#           axis.text.y = element_text(size = 15))
+#   
+#   
+#   print(p_low_loess)
+#   print(p_low_loess_w)
 #   # optionally save:
-#   ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/cmogram_low_binned_", 2019, "_", yvar, ".png"), p, width = 10, height = 6, dpi = 200)
+#   ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/cmogram_low_binned_", 2019, "_", yvar, ".png"),
+#          p_low_loess, width = 10, height = 6, dpi = 200)
+#   ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/weight_cmogram_low_binned_", 2019, "_", yvar, ".png"),
+#          p_low_loess_w, width = 10, height = 6, dpi = 200)
 #   
-#   message("Finished for: ", yvar)
 #   
-# }
-# 
-
-# 
-# 
-# 
-# # -----------------------------#
-# # PARAMETERS
-# # -----------------------------#
-# year <- 2019
-# xvar <- "dist_hv_border"   # running var in metres
-# wvar <- "obs_r"              # weight variable name in df_cmo; set to NULL if none
-# 
-# bin_width_km <- 50
-# span <- 0.6
-# min_obs_per_bin <- 1
-# 
-# # whether to weight the loess on binned means by the bin-level sum of weights
-# weight_bins <- TRUE
-# 
-# # whether to compute binned means as weighted means (if wvar provided)
-# weighted_binned_means <- TRUE
-# 
-# # optionally compute & plot a weighted loess on raw obs (not usually used for cmogram)
-# plot_raw_weighted_loess <- FALSE
-# 
-# # colours
-# col_left <- "red"
-# col_right <- "red"
-# point_colors <- c(left = "#1f78b4", right = "#e31a1c")
-# 
-# 
-# #For the loop
-# cols <- c("dmedia", "dmedia_rd", "dmedia_lc", "dmedia_ch", "dmedia_cn", "dmedia_mt",
-#           "dmedia_d1", "dmedia_d2")
-# 
-# ylabel <- c("Average ENEM Score",
-#             "Average Writing Score",
-#             "Average Language Score",
-#             "Average Human S. Score",
-#             "Average Natural S. Score",
-#             "Average Math Score",
-#             "Average ENEM Score (Day 1)",
-#             "Average ENEM Score (Day 2)")
-# 
-# 
-# 
-# for (j in seq_along(cols)) {
-#   
-#   yvar     <- cols[j]
-#   y_lab    <- ylabel[j]
-#   
-#   options(scipen = 999)
-#     # -----------------------------#
-#     # PREPARE DATA
-#     # -----------------------------#
-#     d <- df_cmo %>%
-#       filter(ano == year) %>%
-#       mutate(x_km = .data[[xvar]] / 1000,
-#              xc = x_km - 0) %>%
-#       filter(!is.na(.data[[yvar]]), !is.na(xc))
+#   #Lowess test
+#   if(j == 1) {
 #     
-#     # ensure weight exists (if requested)
-#     if (!is.null(wvar)) {
-#       if (! (wvar %in% names(d)) ) stop("Weight variable '", wvar, "' not found in the data.")
-#       # Replace NA weights with zero or remove observations with NA weights as you prefer:
-#       d <- d %>% filter(!is.na(.data[[wvar]]))
-#     }
+#     my_span <- 0.66
 #     
-#     # -----------------------------#
-#     # BINNING (fixed-width)
-#     # -----------------------------#
-#     bin_w <- bin_width_km
-#     breaks <- seq(floor(min(d$xc, na.rm=TRUE) / bin_w) * bin_w,
-#                   ceiling(max(d$xc, na.rm=TRUE) / bin_w) * bin_w,
-#                   by = bin_w)
-#     d <- d %>% mutate(bin = cut(xc, breaks = breaks, include.lowest = TRUE, right = FALSE))
 #     
-#     # compute binned stats; use weighted mean if wvar given and weighted_binned_means = TRUE
-#     binned <- d %>%
-#       group_by(bin) %>%
-#       summarise(
-#         n_bin = n(),
-#         w_bin = if (!is.null(wvar)) sum(.data[[wvar]], na.rm = TRUE) else NA_real_,
-#         x_bin = if (!is.null(wvar) && weighted_binned_means) {
-#           # x position of bin = weighted mean of x (weighted by w)
-#           if (sum(.data[[wvar]], na.rm = TRUE) >= 0) weighted.mean(xc, .data[[wvar]], na.rm = TRUE) else mean(xc, na.rm = TRUE)
-#         } else {
-#           mean(xc, na.rm = TRUE)    # unweighted mean
-#         },
-#         y_bin = if (!is.null(wvar) && weighted_binned_means) {
-#           if (sum(.data[[wvar]], na.rm = TRUE) >= 0) weighted.mean(.data[[yvar]], .data[[wvar]], na.rm = TRUE) else mean(.data[[yvar]], na.rm = TRUE)
-#         } else {
-#           mean(.data[[yvar]], na.rm = TRUE)
-#         },
-#         .groups = "drop"
-#       ) %>%
-#       filter(n_bin >= min_obs_per_bin) %>%
-#       arrange(x_bin) %>%
-#       mutate(side = ifelse(x_bin <= 0, "left", "right"))
-#     
-#     # -----------------------------#
-#     # LOESS FITS ON BINNED MEANS
-#     # -----------------------------#
-#     # choose weights for loess on binned means: either equal (NULL) or w_bin
-#     w_for_loess_bins <- if (weight_bins && !all(is.na(binned$w_bin))) binned$w_bin else NULL
-#     
-#     fit_left <- NULL; fit_right <- NULL
-#     if (any(binned$side == "left")) {
-#       left_df <- filter(binned, side == "left")
-#       if (!is.null(w_for_loess_bins)) {
-#         fit_left <- loess(y_bin ~ x_bin, data = left_df, weights = left_df$w_bin, span = span)
-#       } else {
-#         fit_left <- loess(y_bin ~ x_bin, data = left_df, span = span)
-#       }
-#     }
-#     if (any(binned$side == "right")) {
-#       right_df <- filter(binned, side == "right")
-#       if (!is.null(w_for_loess_bins)) {
-#         fit_right <- loess(y_bin ~ x_bin, data = right_df, weights = right_df$w_bin, span = span)
-#       } else {
-#         fit_right <- loess(y_bin ~ x_bin, data = right_df, span = span)
-#       }
-#     }
-#     
-#     # ----------------------------- #
-#     # PREDICTION GRIDS 
-#     # ----------------------------- #
-#     safe_predict_grid <- function(fit, side_df, to_zero = TRUE, ngrid = 250) {
-#       if (is.null(fit) || nrow(side_df) < 1) return(data.frame(x = numeric(0), yhat = numeric(0)))
-#       x_min <- min(side_df$x_bin, na.rm = TRUE)
-#       x_max <- max(side_df$x_bin, na.rm = TRUE)
-#       # create grid spanning that side's bins; ensure grid touches 0 if to_zero = TRUE
-#       if (side_df$x_bin[1] < 0 && x_max <= 0) { # left side
-#         xg <- seq(x_min, x_max, length.out = ngrid)
-#       } else if (side_df$x_bin[1] >= 0 && x_min >= 0) { # right side
-#         xg <- seq(x_min, x_max, length.out = ngrid)
-#       } else {
-#         xg <- seq(x_min, x_max, length.out = ngrid)
-#       }
-#       yg <- tryCatch(predict(fit, newdata = data.frame(x_bin = xg)), error = function(e) rep(NA_real_, length(xg)))
-#       # try to get value at 0; if predict(0) fails, use closest grid value to 0
-#       y0_try <- tryCatch(as.numeric(predict(fit, newdata = data.frame(x_bin = 0))), error = function(e) NA_real_)
-#       if (is.na(y0_try)) {
-#         # choose closest grid value to 0 (either last left or first right)
-#         idx_closest <- which.min(abs(xg - 0))
-#         y0 <- yg[idx_closest]
-#       } else y0 <- y0_try
-#       # ensure 0 included
-#       if (!any(abs(xg - 0) < .Machine$double.eps^0.5)) {
-#         if (min(xg) > 0) { xg <- c(0, xg); yg <- c(y0, yg) }
-#         else { xg <- c(xg, 0); yg <- c(yg, y0) }
-#       } else {
-#         # replace grid value at exactly 0 with y0 to avoid tiny numeric mismatch
-#         xg[which.min(abs(xg - 0))] <- 0
-#         yg[which.min(abs(xg - 0))] <- y0
-#       }
-#       data.frame(x = xg, yhat = yg) %>% arrange(x)
-#     }
-#     
-#     grid_left <- if (!is.null(fit_left)) safe_predict_grid(fit_left, filter(binned, side == "left")) else data.frame()
-#     grid_right <- if (!is.null(fit_right)) safe_predict_grid(fit_right, filter(binned, side == "right")) else data.frame()
-#     
-#     # ----------------------------- #
-#     # OPTIONAL: raw-data weighted loess (if you want to draw it)
-#     # ----------------------------- #
-#     raw_loess_df <- data.frame()
-#     if (plot_raw_weighted_loess) {
-#       if (!is.null(wvar)) {
-#         fit_raw <- loess(formula = as.formula(paste0(yvar, " ~ xc")), data = d, weights = d[[wvar]], span = span)
-#       } else {
-#         fit_raw <- loess(formula = as.formula(paste0(yvar, " ~ xc")), data = d, span = span)
-#       }
-#       xg_raw <- seq(min(d$xc, na.rm = TRUE), max(d$xc, na.rm = TRUE), length.out = 400)
-#       raw_loess_df <- data.frame(x = xg_raw, y = predict(fit_raw, newdata = data.frame(xc = xg_raw)))
-#     }
-#     
-#     # ----------------------------- #
-#     # PLOT: binned points (colored by side) + weighted loess over binned means
-#     # ----------------------------- #
-#     p <- ggplot() +
-#       # optionally: weighted raw loess (thin background line)
-#       { if (plot_raw_weighted_loess && nrow(raw_loess_df)>0) geom_line(data = raw_loess_df, aes(x=x, y=y), color = "grey60", size = 0.6) } +
+#     p_low_lowess <- base_p +
+#       geom_smooth(
+#         data = filter(df18, dist_hv_border <= 0),
+#         aes(x = dist_hv_border / 1000, y = .data[[yvar]]),  # include weight if desired
+#         method = "loess",
+#         method.args = list(span = my_span, degree = 1, family = "symmetric"),
+#         se = FALSE,
+#         color = "#E41A4C",
+#         inherit.aes = FALSE
+#       ) +
 #       
-#       # binned points (colored by side)
-#       geom_point(data = binned, aes(x = x_bin, y = y_bin, fill = side, colour = side),
-#                  size = 3, shape = 21, stroke = 0.7) +
-#       scale_color_brewer(palette = "Set1") +
-#       
-#       
-#       # left & right loess lines fitted on binned means using weights if requested
-#       { if (nrow(grid_left) >= 0)  geom_line(data = grid_left,  aes(x = x, y = yhat), colour = "#E41A4C", size = 1) } +
-#       { if (nrow(grid_right) >= 0) geom_line(data = grid_right, aes(x = x, y = yhat), colour = "#377EB8", size = 1) } +
-#       
+#       # right side (x > 0)
+#       geom_smooth(
+#         data = filter(df18, dist_hv_border > 0),
+#         aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
+#         method = "loess",
+#         method.args = list(span = my_span, degree = 1, family = "symmetric"),
+#         se = FALSE,
+#         color = "#377EB8",
+#         inherit.aes = FALSE
+#       ) +
 #       geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
 #       labs(x = "Distance to DST Border (km)", y = y_lab) +
-#       theme_minimal(base_size = 15) +
-#       theme(legend.position = "none")
+#       theme_minimal(base_size = 18) +
+#       theme(legend.position = "none",
+#             axis.title.x = element_text(size = 20),
+#             axis.title.y = element_text(size = 20),
+#             axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
+#             axis.text.y = element_text(size = 15))
 #     
-#     print(p)
-#     # optionally save:
-#     ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/cmogram_low_binned_", year, "_", yvar, ".png"), p, width = 10, height = 6, dpi = 200)
-# 
-#     message("Finished for: ", yvar)
+#     
+#     print(p_low_lowess)
+#     
+#     # Running variable in km
+#     df18 <- df18 %>%
+#       mutate(x_km = dist_hv_border / 1000)
+#     
+#     # ----------------------------- #
+#     # LEFT SIDE (x <= 0) 
+#     # ----------------------------- #
+#     df_left <- df18 %>% filter(x_km <= 0)
+#     
+#     lw_left <- lowess(
+#       x = df_left$x_km,
+#       y = df_left[[yvar]],
+#       f = 0.8
+#     )
+#     
+#     # ----------------------------- #
+#     # RIGHT SIDE (x > 0)
+#     # ----------------------------- #
+#     df_right <- df18 %>% filter(x_km > 0)
+#     
+#     lw_right <- lowess(
+#       x = df_right$x_km,
+#       y = df_right[[yvar]],
+#       f = 0.8
+#     )
+#     
+#     # ----------------------------- #
+#     # Plot
+#     # ----------------------------- #
+#     p_low_lowess_real <- base_p +
+#       geom_line(
+#         inherit.aes = FALSE,
+#         data = data.frame(x = lw_left$x, y = lw_left$y),
+#         aes(x = x, y = y),
+#         color = "#E41A4C"
+#       ) +
+#       
+#       geom_line(
+#         inherit.aes = FALSE,
+#         data = data.frame(x = lw_right$x, y = lw_right$y),
+#         aes(x = x, y = y),
+#         color = "#377EB8"
+#       ) +
+#       
+#       geom_vline(xintercept = 0, linetype = "dashed") +
+#       labs(x = "Distance to DST Border (km)", y = y_lab) +
+#       theme_minimal(base_size = 18) +
+#       theme(legend.position = "none",
+#             axis.title.x = element_text(size = 20),
+#             axis.title.y = element_text(size = 20),
+#             axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
+#             axis.text.y = element_text(size = 15))
+#     
+#     print(p_low_lowess_real)
+#     
+#     ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/lowess_", 2019, "_", yvar, ".png"),
+#            p_low_lowess, width = 10, height = 6, dpi = 200)
+#     ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/lowess_real_", 2019, "_", yvar, ".png"),
+#            p_low_lowess_real, width = 10, height = 6, dpi = 200)
+#     
+#     rm(p_low_lowess, p_low_lowess_real, lw_right, df_right, lw_left, df_left, my_span)
+#     
+#   }
+#   
+#   message("Finshed for: ", yvar)
+#   
+#   rm(yvar, ylab, d, j, rd_out, bins, df18, bins_left, bins_right, base_p, p_low_loess_w, p_low_loess)
+#    
 # }
-
-# ---------------------------------------------------------------------------- #
-##### 2.1.1.2.3 Filters -----
+# 
+# rm(cols, ylabel)
+# 
+# # for (j in seq_along(cols)) {
+# #   
+# #   yvar     <- cols[j]
+# #   y_lab    <- ylabel[j]
+# #   
+# #   options(scipen = 999)
+# #   # -----------------------------#
+# #   # PREPARE DATA
+# #   # -----------------------------#
+# #   d <- df_cmo %>%
+# #     filter(ano == 2019) %>%
+# #     mutate(x_km = dist_hv_border / 1000,
+# #            xc = x_km ) %>%
+# #     filter(!is.na(.data[[yvar]]), !is.na(xc))
+# #   
+# #   d <- d %>% filter(!is.na(obs_r))
+# # 
+# #   
+# #   # -----------------------------#
+# #   # RDPLOT (fixed-width)
+# #   # -----------------------------#
+# #   rd_out <- rdplot(
+# #     y = d[[yvar]],
+# #     x = d$xc,
+# #     weights = d$obs_r,   #2018 weights
+# #     c = 0
+# #   )
+# #   
+# #   #extract bins
+# #   bins <- rd_out$vars_bins
+# #   
+# #   bins <- rd_out$vars_bins
+# #   # create side variable: left (<0) and right (>=0)
+# #   bins$side <- ifelse(bins$rdplot_mean_x < 0, "left", "right")
+# #   bins$side <- factor(bins$side, levels = c("left", "right"))
+# #   
+# #   
+# #   # -----------------------------#
+# #   # LOESS FITS ON BINNED MEANS
+# #   # -----------------------------#
+# #   bins_left  <- subset(bins, rdplot_mean_x < 0)
+# #   bins_right <- subset(bins, rdplot_mean_x >= 0)
+# #   
+# #   fit_left  <- loess(rdplot_mean_y ~ rdplot_mean_x,
+# #                      data = bins_left,
+# #                      weights = bins_left$rdplot_N,
+# #                      span = 0.6)
+# #   
+# #   fit_right <- loess(rdplot_mean_y ~ rdplot_mean_x,
+# #                      data = bins_right,
+# #                      weights = bins_right$rdplot_N,
+# #                      span = 0.6)
+# #   
+# #   
+# #   # left grid
+# #   if (nrow(bins_left) >= 0) {
+# #     xg_left <- seq(min(bins_left$rdplot_mean_x, na.rm = TRUE),
+# #                    max(bins_left$rdplot_mean_x, na.rm = TRUE),
+# #                    length.out = 200)
+# #     yg_left <- tryCatch(predict(fit_left, newdata = data.frame(rdplot_mean_x = xg_left)),
+# #                         error = function(e) rep(NA_real_, length(xg_left)))
+# #     # try direct prediction at 0; fallback to last predicted y (closest-to-zero on left)
+# #     y0_left_try <- tryCatch(as.numeric(predict(fit_left, newdata = data.frame(rdplot_mean_x = 0))),
+# #                             error = function(e) NA_real_)
+# #     if (is.na(y0_left_try)) {
+# #       # choose nearest grid value (the one with largest x because left xg <= 0)
+# #       idx_closest <- which.max(xg_left)
+# #       y0_left <- yg_left[idx_closest]
+# #     } else y0_left <- y0_left_try
+# #     # ensure 0 included at the end
+# #     if (!any(abs(xg_left - 0) < .Machine$double.eps^0.5)) {
+# #       xg_left <- c(xg_left, 0)
+# #       yg_left <- c(yg_left, y0_left)
+# #     } else {
+# #       yg_left[which.min(abs(xg_left - 0))] <- y0_left
+# #     }
+# #     grid_left <- data.frame(x = xg_left, y = yg_left) %>% arrange(x)
+# #   } else {
+# #     grid_left <- data.frame(x = numeric(0), y = numeric(0))
+# #     y0_left <- NA_real_
+# #   }
+# #   
+# #   # right grid
+# #   if (nrow(bins_right) >= 0) {
+# #     xg_right <- seq(min(bins_right$rdplot_mean_x, na.rm = TRUE),
+# #                     max(bins_right$rdplot_mean_x, na.rm = TRUE),
+# #                     length.out = 200)
+# #     yg_right <- tryCatch(predict(fit_right, newdata = data.frame(rdplot_mean_x = xg_right)),
+# #                          error = function(e) rep(NA_real_, length(xg_right)))
+# #     # try direct prediction at 0; fallback to first predicted y (closest-to-zero on right)
+# #     y0_right_try <- tryCatch(as.numeric(predict(fit_right, newdata = data.frame(rdplot_mean_x = 0))),
+# #                              error = function(e) NA_real_)
+# #     if (is.na(y0_right_try)) {
+# #       idx_closest <- which.min(xg_right)  # smallest x in right grid (closest to 0)
+# #       y0_right <- yg_right[idx_closest]
+# #     } else y0_right <- y0_right_try
+# #     # ensure 0 included at the start
+# #     if (!any(abs(xg_right - 0) < .Machine$double.eps^0.5)) {
+# #       xg_right <- c(0, xg_right)
+# #       yg_right <- c(y0_right, yg_right)
+# #     } else {
+# #       yg_right[which.min(abs(xg_right - 0))] <- y0_right
+# #     }
+# #     grid_right <- data.frame(x = xg_right, y = yg_right) %>% arrange(x)
+# #   } else {
+# #     grid_right <- data.frame(x = numeric(0), y = numeric(0))
+# #     y0_right <- NA_real_
+# #   }
+# #   # ----------------------------- #
+# #   # Plot 
+# #   # ----------------------------- #
+# #   bins$side <- factor(bins$side, levels = c("left","right"))
+# #   
+# #   bins$side <- factor(bins$side, levels = c("left", "right"))
+# #   
+# #   # Use rdplot_mean_* names for points and ensure colors for fill and border match Set1
+# #   p <- ggplot() +
+# #     # binned points colored by side (shape 21 uses fill + colour)
+# #     geom_point(data = bins,
+# #                aes(x = rdplot_mean_x, y = rdplot_mean_y, fill = side, colour = side),
+# #                alpha = 0.8, size = 2.5) +
+# #     scale_fill_brewer(palette = "Set1") +
+# # 
+# #     # left loess line (only if grid_left exists and has rows)
+# #     { if (exists("grid_left") && nrow(grid_left) > 0)
+# #       geom_line(data = grid_left, aes(x = x, y = y), colour = "#E41A4C", size = 1) } +
+# #     
+# #     # right loess line (only if grid_right exists and has rows)
+# #     { if (exists("grid_right") && nrow(grid_right) > 0)
+# #       geom_line(data = grid_right, aes(x = x, y = y), colour = "#377EB8", size = 1) } +
+# #     
+# #     # optional points where lines meet the cutoff (if available)
+# #     { if (exists("y0_left") && !is.na(y0_left))  geom_point(aes(x = 0, y = y0_left), colour = "#E41A4C", size = 1) } +
+# #     { if (exists("y0_right") && !is.na(y0_right)) geom_point(aes(x = 0, y = y0_right), colour = "#377EB8", size = 1) } +
+# #     
+# #     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
+# #     labs(x = "Distance to DST Border (km)", y = y_lab) +
+# #     theme_minimal(base_size = 15) +
+# #     theme(legend.position = "none")
+# #   
+# #   print(p)
+# #   # optionally save:
+# #   ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/cmogram_low_binned_", 2019, "_", yvar, ".png"), p, width = 10, height = 6, dpi = 200)
+# #   
+# #   message("Finished for: ", yvar)
+# #   
+# # }
+# # 
+# 
+# # 
+# # 
+# # 
+# # # -----------------------------#
+# # # PARAMETERS
+# # # -----------------------------#
+# # year <- 2019
+# # xvar <- "dist_hv_border"   # running var in metres
+# # wvar <- "obs_r"              # weight variable name in df_cmo; set to NULL if none
+# # 
+# # bin_width_km <- 50
+# # span <- 0.6
+# # min_obs_per_bin <- 1
+# # 
+# # # whether to weight the loess on binned means by the bin-level sum of weights
+# # weight_bins <- TRUE
+# # 
+# # # whether to compute binned means as weighted means (if wvar provided)
+# # weighted_binned_means <- TRUE
+# # 
+# # # optionally compute & plot a weighted loess on raw obs (not usually used for cmogram)
+# # plot_raw_weighted_loess <- FALSE
+# # 
+# # # colours
+# # col_left <- "red"
+# # col_right <- "red"
+# # point_colors <- c(left = "#1f78b4", right = "#e31a1c")
+# # 
+# # 
+# # #For the loop
+# # cols <- c("dmedia", "dmedia_rd", "dmedia_lc", "dmedia_ch", "dmedia_cn", "dmedia_mt",
+# #           "dmedia_d1", "dmedia_d2")
+# # 
+# # ylabel <- c("Average ENEM Score",
+# #             "Average Writing Score",
+# #             "Average Language Score",
+# #             "Average Human S. Score",
+# #             "Average Natural S. Score",
+# #             "Average Math Score",
+# #             "Average ENEM Score (Day 1)",
+# #             "Average ENEM Score (Day 2)")
+# # 
+# # 
+# # 
+# # for (j in seq_along(cols)) {
+# #   
+# #   yvar     <- cols[j]
+# #   y_lab    <- ylabel[j]
+# #   
+# #   options(scipen = 999)
+# #     # -----------------------------#
+# #     # PREPARE DATA
+# #     # -----------------------------#
+# #     d <- df_cmo %>%
+# #       filter(ano == year) %>%
+# #       mutate(x_km = .data[[xvar]] / 1000,
+# #              xc = x_km - 0) %>%
+# #       filter(!is.na(.data[[yvar]]), !is.na(xc))
+# #     
+# #     # ensure weight exists (if requested)
+# #     if (!is.null(wvar)) {
+# #       if (! (wvar %in% names(d)) ) stop("Weight variable '", wvar, "' not found in the data.")
+# #       # Replace NA weights with zero or remove observations with NA weights as you prefer:
+# #       d <- d %>% filter(!is.na(.data[[wvar]]))
+# #     }
+# #     
+# #     # -----------------------------#
+# #     # BINNING (fixed-width)
+# #     # -----------------------------#
+# #     bin_w <- bin_width_km
+# #     breaks <- seq(floor(min(d$xc, na.rm=TRUE) / bin_w) * bin_w,
+# #                   ceiling(max(d$xc, na.rm=TRUE) / bin_w) * bin_w,
+# #                   by = bin_w)
+# #     d <- d %>% mutate(bin = cut(xc, breaks = breaks, include.lowest = TRUE, right = FALSE))
+# #     
+# #     # compute binned stats; use weighted mean if wvar given and weighted_binned_means = TRUE
+# #     binned <- d %>%
+# #       group_by(bin) %>%
+# #       summarise(
+# #         n_bin = n(),
+# #         w_bin = if (!is.null(wvar)) sum(.data[[wvar]], na.rm = TRUE) else NA_real_,
+# #         x_bin = if (!is.null(wvar) && weighted_binned_means) {
+# #           # x position of bin = weighted mean of x (weighted by w)
+# #           if (sum(.data[[wvar]], na.rm = TRUE) >= 0) weighted.mean(xc, .data[[wvar]], na.rm = TRUE) else mean(xc, na.rm = TRUE)
+# #         } else {
+# #           mean(xc, na.rm = TRUE)    # unweighted mean
+# #         },
+# #         y_bin = if (!is.null(wvar) && weighted_binned_means) {
+# #           if (sum(.data[[wvar]], na.rm = TRUE) >= 0) weighted.mean(.data[[yvar]], .data[[wvar]], na.rm = TRUE) else mean(.data[[yvar]], na.rm = TRUE)
+# #         } else {
+# #           mean(.data[[yvar]], na.rm = TRUE)
+# #         },
+# #         .groups = "drop"
+# #       ) %>%
+# #       filter(n_bin >= min_obs_per_bin) %>%
+# #       arrange(x_bin) %>%
+# #       mutate(side = ifelse(x_bin <= 0, "left", "right"))
+# #     
+# #     # -----------------------------#
+# #     # LOESS FITS ON BINNED MEANS
+# #     # -----------------------------#
+# #     # choose weights for loess on binned means: either equal (NULL) or w_bin
+# #     w_for_loess_bins <- if (weight_bins && !all(is.na(binned$w_bin))) binned$w_bin else NULL
+# #     
+# #     fit_left <- NULL; fit_right <- NULL
+# #     if (any(binned$side == "left")) {
+# #       left_df <- filter(binned, side == "left")
+# #       if (!is.null(w_for_loess_bins)) {
+# #         fit_left <- loess(y_bin ~ x_bin, data = left_df, weights = left_df$w_bin, span = span)
+# #       } else {
+# #         fit_left <- loess(y_bin ~ x_bin, data = left_df, span = span)
+# #       }
+# #     }
+# #     if (any(binned$side == "right")) {
+# #       right_df <- filter(binned, side == "right")
+# #       if (!is.null(w_for_loess_bins)) {
+# #         fit_right <- loess(y_bin ~ x_bin, data = right_df, weights = right_df$w_bin, span = span)
+# #       } else {
+# #         fit_right <- loess(y_bin ~ x_bin, data = right_df, span = span)
+# #       }
+# #     }
+# #     
+# #     # ----------------------------- #
+# #     # PREDICTION GRIDS 
+# #     # ----------------------------- #
+# #     safe_predict_grid <- function(fit, side_df, to_zero = TRUE, ngrid = 250) {
+# #       if (is.null(fit) || nrow(side_df) < 1) return(data.frame(x = numeric(0), yhat = numeric(0)))
+# #       x_min <- min(side_df$x_bin, na.rm = TRUE)
+# #       x_max <- max(side_df$x_bin, na.rm = TRUE)
+# #       # create grid spanning that side's bins; ensure grid touches 0 if to_zero = TRUE
+# #       if (side_df$x_bin[1] < 0 && x_max <= 0) { # left side
+# #         xg <- seq(x_min, x_max, length.out = ngrid)
+# #       } else if (side_df$x_bin[1] >= 0 && x_min >= 0) { # right side
+# #         xg <- seq(x_min, x_max, length.out = ngrid)
+# #       } else {
+# #         xg <- seq(x_min, x_max, length.out = ngrid)
+# #       }
+# #       yg <- tryCatch(predict(fit, newdata = data.frame(x_bin = xg)), error = function(e) rep(NA_real_, length(xg)))
+# #       # try to get value at 0; if predict(0) fails, use closest grid value to 0
+# #       y0_try <- tryCatch(as.numeric(predict(fit, newdata = data.frame(x_bin = 0))), error = function(e) NA_real_)
+# #       if (is.na(y0_try)) {
+# #         # choose closest grid value to 0 (either last left or first right)
+# #         idx_closest <- which.min(abs(xg - 0))
+# #         y0 <- yg[idx_closest]
+# #       } else y0 <- y0_try
+# #       # ensure 0 included
+# #       if (!any(abs(xg - 0) < .Machine$double.eps^0.5)) {
+# #         if (min(xg) > 0) { xg <- c(0, xg); yg <- c(y0, yg) }
+# #         else { xg <- c(xg, 0); yg <- c(yg, y0) }
+# #       } else {
+# #         # replace grid value at exactly 0 with y0 to avoid tiny numeric mismatch
+# #         xg[which.min(abs(xg - 0))] <- 0
+# #         yg[which.min(abs(xg - 0))] <- y0
+# #       }
+# #       data.frame(x = xg, yhat = yg) %>% arrange(x)
+# #     }
+# #     
+# #     grid_left <- if (!is.null(fit_left)) safe_predict_grid(fit_left, filter(binned, side == "left")) else data.frame()
+# #     grid_right <- if (!is.null(fit_right)) safe_predict_grid(fit_right, filter(binned, side == "right")) else data.frame()
+# #     
+# #     # ----------------------------- #
+# #     # OPTIONAL: raw-data weighted loess (if you want to draw it)
+# #     # ----------------------------- #
+# #     raw_loess_df <- data.frame()
+# #     if (plot_raw_weighted_loess) {
+# #       if (!is.null(wvar)) {
+# #         fit_raw <- loess(formula = as.formula(paste0(yvar, " ~ xc")), data = d, weights = d[[wvar]], span = span)
+# #       } else {
+# #         fit_raw <- loess(formula = as.formula(paste0(yvar, " ~ xc")), data = d, span = span)
+# #       }
+# #       xg_raw <- seq(min(d$xc, na.rm = TRUE), max(d$xc, na.rm = TRUE), length.out = 400)
+# #       raw_loess_df <- data.frame(x = xg_raw, y = predict(fit_raw, newdata = data.frame(xc = xg_raw)))
+# #     }
+# #     
+# #     # ----------------------------- #
+# #     # PLOT: binned points (colored by side) + weighted loess over binned means
+# #     # ----------------------------- #
+# #     p <- ggplot() +
+# #       # optionally: weighted raw loess (thin background line)
+# #       { if (plot_raw_weighted_loess && nrow(raw_loess_df)>0) geom_line(data = raw_loess_df, aes(x=x, y=y), color = "grey60", size = 0.6) } +
+# #       
+# #       # binned points (colored by side)
+# #       geom_point(data = binned, aes(x = x_bin, y = y_bin, fill = side, colour = side),
+# #                  size = 3, shape = 21, stroke = 0.7) +
+# #       scale_color_brewer(palette = "Set1") +
+# #       
+# #       
+# #       # left & right loess lines fitted on binned means using weights if requested
+# #       { if (nrow(grid_left) >= 0)  geom_line(data = grid_left,  aes(x = x, y = yhat), colour = "#E41A4C", size = 1) } +
+# #       { if (nrow(grid_right) >= 0) geom_line(data = grid_right, aes(x = x, y = yhat), colour = "#377EB8", size = 1) } +
+# #       
+# #       geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
+# #       labs(x = "Distance to DST Border (km)", y = y_lab) +
+# #       theme_minimal(base_size = 15) +
+# #       theme(legend.position = "none")
+# #     
+# #     print(p)
+# #     # optionally save:
+# #     ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/cmogram_low_binned_", year, "_", yvar, ".png"), p, width = 10, height = 6, dpi = 200)
+# # 
+# #     message("Finished for: ", yvar)
+# # }
+# 
+# # ---------------------------------------------------------------------------- #
+##### 2.1.1.2.2 Filters -----
 # ---------------------------------------------------------------------------- #
 
 #Filtering the data for every specification:
@@ -1622,183 +1992,111 @@ base <- base %>%
     T ~ NA
   )) %>% ungroup()
 
+###### --------------------- Mother E. ---------------------------------------- #
 
-for (j in seq_along(vars)) {
-  
-  yvar     <- vars[j]
-  y_lab    <- "Average ENEM Score"
-  
-  
-  for(i in c(0:1)){
-  
-    
-    
-    temp <- base %>% ungroup() %>% 
-      filter(.data[[yvar]] == i)
-    
-    #Filtering the database
-    df_cmo <- temp %>%
-      filter(priv0 == 1, .data[[yvar]] == i) %>%
-      group_by(mun_prova, ano, dist_hv_border, seg, lat, lon) %>%
-      summarise(media = mean(media, na.rm = TRUE), obs = n(), .groups = "drop") %>%
-      filter(as.numeric(ano) %in% c(2018, 2019)) %>%
-      arrange(mun_prova, ano) %>%
-      group_by(mun_prova) %>%
-      mutate(
-        dup1 = 1,
-        dup2 = sum(dup1),
-        v1_nota = ifelse(ano == 2018, media, NA),
-        v2_nota = max(v1_nota, na.rm = T),
-        dmedia = media - v2_nota
-      ) %>%
-      ungroup() %>% 
-      filter(dup2 == 2) %>% 
-      select(-c(dup2, dup1, v1_nota, v2_nota))
-    
-    
-    rm(temp)
-    #Now run the steps
-    options(scipen = 999)
-    # -----------------------------#
-    # PREPARE DATA
-    # -----------------------------#
-    d <- df_cmo %>%
-      filter(ano == 2019) %>%
-      mutate(x_km = dist_hv_border / 1000,
-             xc = x_km ) %>%
-      filter(!is.na(xc))
-    
-    d <- d %>% filter(!is.na(obs))
-    
-    
-    # -----------------------------#
-    # RDPLOT (fixed-width)
-    # -----------------------------#
-    rd_out <- rdplot(
-      y = d$dmedia,
-      x = d$xc,
-      weights = d$obs,   #2018 weights
-      c = 0
-    )
-    
-    #extract bins
-    bins <- rd_out$vars_bins
-    
-    # create side variable: left (<0) and right (>=0)
-    bins$side <- ifelse(bins$rdplot_mean_x < 0, "left", "right")
-    bins$side <- factor(bins$side, levels = c("left", "right"))
-    
-    #Temporary base
-    df18 <- df_cmo %>% filter(ano == 2019)
-    
-    # Make a treatment indicator like in your Stata: dist > 0 treated
-    df18 <- df18 %>% mutate(trat = ifelse(dist_hv_border > 0, 1, 0))
-    
-    
-    # -----------------------------#
-    # LOESS FITS ON BINNED MEANS
-    # -----------------------------#
-    bins_left  <- subset(bins, rdplot_mean_x < 0)
-    bins_right <- subset(bins, rdplot_mean_x >= 0)
-    
-    
-    # ----------------------------- #
-    # Plot 
-    # ----------------------------- #
-    bins$side <- factor(bins$side, levels = c("left","right"))
-    
-    bins$side <- factor(bins$side, levels = c("left", "right"))
-    
-    # Use rdplot_mean_* names for points and ensure colors for fill and border match Set1
-    base_p <- ggplot() +
-      # binned points colored by side (shape 21 uses fill + colour)
-      geom_point(data = bins,
-                 aes(x = rdplot_mean_x, y = rdplot_mean_y, fill = side, colour = side),
-                 alpha = 0.8, size = 2.5) +
-      scale_fill_brewer(palette = "Set1") + 
-      theme_minimal()
-    
-    
-    
-        # ------------------------ #
-    #No weights
-    # ------------------------ #
-    p_low_loess <- base_p +
-      geom_smooth(
-        data = filter(df18, dist_hv_border <= 0),
-        aes(x = dist_hv_border / 1000, y = dmedia),
-        method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
-      ) +
-      geom_smooth(
-        data = filter(df18, dist_hv_border > 0),
-        aes(x = dist_hv_border / 1000, y = dmedia),
-        method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
-      ) +
-      geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
-      labs(x = "Distance to DST Border (km)", y = y_lab) +
-      theme_minimal(base_size = 18) +
-      theme(legend.position = "none",
-            axis.title.x = element_text(size = 20),
-            axis.title.y = element_text(size = 20),
-            axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
-            axis.text.y = element_text(size = 15))
-    
-    
-    
-    # ------------------------ #
-    #With weights
-    # ------------------------ #
-    p_low_loess_w <- base_p +
-      geom_smooth(
-        data = filter(df18, dist_hv_border <= 0),
-        aes(x = dist_hv_border / 1000, y = dmedia,
-            weight = df_cmo$obs[df_cmo$ano == 2018 & df_cmo$dist_hv_border <= 0]),
-        method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
-      ) +
-      geom_smooth(
-        data = filter(df18, dist_hv_border > 0),
-        aes(x = dist_hv_border / 1000, y = dmedia,
-            weight = df_cmo$obs[df_cmo$ano == 2018 & df_cmo$dist_hv_border > 0]),
-        method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
-      ) +
-      geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
-      labs(x = "Distance to DST Border (km)", y = y_lab) +
-      theme_minimal(base_size = 18) +
-      theme(legend.position = "none",
-            axis.title.x = element_text(size = 20),
-            axis.title.y = element_text(size = 20),
-            axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
-            axis.text.y = element_text(size = 15))
-    
-    
-    print(p_low_loess)
-    print(p_low_loess_w)
-    # optionally save:
-    ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/cmogram_low_binned_", 2019, "_", yvar,"_", i, ".png"),
-           p_low_loess, width = 10, height = 6, dpi = 200)
-    # ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/weight_cmogram_low_binned_", 2019, "_", yvar, ".png"),
-    #        p_low_loess_w, width = 10, height = 6, dpi = 200)
-    # 
-    message("Finshed for: ", yvar," and filter: ",i)
-    
+#With High School
+df_escm1 <- base %>%
+        filter(priv0 == 1, escm == 1) %>%
+        group_by(mun_prova, ano, dist_hv_border) %>%
+        summarise(media = mean(media, na.rm = TRUE), .groups = "drop") %>%
+        filter(as.numeric(ano) %in% c(2018, 2019)) %>%
+        arrange(mun_prova, ano) %>%
+        group_by(mun_prova) %>%
+        mutate(
+          dup1 = 1,
+          dup2 = sum(dup1),
+          v1_nota = ifelse(ano == 2018, media, NA),
+          v2_nota = max(v1_nota, na.rm = T),
+          dmedia_escm1 = media - v2_nota
+        ) %>%
+        ungroup() %>%
+        filter(dup2 == 2) %>%
+        select(-c(dup2, dup1, v1_nota, v2_nota))
 
-  }
+#With OUT High School
+df_escm0 <- base %>%
+  filter(priv0 == 1, escm == 0) %>%
+  group_by(mun_prova, ano, dist_hv_border) %>%
+  summarise(media = mean(media, na.rm = TRUE), .groups = "drop") %>%
+  filter(as.numeric(ano) %in% c(2018, 2019)) %>%
+  arrange(mun_prova, ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    dmedia_escm0 = media - v2_nota
+  ) %>%
+  ungroup() %>%
+  filter(dup2 == 2) %>%
+  select(-c(dup2, dup1, v1_nota, v2_nota))
 
-  rm(yvar, ylab, d, j, rd_out, bins, df18, bins_left, bins_right, base_p, p_low_loess_w, p_low_loess)
+###### --------------------- Timezone ---------------------------------------- #
+
+#UTC -3
+df_time1 <- base %>%
+  filter(priv0 == 1, time13 == 1) %>%
+  group_by(mun_prova, ano, dist_hv_border) %>%
+  summarise(media = mean(media, na.rm = TRUE), .groups = "drop") %>%
+  filter(as.numeric(ano) %in% c(2018, 2019)) %>%
+  arrange(mun_prova, ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    dmedia_bra1 = media - v2_nota
+  ) %>%
+  ungroup() %>%
+  filter(dup2 == 2) %>%
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+#UTC -4
+df_time0 <- base %>%
+  filter(priv0 == 1, time13 == 0) %>%
+  group_by(mun_prova, ano, dist_hv_border) %>%
+  summarise(media = mean(media, na.rm = TRUE), .groups = "drop") %>%
+  filter(as.numeric(ano) %in% c(2018, 2019)) %>%
+  arrange(mun_prova, ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    dmedia_bra0 = media - v2_nota
+  ) %>%
+  ungroup() %>%
+  filter(dup2 == 2) %>%
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+# ---------------------------------------------------------------------------- #
+##### 2.1.1.2.3 Export -----
+# ---------------------------------------------------------------------------- #
+
+
+df_cmo <- df_cmo %>% 
+  filter(ano == 2019) %>% 
+  left_join(df_escm0 %>% filter(ano == 2019) %>% select(mun_prova, dmedia_escm0),
+            by = c("mun_prova")) %>%
+  left_join(df_escm1 %>% filter(ano == 2019) %>% select(mun_prova, dmedia_escm1),
+            by = c("mun_prova")) %>%
+  left_join(df_time1 %>% filter(ano == 2019) %>% select(mun_prova, dmedia_bra1),
+            by = c("mun_prova")) %>%
+  left_join(df_time0 %>% filter(ano == 2019) %>% select(mun_prova, dmedia_bra0),
+            by = c("mun_prova"))
   
-}
 
+
+rm(df_escm0, df_escm1, df_time0, df_time1)
 
 # ---------------------------------------------------------------------------- #
 ### 2.1.2 19-17 ----
 # ---------------------------------------------------------------------------- #
 
-
-base_temp <- base %>%
-  select(-old) %>%
-  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2017.RDS"))) %>%
-  setDT() %>%
-  filter(conclusao == 2)
+base_temp <- base
 
 ##### 2.1.2.1 opt bw -----
 base_b <- base_temp[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
@@ -2201,157 +2499,70 @@ rm(d, d0, d1, lw0, lw1, cutoff, png_filename, x_range, ticks, years, span_val, y
 # ---------------------------------------------------------------------------- #
 #### 2.1.2.4 CMOGRAM -----
 # ---------------------------------------------------------------------------- #
-#For the loop
+###### 2.1.2.4.1 Stata Export ----
+# ---------------------------------------------------------------------------- #
 
-base_c <- base_c %>% 
-  group_by(mun_prova) %>% 
-  mutate(obs_r = obs[ano == 2017]) %>% 
-  ungroup()
-
-cols <- c("d.media")
-
-ylabel <- c("Average ENEM Score")
+df_cmo <- df_cmo %>% 
+  left_join(base_c %>% filter(ano == 2018) %>% select(mun_prova, d.media) %>% 
+              rename(dmedia_2018 = d.media),
+            by = c("mun_prova"))
 
 
-for (j in seq_along(cols)) {
-  
-  yvar     <- cols[j]
-  y_lab    <- ylabel[j]
-  
-  options(scipen = 999)
-  # -----------------------------#
-  # PREPARE DATA
-  # -----------------------------#
-  d <- base_c %>%
-    filter(ano == 2018) %>%
-    mutate(x_km = dist_hv_border / 1000,
-           xc = x_km ) %>%
-    filter(!is.na(.data[[yvar]]), !is.na(xc))
-  
-  d <- d %>% filter(!is.na(obs_r))
-  
-  
-  # -----------------------------#
-  # RDPLOT (fixed-width)
-  # -----------------------------#
-  rd_out <- rdplot(
-    y = d[[yvar]],
-    x = d$xc,
-    weights = d$obs_r,   #2018 weights
-    c = 0
-  )
-  
-  #extract bins
-  bins <- rd_out$vars_bins
-  
-  # create side variable: left (<0) and right (>=0)
-  bins$side <- ifelse(bins$rdplot_mean_x < 0, "left", "right")
-  bins$side <- factor(bins$side, levels = c("left", "right"))
-  
-  #Temporary base
-  df18 <- base_c %>% filter(ano == 2018)
-  
-  # Make a treatment indicator like in your Stata: dist > 0 treated
-  df18 <- df18 %>% mutate(trat = ifelse(dist_hv_border > 0, 1, 0))
-  
-  
-  # -----------------------------#
-  # LOESS FITS ON BINNED MEANS
-  # -----------------------------#
-  bins_left  <- subset(bins, rdplot_mean_x < 0)
-  bins_right <- subset(bins, rdplot_mean_x >= 0)
-  
-  
-  # ----------------------------- #
-  # Plot 
-  # ----------------------------- #
-  bins$side <- factor(bins$side, levels = c("left","right"))
-  
-  bins$side <- factor(bins$side, levels = c("left", "right"))
-  
-  # Use rdplot_mean_* names for points and ensure colors for fill and border match Set1
-  base_p <- ggplot() +
-    # binned points colored by side (shape 21 uses fill + colour)
-    geom_point(data = bins,
-               aes(x = rdplot_mean_x, y = rdplot_mean_y, fill = side, colour = side),
-               alpha = 0.8, size = 2.5) +
-    scale_fill_brewer(palette = "Set1") + 
-    theme_minimal()
-  
-  
-  
-  # ------------------------ #
-  #No weights
-  # ------------------------ #
-  p_low_loess <- base_p +
-    geom_smooth(
-      data = filter(df18, dist_hv_border <= 0),
-      aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
-      method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
-    ) +
-    geom_smooth(
-      data = filter(df18, dist_hv_border > 0),
-      aes(x = dist_hv_border / 1000, y = .data[[yvar]]),
-      method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
-    ) +
-    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
-    labs(x = "Distance to DST Border (km)", y = y_lab) +
-    theme_minimal(base_size = 18) +
-    theme(legend.position = "none",
-          axis.title.x = element_text(size = 20),
-          axis.title.y = element_text(size = 20),
-          axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
-          axis.text.y = element_text(size = 15))
-  
-  
-  
-  # ------------------------ #
-  #With weights
-  # ------------------------ #
-  p_low_loess_w <- base_p +
-    geom_smooth(
-      data = filter(df18, dist_hv_border <= 0),
-      aes(x = dist_hv_border / 1000, y = .data[[yvar]],
-          weight = base_c$obs_r[base_c$ano == 2017 & base_c$dist_hv_border <= 0]),
-      method = "loess", se = FALSE, color = "#E41A4C", inherit.aes = FALSE
-    ) +
-    geom_smooth(
-      data = filter(df18, dist_hv_border > 0),
-      aes(x = dist_hv_border / 1000, y = .data[[yvar]],
-          weight = base_c$obs_r[base_c$ano == 2017 & base_c$dist_hv_border > 0]),
-      method = "loess", se = FALSE, color = "#377EB8", inherit.aes = FALSE
-    ) +
-    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40", size = 0.9) +
-    labs(x = "Distance to DST Border (km)", y = y_lab) +
-    theme_minimal(base_size = 18) +
-    theme(legend.position = "none",
-          axis.title.x = element_text(size = 20),
-          axis.title.y = element_text(size = 20),
-          axis.text.x = element_text(size = 15,angle = 90,hjust = 1, vjust = 0.5),
-          axis.text.y = element_text(size = 15))
-  
-  
-  print(p_low_loess)
-  print(p_low_loess_w)
-  # optionally save:
-  ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/cmogram_low_binned_", 2018, "_", yvar, ".png"),
-         p_low_loess, width = 10, height = 6, dpi = 200)
-  ggsave(paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/cmogram/weight_cmogram_low_binned_", 2018, "_", yvar, ".png"),
-         p_low_loess_w, width = 10, height = 6, dpi = 200)
-  
-  
-  rm(yvar, ylab, d, rd_out, bins, df18, bins_left, bins_right, base_p, p_low_loess_w, p_low_loess)
-  
-}
+#Final data adjustments
 
-rm(cols, ylabel)
+df_cmo <- df_cmo %>% 
+  rename(dmedia_easy = d.mediabl,
+         dmedia_hard = d.mediabh) %>% 
+  mutate(dist_km = dist_hv_border/1000) %>% 
+  select(-c(dist_hv_border,obs, obs_r,
+            media, media_dia1, media_dia2, media_rd, media_cn, media_lc, media_ch, media_mt,
+            mediabl, mediabh, ano))
+
+# -------------- #
+# Labels --- #
+# -------------- #
+
+attr(df_cmo$dmedia, "label") <- "Nota 2019-2018"
+attr(df_cmo$dmedia_rd, "label") <- "Nota Redação 2019-2018"
+attr(df_cmo$dmedia_cn, "label") <- "Nota C. Naturais 2019-2018"
+attr(df_cmo$dmedia_ch, "label") <- "Nota C. Humanas 2019-2018"
+attr(df_cmo$dmedia_lc, "label") <- "Nota Linguagem 2019-2018"
+attr(df_cmo$dmedia_mt, "label") <- "Nota Matemática 2019-2018"
+attr(df_cmo$dmedia_d1, "label") <- "Nota 1° Dia 2019-2018"
+attr(df_cmo$dmedia_d2, "label") <- "Nota 2° Dia 2019-2018"
+attr(df_cmo$dmedia_easy, "label") <- "Nota Q. Fácil 2019-2018"
+attr(df_cmo$dmedia_hard, "label") <- "Nota Q. Difícil 2019-2018"
+attr(df_cmo$dmedia_escm0, "label") <- "Nota Mãe SEM EM 2019-2018"
+attr(df_cmo$dmedia_escm1, "label") <- "Nota Mãe COM EM 2019-2018"
+attr(df_cmo$dmedia_bra1, "label") <- "Nota UTC-3 (Brasília) 2019-2018"
+attr(df_cmo$dmedia_bra0, "label") <- "Nota UTC-4 2019-2018"
+attr(df_cmo$dmedia_2018, "label") <- "Nota 2018-2017"
+attr(df_cmo$dist_km, "label") <- "Distância em km"
+
+library(haven)
+
+
+write_dta(df_cmo, "C:/Users/tuffyli/OneDrive - Insper/Dados_HV/dados_cmogram.dta" )
+
+
+
+rm(df_cmo)
+# ---------------------------------------------------------------------------- #
+## 2.2 Dist. Res. -----
+# ---------------------------------------------------------------------------- #
+
+
+
+
+
+
 
 # ---------------------------------------------------------------------------- #
-## 2.2 Bins ----
+## 2.3 Bins ----
 # ---------------------------------------------------------------------------- #
 ### A. 1918 ----
 # ---------------------------------------------------------------------------- #
-#### 2.2.1 POL 1 ------
+#### 2.3.1 POL 1 ------
 # ---------------------------------------------------------------------------- #
 plist <- list()
 
@@ -2522,7 +2733,7 @@ for (i in fig_loop) {
 }
 
 
-#### 2.2.2 POL 2 ------
+#### 2.3.2 POL 2 ------
 plist <- list()
 
 bins <- c(5, 10, 25)
@@ -3202,6 +3413,11 @@ for (i in fig_loop) {
 
 rm(bins, j, plist, fig_loop, base_c, base_b, bw_bias_b, bw_main_b,
    bw_main_c, bw_bias_c)
+
+rm(base_temp)
+
+#Final adjustment for the remaining
+base <- base %>% filter(ano != 2017)
 
 # ---------------------------------------------------------------------------- #
 # 3. Matérias----
