@@ -2,6 +2,8 @@
 # 9. Anexo ----
 # ---------------------------------------------------------------------------- #
 
+load(file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_p2.RData")
+load(file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_NF.RData")
 
 # ---------------------------------------------------------------------------- #
 ## 9.0 OLD ----
@@ -4149,7 +4151,7 @@ for (year in c(2018:2019)){
         y = base_ag[[i]],
         x = base_ag$dist_hv_border,
         c = 0,
-        p =1,
+        p = 1,
         h = bw_main_a,
         b = bw_bias_a,
         cluster = base_ag$seg,
@@ -4439,7 +4441,7 @@ rm( covs, plot_covs)
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
-## BW Map ----
+###18.6.1 BW Map ----
 # ---------------------------------------------------------------------------- #
 line <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/line.RDS")
 base <- base_inpe %>%
@@ -4456,7 +4458,7 @@ mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educaçã
   mutate(
     dist_hv = ifelse(amostra == 1, dist_hv_border / 1000, NA),
     in_band = ifelse(abs(dist_hv_border) <= bw_main_a, 1, 0),
-    in_enem = ifelse(co_municipio %in% mun_enem$mun_prova, 1, 0),
+    in_enem = ifelse(co_municipio %in% unique(base_inpe$mun_prova), 1, 0),
     
     final = case_when(
       in_band == 1 & in_enem == 1 ~ 2,
@@ -4513,10 +4515,11 @@ map <- ggplot(mun_hv) +
 
 map
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band.png"),plot = map,device = "png", dpi = 300)
+#ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band.png"),plot = map,device = "png", dpi = 300)
 
-
-### Balance -----
+# ---------------------------------------------------------------------------- #
+###18.6.2 Balance -----
+# ---------------------------------------------------------------------------- #
 temp <- base_inpe[priv0 == 1,.(media = mean(media, na.rm = T),
                                obs = .N),
                   by = .(mun_prova,ano,dist_hv_border,seg,lat,lon, hv)] %>% 
@@ -4586,58 +4589,130 @@ rm(treated_coords, control_coords, dist_matrix, nearest_index, treated, control,
 
 
 
+# ---------------------------------------------------------------------------- #
+### 18.6.3 T Test ----
+# ---------------------------------------------------------------------------- #
 
-### T Test ----
 base_inpe_t <- base_inpe %>%
   filter(abs(dist_hv_border) <= bw_main_a) %>% 
   left_join(matched_df_id_pair %>% select(mun_prova, pair_id), by = "mun_prova")
 
 
-summary(base_inpe_t %>% select(id18, hv, pair_id))
+summary(base_inpe_t %>% select(id18, hv, pair_id, lat, lon))
 
 library(broom)
 
-test_covariates <- function(data, var_list, treat_var = "hv", fe_var = "pair_id") {
-  results <- lapply(var_list, function(var) {
-    formula_str <- paste0(var, " ~ ", treat_var, " | ", fe_var)
-    model <- feols(as.formula(formula_str), data = data)
-    
-    tidy_result <- broom::tidy(model)
-    treat_row <- tidy_result[tidy_result$term == treat_var, ]
-    
-    # Compute z-stat manually
-    z_stat <- treat_row$estimate / treat_row$std.error
-    
-    data.frame(
-      variable = var,
-      estimate = treat_row$estimate,
-      std.error = treat_row$std.error,
-      statistic = z_stat,
-      p.value = treat_row$p.value
-    )
-  })
-  
-  do.call(rbind, results)
-}
 
-results_list <- list()
+ef <- dummy_cols(base_inpe_t$seg[base_inpe_t$ano == 2018])
+ef <- ef %>% select(-1,-2)
 
-for (year in c(2019, 2018)) {
+# test_covariates <- function(data, var_list, treat_var = "hv", fe_var = "pair_id",
+#                             lat = "lat", lon = "lon", ef = "ef") {
+#   results <- lapply(var_list, function(var) {
+#     formula_str <- paste0(var, " ~ ", treat_var,"+", lat, "+", lon, " | ", fe_var, "+", ef)
+#     model <- feols(as.formula(formula_str), data = data)
+#     
+#     tidy_result <- broom::tidy(model)
+#     treat_row <- tidy_result[tidy_result$term == treat_var, ]
+#     
+#     # Compute z-stat manually
+#     z_stat <- treat_row$estimate / treat_row$std.error
+#     
+#     data.frame(
+#       variable = var,
+#       estimate = treat_row$estimate,
+#       std.error = treat_row$std.error,
+#       statistic = z_stat,
+#       p.value = treat_row$p.value
+#     )
+#   })
+#   
+#   do.call(rbind, results)
+# }
+# 
+# results_list <- list()
+# 
+# for (year in c(2019, 2018)) {
+#   
+#   temp <- base_inpe_t %>% 
+#     filter(ano == year)
+#   
+#   results_covs <- test_covariates(data = temp, var_list = var_list)
+#   
+#   results_list[[as.character(year)]] <- results_covs
+#   
+#   
+#   print(paste("Resultados para o ano", year))
+#   print(results_covs)
+# }
+# 
+# 
+# 
+# 
+
+#Runing the regression
+rlist <- list()
+
+for (year in c(2018:2019)){
   
-  temp <- base_inpe_t %>% 
+  base_y <- base_inpe_t %>% 
     filter(ano == year)
   
-  results_covs <- test_covariates(data = temp, var_list = var_list)
   
-  results_list[[as.character(year)]] <- results_covs
+  for (i in var_list){
+    
+    print(i)
+    
+    base_ag <- base_y %>% filter(!is.na(.data[[i]]))
+    
+    
+    ef <- dummy_cols(base_ag$seg)
+    ef <- ef %>% select(-1,-2)
+    
+    
+    rlist[[as.character(paste0(year,"_",i))]] <-
+      rdrobust(
+        y = base_ag[[i]],
+        x = base_ag$dist_hv_border,
+        c = 0,
+        p = 1,
+        h = bw_main_a,
+        b = bw_bias_a,
+        cluster = base_ag$pair_id,
+        vce = "hc0",
+        covs = cbind(
+          ef,
+          #base_ag$pair_id,
+          base_ag$lat, 
+          base_ag$lon
+        )
+      )
+    
+    
+    
+    
+    message("Finished for: ", i)
+    
+    
+  }
   
+  message(" -------------------------- ")
+  message("Finished for year: ", year)
+  message(" -------------------------- ")
   
-  print(paste("Resultados para o ano", year))
-  print(results_covs)
 }
+rm(ef,i, base_y, base_ag)
 
 
-## Tabela ----
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#### 18.6.3.1 Tabela ----
+# ---------------------------------------------------------------------------- #
+
 vnames <- c(
   '18 years old',
   'Female',
@@ -4717,20 +4792,20 @@ covs <- data.frame(
   )
 
 
-covs$ep[covs$var == vnames[1]] <- results_list[["2019"]]$statistic[1] #id18
-covs$ep[covs$var == vnames[2]] <- results_list[["2019"]]$statistic[2] #fem
-covs$ep[covs$var == vnames[3]] <- results_list[["2019"]]$statistic[3] #ppi
-covs$ep[covs$var == vnames[4]] <- results_list[["2019"]]$statistic[4] #escp
-covs$ep[covs$var == vnames[5]] <- results_list[["2019"]]$statistic[5] #escm
-covs$ep[covs$var == vnames[6]] <- results_list[["2019"]]$statistic[6] #dom5
-covs$ep[covs$var == vnames[7]] <- results_list[["2019"]]$statistic[7] #renda1
-covs$ep[covs$var == vnames[8]] <- results_list[["2019"]]$statistic[8] #pibpc
-covs$ep[covs$var == vnames[9]] <- results_list[["2019"]]$statistic[9] #trab manual Pai
-covs$ep[covs$var == vnames[10]] <- results_list[["2019"]]$statistic[10] #trab manual Mae
-covs$ep[covs$var == vnames[11]] <- results_list[["2019"]]$statistic[11] #temp1d
-covs$ep[covs$var == vnames[12]] <- results_list[["2019"]]$statistic[12] #temp2d
-covs$ep[covs$var == vnames[13]] <- results_list[["2019"]]$statistic[13] #um1d
-covs$ep[covs$var == vnames[14]] <- results_list[["2019"]]$statistic[14] #um2d
+covs$ep[covs$var == vnames[1]] <- rlist[["2019_id18"]]$z[[3]]#id18
+covs$ep[covs$var == vnames[2]] <- rlist[["2019_fem"]]$z[[3]] #fem
+covs$ep[covs$var == vnames[3]] <- rlist[["2019_ppi"]]$z[[3]] #ppi
+covs$ep[covs$var == vnames[4]] <- rlist[["2019_escp"]]$z[[3]] #escp
+covs$ep[covs$var == vnames[5]] <- rlist[["2019_escm"]]$z[[3]] #escm
+covs$ep[covs$var == vnames[6]] <- rlist[["2019_dom5"]]$z[[3]] #dom5
+covs$ep[covs$var == vnames[7]] <- rlist[["2019_renda1"]]$z[[3]] #renda1
+covs$ep[covs$var == vnames[8]] <- rlist[["2019_pibpc"]]$z[[3]] #pibpc
+covs$ep[covs$var == vnames[9]] <- rlist[["2019_pai_trab_man"]]$z[[3]] #trab manual Pai
+covs$ep[covs$var == vnames[10]] <- rlist[["2019_mae_trab_man"]]$z[[3]] #trab manual Mae
+covs$ep[covs$var == vnames[11]] <- rlist[["2019_temp_1d"]]$z[[3]] #temp1d
+covs$ep[covs$var == vnames[12]] <- rlist[["2019_temp_2d"]]$z[[3]] #temp2d
+covs$ep[covs$var == vnames[13]] <- rlist[["2019_umid_1d"]]$z[[3]] #um1d
+covs$ep[covs$var == vnames[14]] <- rlist[["2019_umid_2d"]]$z[[3]] #um2d
 
 
 
