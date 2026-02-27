@@ -2337,3 +2337,146 @@ saeb <- rbind(saeb_17, saeb_19)
 saveRDS(saeb, file = paste0("Z:/Tuffy/Paper - HV/Bases/saeb_total.RDS"))
 rm(saeb, saeb_17, saeb_19, saeb3, saeb5, saeb9)
 
+
+
+rm(ls = list())
+gc()
+# ---------------------------------------------------------------------------- #
+#3. INPE Data ----
+# ---------------------------------------------------------------------------- #
+## 3.1 (2018) ----
+# ---------------------------------------------------------------------------- #
+
+dtb <- read_xls("Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/inpe/DTB_BRASIL_MUNICIPIO.xls") %>%
+  mutate(
+    nomemun = stri_trans_general(Nome_Município, "Latin-ASCII"),
+    nomemun = gsub(" ","",x = nomemun),
+    nomemun = gsub("-","",x = nomemun),
+    nomemun = gsub("'","",x = nomemun),
+    nomemun = toupper(nomemun),
+    nomeuf = stri_trans_general(Nome_UF, "Latin-ASCII"),
+    nomeuf = gsub(" ","",x = nomeuf),
+    nomeuf = gsub("-","",x = nomeuf),
+    nomeuf = gsub("'","",x = nomeuf),
+    nomeuf = toupper(nomeuf),
+    codmun = `Código Município Completo`
+  ) %>%
+  select(nomemun, nomeuf, codmun)
+
+# Dados do INPE-Queimadas
+inpe <- fread(file = "Z:/Tuffy/Paper - HV/Bases/inpe/dados_sisam-2018/task_9045.dados_sisam.2018.csv")
+
+inpe <- inpe %>%
+  select(
+    municipio_nome,
+    uf_nome,
+    vento_velocidade_ms,
+    temperatura_c,
+    precipitacao_mmdia,
+    umidade_relativa_percentual,
+    datahora,
+    pm25_ugm3,
+    o3_ppb
+  ) %>%
+  mutate(
+    dia = day(ymd_hms(datahora)),
+    mes = month(ymd_hms(datahora)),
+    hora = hour(ymd_hms(datahora))
+  ) %>%
+  filter(mes == 11 & dia %in% c(4,11) & hora == 12) %>% #Dia e hora do ENEM# 2018
+  select(-hora)
+
+inpe <- inpe %>%
+  mutate(
+    nomemun = stri_trans_general(municipio_nome, "Latin-ASCII"),
+    nomemun = gsub(" ","",x = nomemun),
+    nomemun = gsub("-","",x = nomemun),
+    nomemun = gsub("'","",x = nomemun),
+    nomeuf = stri_trans_general(uf_nome, "Latin-ASCII"),
+    nomeuf = gsub(" ","",x = nomeuf),
+    nomeuf = gsub("-","",x = nomeuf),
+    nomeuf = gsub("'","",x = nomeuf)
+  ) %>% 
+  inner_join(dtb, by = c("nomemun","nomeuf")) %>%
+  rename(
+    vento = vento_velocidade_ms,
+    temp = temperatura_c,
+    prec = precipitacao_mmdia,
+    umid = umidade_relativa_percentual,
+    pm25 = pm25_ugm3,
+    o3 = o3_ppb
+  ) %>%
+  select(-nomeuf,-nomemun,-municipio_nome,-uf_nome,-mes) %>%
+  pivot_wider(id_cols = codmun,names_from = dia,values_from = c(vento,temp,prec,umid,pm25,o3))
+
+rm(dtb)
+
+saveRDS(inpe, "Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2018.rds")
+
+# ---------------------------------------------------------------------------- #
+## 3.2 (2019) ----
+# ---------------------------------------------------------------------------- #
+dtb <- read_xls("Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/inpe/DTB_BRASIL_MUNICIPIO.xls") %>%
+  mutate(
+    nomemun = stri_trans_general(Nome_Município, "Latin-ASCII"),
+    nomemun = gsub(" ","",x = nomemun),
+    nomemun = gsub("-","",x = nomemun),
+    nomemun = gsub("'","",x = nomemun),
+    nomemun = toupper(nomemun),
+    nomeuf = stri_trans_general(Nome_UF, "Latin-ASCII"),
+    nomeuf = gsub(" ","",x = nomeuf),
+    nomeuf = gsub("-","",x = nomeuf),
+    nomeuf = gsub("'","",x = nomeuf),
+    nomeuf = toupper(nomeuf),
+    codmun = `Código Município Completo`
+  ) %>%
+  select(nomemun, nomeuf, codmun)
+
+# Dados do INPE-Queimadas
+inpe <- fread(file = "Z:/Tuffy/Paper - HV/Bases/inpe/dados_sisam-2019/task_9045.dados_sisam.2019.csv")
+
+inpe <- inpe %>%
+  select(
+    municipio_nome,
+    uf_nome,
+    vento_velocidade_ms,
+    temperatura_c,
+    precipitacao_mmdia,
+    umidade_relativa_percentual,
+    datahora,
+    pm25_ugm3,
+    o3_ppb
+  ) %>%
+  mutate(
+    dia = day(ymd_hms(datahora)),
+    mes = month(ymd_hms(datahora)),
+    hora = hour(ymd_hms(datahora))
+  ) %>%
+  filter(mes == 11 & dia %in% c(3,10) & hora == 12) %>% #Dia e hora do ENEM# 2018
+  select(-hora)
+
+inpe <- inpe %>%
+  mutate(
+    nomemun = stri_trans_general(municipio_nome, "Latin-ASCII"),
+    nomemun = gsub(" ","",x = nomemun),
+    nomemun = gsub("-","",x = nomemun),
+    nomemun = gsub("'","",x = nomemun),
+    nomeuf = stri_trans_general(uf_nome, "Latin-ASCII"),
+    nomeuf = gsub(" ","",x = nomeuf),
+    nomeuf = gsub("-","",x = nomeuf),
+    nomeuf = gsub("'","",x = nomeuf)
+  ) %>% 
+  inner_join(dtb, by = c("nomemun","nomeuf")) %>%
+  rename(
+    vento = vento_velocidade_ms,
+    temp = temperatura_c,
+    prec = precipitacao_mmdia,
+    umid = umidade_relativa_percentual,
+    pm25 = pm25_ugm3,
+    o3 = o3_ppb
+  ) %>%
+  select(-nomeuf,-nomemun,-municipio_nome,-uf_nome,-mes) %>%
+  pivot_wider(id_cols = codmun,names_from = dia,values_from = c(vento,temp,prec,umid,pm25,o3))
+
+rm(dtb)
+saveRDS(inpe, "Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2019.rds")

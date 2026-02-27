@@ -3887,77 +3887,13 @@ rm(graph, tablist_bw, rlist_bw)
 # ---------------------------------------------------------------------------- #
 # 18. Balance Figs ----
 # ---------------------------------------------------------------------------- #
-## 18.1 (2018) ----
-### 18.1.1 INPE ----
-dtb <- read_xls("Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/inpe/DTB_BRASIL_MUNICIPIO.xls") %>%
-  mutate(
-    nomemun = stri_trans_general(Nome_Município, "Latin-ASCII"),
-    nomemun = gsub(" ","",x = nomemun),
-    nomemun = gsub("-","",x = nomemun),
-    nomemun = gsub("'","",x = nomemun),
-    nomemun = toupper(nomemun),
-    nomeuf = stri_trans_general(Nome_UF, "Latin-ASCII"),
-    nomeuf = gsub(" ","",x = nomeuf),
-    nomeuf = gsub("-","",x = nomeuf),
-    nomeuf = gsub("'","",x = nomeuf),
-    nomeuf = toupper(nomeuf),
-    codmun = `Código Município Completo`
-  ) %>%
-  select(nomemun, nomeuf, codmun)
 
-# Dados do INPE-Queimadas
-inpe <- fread(file = "Z:/Tuffy/Paper - HV/Bases/inpe/dados_sisam-2018/task_9045.dados_sisam.2018.csv")
-
-inpe <- inpe %>%
-  select(
-    municipio_nome,
-    uf_nome,
-    vento_velocidade_ms,
-    temperatura_c,
-    precipitacao_mmdia,
-    umidade_relativa_percentual,
-    datahora,
-    pm25_ugm3,
-    o3_ppb
-  ) %>%
-  mutate(
-    dia = day(ymd_hms(datahora)),
-    mes = month(ymd_hms(datahora)),
-    hora = hour(ymd_hms(datahora))
-  ) %>%
-  filter(mes == 11 & dia %in% c(4,11) & hora == 12) %>% #Dia e hora do ENEM# 2018
-  select(-hora)
-
-inpe <- inpe %>%
-  mutate(
-    nomemun = stri_trans_general(municipio_nome, "Latin-ASCII"),
-    nomemun = gsub(" ","",x = nomemun),
-    nomemun = gsub("-","",x = nomemun),
-    nomemun = gsub("'","",x = nomemun),
-    nomeuf = stri_trans_general(uf_nome, "Latin-ASCII"),
-    nomeuf = gsub(" ","",x = nomeuf),
-    nomeuf = gsub("-","",x = nomeuf),
-    nomeuf = gsub("'","",x = nomeuf)
-  ) %>% 
-  inner_join(dtb, by = c("nomemun","nomeuf")) %>%
-  rename(
-    vento = vento_velocidade_ms,
-    temp = temperatura_c,
-    prec = precipitacao_mmdia,
-    umid = umidade_relativa_percentual,
-    pm25 = pm25_ugm3,
-    o3 = o3_ppb
-  ) %>%
-  select(-nomeuf,-nomemun,-municipio_nome,-uf_nome,-mes) %>%
-  pivot_wider(id_cols = codmun,names_from = dia,values_from = c(vento,temp,prec,umid,pm25,o3))
-
-rm(dtb)
-
-saveRDS(inpe, "Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2018.rds")
-
+inpe <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2018.rds")
 # Base de dados
 
+# ---------------------------------------------------------------------------- #
 ### 18.1.2 Unidos ----
+# ---------------------------------------------------------------------------- #
 base_2018 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS")) %>%
   setDT() %>%
   mutate(codmun = as.character(mun_prova)) %>%
@@ -3988,71 +3924,8 @@ rm(inpe)
 ##18.2 (2019) ----
 # ---------------------------------------------------------------------------- #
 
-dtb <- read_xls("Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/inpe/DTB_BRASIL_MUNICIPIO.xls") %>%
-  mutate(
-    nomemun = stri_trans_general(Nome_Município, "Latin-ASCII"),
-    nomemun = gsub(" ","",x = nomemun),
-    nomemun = gsub("-","",x = nomemun),
-    nomemun = gsub("'","",x = nomemun),
-    nomemun = toupper(nomemun),
-    nomeuf = stri_trans_general(Nome_UF, "Latin-ASCII"),
-    nomeuf = gsub(" ","",x = nomeuf),
-    nomeuf = gsub("-","",x = nomeuf),
-    nomeuf = gsub("'","",x = nomeuf),
-    nomeuf = toupper(nomeuf),
-    codmun = `Código Município Completo`
-  ) %>%
-  select(nomemun, nomeuf, codmun)
 
-# Dados do INPE-Queimadas
-inpe <- fread(file = "Z:/Tuffy/Paper - HV/Bases/inpe/dados_sisam-2019/task_9045.dados_sisam.2019.csv")
-
-inpe <- inpe %>%
-  select(
-    municipio_nome,
-    uf_nome,
-    vento_velocidade_ms,
-    temperatura_c,
-    precipitacao_mmdia,
-    umidade_relativa_percentual,
-    datahora,
-    pm25_ugm3,
-    o3_ppb
-  ) %>%
-  mutate(
-    dia = day(ymd_hms(datahora)),
-    mes = month(ymd_hms(datahora)),
-    hora = hour(ymd_hms(datahora))
-  ) %>%
-  filter(mes == 11 & dia %in% c(3,10) & hora == 12) %>% #Dia e hora do ENEM# 2018
-  select(-hora)
-
-inpe <- inpe %>%
-  mutate(
-    nomemun = stri_trans_general(municipio_nome, "Latin-ASCII"),
-    nomemun = gsub(" ","",x = nomemun),
-    nomemun = gsub("-","",x = nomemun),
-    nomemun = gsub("'","",x = nomemun),
-    nomeuf = stri_trans_general(uf_nome, "Latin-ASCII"),
-    nomeuf = gsub(" ","",x = nomeuf),
-    nomeuf = gsub("-","",x = nomeuf),
-    nomeuf = gsub("'","",x = nomeuf)
-  ) %>% 
-  inner_join(dtb, by = c("nomemun","nomeuf")) %>%
-  rename(
-    vento = vento_velocidade_ms,
-    temp = temperatura_c,
-    prec = precipitacao_mmdia,
-    umid = umidade_relativa_percentual,
-    pm25 = pm25_ugm3,
-    o3 = o3_ppb
-  ) %>%
-  select(-nomeuf,-nomemun,-municipio_nome,-uf_nome,-mes) %>%
-  pivot_wider(id_cols = codmun,names_from = dia,values_from = c(vento,temp,prec,umid,pm25,o3))
-
-rm(dtb)
-saveRDS(inpe, "Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2019.rds")
-
+readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2019.rds")
 # ---------------------------------------------------------------------------- #
 ### 18.2.2 Unidos ----
 # ---------------------------------------------------------------------------- #
@@ -4176,9 +4049,9 @@ rm(ef,i, base_y, base_ag)
 
 
 
-
+# ---------------------------------------------------------------------------- #
 ##18.5 TABELA --------------------------------------------------------------
-
+# ---------------------------------------------------------------------------- #
 
 vnames <- c(
   '18 years old',
@@ -4834,32 +4707,6 @@ covs$ep19[covs$var == vnames[13]] <- rlist[["2019_umid_d1"]]$z[[3]] #um1d
 covs$ep19[covs$var == vnames[14]] <- rlist[["2019_umid_d2"]]$z[[3]] #um2d
 
 
-# plot_covs <- ggplot(data = covs) +
-#   theme_bw() + 
-#   labs(x = 't-statistic', y = NULL) + 
-#   scale_x_continuous(breaks = c(-1.96, 0, +1.96), 
-#                      labels = c(-1.96, '', 1.96), 
-#                      limits = c(-5.1, 5.1)) + 
-#   geom_vline(xintercept = c(-1.96, 1.96), color = 'red', linetype = 'dashed', linewidth = 1) + 
-#   geom_point(aes(x = ep18, y = var), color = '#1A2D99', size = 2.25) + 
-#   geom_point(aes(x = ep19, y = var), color = '#fc8d62', size = 2.25) + 
-#   
-#   scale_color_manual(
-#     values = c("2018" = '#1A2D99', "2019" = '#fc8d62')
-#   ) +
-#   theme(
-#     panel.grid.minor.x = element_blank(),
-#     panel.grid.minor.y = element_blank(),
-#     axis.title.x = element_text(size = 25),
-#     axis.title.y = element_text(size = 25),
-#     axis.text.x = element_text(size = 20),
-#     axis.text.y = element_text(size = 20),
-#     legend.title = element_text(size = 20),
-#     legend.text = element_text(size = 19)
-#   )
-# 
-# 
-# plot_covs
 
 library(tidyverse)
 
@@ -4920,7 +4767,7 @@ plot_covs
 ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/both_matched_covs_test_lvl.png"), device = "png", height = 10, width = 8)
 ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/both_matched_covs_test_lvl.eps"), device = "eps", height = 10, width = 8)
 
-rm( covs, plot_covs, covs_long)
+rm( covs, plot_covs, covs_long, rlist)
 
 # ---------------------------------------------------------------------------- #
 ### 18.6.5 Mun  -----
@@ -5108,7 +4955,8 @@ plot_covs <- ggplot(data = covs_np) +
   theme_bw() +
   labs(x = 't-statistic', y = NULL) +
   scale_x_continuous(breaks = c(-1.96, 0, +1.96),
-                     labels = c(-1.96, '', 1.96)) +
+                     labels = c(-1.96, '', 1.96),
+                     limits = c(-6, 6)) +
   geom_vline(xintercept = c(-1.96, 1.96), color = 'red', linetype = 'dashed', linewidth = 1) +
   geom_point(aes(x = ep18, y = var), color = '#1A2D99', size = 2.25) +
   theme(panel.grid.minor.x = element_blank(),
@@ -5123,7 +4971,7 @@ plot_covs
 ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/covs_test_dif_.png"), device = "png", height = 10, width = 7)
 ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/covs_test_dif_.eps"), device = "eps", height = 10, width = 7)
 
-rm( covs, plot_covs)
+rm( covs_np, plot_covs, temp, mun_agre, mun_nopair)
 
 
 
