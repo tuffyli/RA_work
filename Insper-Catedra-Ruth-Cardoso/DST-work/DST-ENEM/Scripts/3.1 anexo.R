@@ -4515,6 +4515,7 @@ map <- ggplot(mun_hv) +
 
 map
 
+rm(map, line)
 #ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band.png"),plot = map,device = "png", dpi = 300)
 
 # ---------------------------------------------------------------------------- #
@@ -4602,72 +4603,29 @@ summary(base_inpe_t %>% select(id18, hv, pair_id, lat, lon))
 
 library(broom)
 
-
-ef <- dummy_cols(base_inpe_t$seg[base_inpe_t$ano == 2018])
-ef <- ef %>% select(-1,-2)
-
-# test_covariates <- function(data, var_list, treat_var = "hv", fe_var = "pair_id",
-#                             lat = "lat", lon = "lon", ef = "ef") {
-#   results <- lapply(var_list, function(var) {
-#     formula_str <- paste0(var, " ~ ", treat_var,"+", lat, "+", lon, " | ", fe_var, "+", ef)
-#     model <- feols(as.formula(formula_str), data = data)
-#     
-#     tidy_result <- broom::tidy(model)
-#     treat_row <- tidy_result[tidy_result$term == treat_var, ]
-#     
-#     # Compute z-stat manually
-#     z_stat <- treat_row$estimate / treat_row$std.error
-#     
-#     data.frame(
-#       variable = var,
-#       estimate = treat_row$estimate,
-#       std.error = treat_row$std.error,
-#       statistic = z_stat,
-#       p.value = treat_row$p.value
-#     )
-#   })
-#   
-#   do.call(rbind, results)
-# }
-# 
-# results_list <- list()
-# 
-# for (year in c(2019, 2018)) {
-#   
-#   temp <- base_inpe_t %>% 
-#     filter(ano == year)
-#   
-#   results_covs <- test_covariates(data = temp, var_list = var_list)
-#   
-#   results_list[[as.character(year)]] <- results_covs
-#   
-#   
-#   print(paste("Resultados para o ano", year))
-#   print(results_covs)
-# }
-# 
-# 
-# 
-# 
-
 #Runing the regression
 rlist <- list()
 
 for (year in c(2018:2019)){
   
   base_y <- base_inpe_t %>% 
-    filter(ano == year)
+    filter(ano == year, 
+           priv0 == 1)
   
   
   for (i in var_list){
     
-    print(i)
+    # --- Individual Level ---- #
     
     base_ag <- base_y %>% filter(!is.na(.data[[i]]))
     
-    
+    #Seg dummy
     ef <- dummy_cols(base_ag$seg)
     ef <- ef %>% select(-1,-2)
+    
+    #Pair dummy
+    pair_dum <- dummy_cols(base_ag$pair_id)
+    pair_dum <- pair_dum %>% select(-1,-2)
     
     
     rlist[[as.character(paste0(year,"_",i))]] <-
@@ -4682,26 +4640,22 @@ for (year in c(2018:2019)){
         vce = "hc0",
         covs = cbind(
           ef,
-          #base_ag$pair_id,
+          pair_dum,
           base_ag$lat, 
           base_ag$lon
         )
       )
     
-    
-    
-    
-    message("Finished for: ", i)
-    
+    message("Individual Estimation finished: ", i)
     
   }
   
   message(" -------------------------- ")
   message("Finished for year: ", year)
   message(" -------------------------- ")
-  
+  rm(year)
 }
-rm(ef,i, base_y, base_ag)
+rm(i, base_y, base_ag, residual)
 
 
 
@@ -4710,7 +4664,7 @@ rm(ef,i, base_y, base_ag)
 
 
 # ---------------------------------------------------------------------------- #
-#### 18.6.3.1 Tabela ----
+### 18.6.4 Tabela ----
 # ---------------------------------------------------------------------------- #
 
 vnames <- c(
@@ -4730,110 +4684,111 @@ vnames <- c(
   "Humidity - Day 2"
 )
 
+# 
+# ##### 2018 ---- #
+# covs <- data.frame(
+#   ano = rep(2017:2017, length(vnames)),
+#   var = vnames,
+#   ep = rep(NA, times = length(vnames))
+# ) %>% 
+#   mutate(
+#     ano = "2018"
+#   )
+# 
+# 
+# covs$ep[covs$var == vnames[1]] <- results_list[["2018"]]$statistic[1] #id18
+# covs$ep[covs$var == vnames[2]] <- results_list[["2018"]]$statistic[2] #fem
+# covs$ep[covs$var == vnames[3]] <- results_list[["2018"]]$statistic[3] #ppi
+# covs$ep[covs$var == vnames[4]] <- results_list[["2018"]]$statistic[4] #escp
+# covs$ep[covs$var == vnames[5]] <- results_list[["2018"]]$statistic[5] #escm
+# covs$ep[covs$var == vnames[6]] <- results_list[["2018"]]$statistic[6] #dom5
+# covs$ep[covs$var == vnames[7]] <- results_list[["2018"]]$statistic[7] #renda1
+# covs$ep[covs$var == vnames[8]] <- results_list[["2018"]]$statistic[8] #pibpc
+# covs$ep[covs$var == vnames[9]] <- results_list[["2018"]]$statistic[9] #trab manual Pai
+# covs$ep[covs$var == vnames[10]] <- results_list[["2018"]]$statistic[10] #trab manual Mae
+# covs$ep[covs$var == vnames[11]] <- results_list[["2018"]]$statistic[11] #temp1d
+# covs$ep[covs$var == vnames[12]] <- results_list[["2018"]]$statistic[12] #temp2d
+# covs$ep[covs$var == vnames[13]] <- results_list[["2018"]]$statistic[13] #um1d
+# covs$ep[covs$var == vnames[14]] <- results_list[["2018"]]$statistic[14] #um2d
+# 
+# 
+# 
+# plot_covs <- ggplot(data = covs) +
+#   theme_bw() + 
+#   labs(x = 't-statistic', y = NULL) + 
+#   scale_x_continuous(breaks = c(-1.96, 0, +1.96), 
+#                      labels = c(-1.96, '', 1.96), 
+#                      limits = c(-12.43, 12.43)) + 
+#   geom_vline(xintercept = c(-1.96, 1.96), color = 'red', linetype = 'dashed', linewidth = 1) + 
+#   geom_point(aes(x = ep, y = var), color = '#1A2D99', size = 2.25) + 
+#   theme(panel.grid.minor.x = element_blank(),
+#         panel.grid.minor.y = element_blank()) + 
+#   theme(axis.title.x = element_text(size = 25),
+#         axis.title.y = element_text(size = 25),
+#         axis.text.x = element_text(size = 20),
+#         axis.text.y = element_text(size = 20))
+# 
+# plot_covs
+# 
+# ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/matched_covs_test_",2018,"_.png"), device = "png", height = 10, width = 7)
+# ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/matched_covs_test_",2018,"_.eps"), device = "eps", height = 10, width = 7)
+# 
+# rm( covs, plot_covs)
+# 
+# ##### 2019 ---- #
+# covs <- data.frame(
+#   ano = rep(2017:2017, length(vnames)),
+#   var = vnames,
+#   ep = rep(NA, times = length(vnames))
+# ) %>% 
+#   mutate(
+#     ano = "2019"
+#   )
+# 
+# 
+# covs$ep[covs$var == vnames[1]] <- rlist[["2019_id18"]]$z[[3]]#id18
+# covs$ep[covs$var == vnames[2]] <- rlist[["2019_fem"]]$z[[3]] #fem
+# covs$ep[covs$var == vnames[3]] <- rlist[["2019_ppi"]]$z[[3]] #ppi
+# covs$ep[covs$var == vnames[4]] <- rlist[["2019_escp"]]$z[[3]] #escp
+# covs$ep[covs$var == vnames[5]] <- rlist[["2019_escm"]]$z[[3]] #escm
+# covs$ep[covs$var == vnames[6]] <- rlist[["2019_dom5"]]$z[[3]] #dom5
+# covs$ep[covs$var == vnames[7]] <- rlist[["2019_renda1"]]$z[[3]] #renda1
+# covs$ep[covs$var == vnames[8]] <- rlist[["2019_pibpc"]]$z[[3]] #pibpc
+# covs$ep[covs$var == vnames[9]] <- rlist[["2019_pai_trab_man"]]$z[[3]] #trab manual Pai
+# covs$ep[covs$var == vnames[10]] <- rlist[["2019_mae_trab_man"]]$z[[3]] #trab manual Mae
+# covs$ep[covs$var == vnames[11]] <- rlist[["2019_temp_1d"]]$z[[3]] #temp1d
+# covs$ep[covs$var == vnames[12]] <- rlist[["2019_temp_2d"]]$z[[3]] #temp2d
+# covs$ep[covs$var == vnames[13]] <- rlist[["2019_umid_1d"]]$z[[3]] #um1d
+# covs$ep[covs$var == vnames[14]] <- rlist[["2019_umid_2d"]]$z[[3]] #um2d
+# 
+# 
+# 
+# plot_covs <- ggplot(data = covs) +
+#   theme_bw() + 
+#   labs(x = 't-statistic', y = NULL) + 
+#   scale_x_continuous(breaks = c(-1.96, 0, +1.96), 
+#                      labels = c(-1.96, '', 1.96), 
+#                      limits = c(-7.2, 7.2)) + 
+#   geom_vline(xintercept = c(-1.96, 1.96), color = 'red', linetype = 'dashed', linewidth = 1) + 
+#   geom_point(aes(x = ep, y = var), color = '#1A2D99', size = 2.25) + 
+#   theme(panel.grid.minor.x = element_blank(),
+#         panel.grid.minor.y = element_blank()) + 
+#   theme(axis.title.x = element_text(size = 25),
+#         axis.title.y = element_text(size = 25),
+#         axis.text.x = element_text(size = 20),
+#         axis.text.y = element_text(size = 20))
+# 
+# plot_covs
+# 
+# ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/matched_covs_test_",2019,"_.png"), device = "png", height = 10, width = 7)
+# ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/matched_covs_test_",2019,"_.eps"), device = "eps", height = 10, width = 7)
+# 
+# rm( covs, plot_covs)
 
-##### 2018 ----
-covs <- data.frame(
-  ano = rep(2017:2017, length(vnames)),
-  var = vnames,
-  ep = rep(NA, times = length(vnames))
-) %>% 
-  mutate(
-    ano = "2018"
-  )
 
-
-covs$ep[covs$var == vnames[1]] <- results_list[["2018"]]$statistic[1] #id18
-covs$ep[covs$var == vnames[2]] <- results_list[["2018"]]$statistic[2] #fem
-covs$ep[covs$var == vnames[3]] <- results_list[["2018"]]$statistic[3] #ppi
-covs$ep[covs$var == vnames[4]] <- results_list[["2018"]]$statistic[4] #escp
-covs$ep[covs$var == vnames[5]] <- results_list[["2018"]]$statistic[5] #escm
-covs$ep[covs$var == vnames[6]] <- results_list[["2018"]]$statistic[6] #dom5
-covs$ep[covs$var == vnames[7]] <- results_list[["2018"]]$statistic[7] #renda1
-covs$ep[covs$var == vnames[8]] <- results_list[["2018"]]$statistic[8] #pibpc
-covs$ep[covs$var == vnames[9]] <- results_list[["2018"]]$statistic[9] #trab manual Pai
-covs$ep[covs$var == vnames[10]] <- results_list[["2018"]]$statistic[10] #trab manual Mae
-covs$ep[covs$var == vnames[11]] <- results_list[["2018"]]$statistic[11] #temp1d
-covs$ep[covs$var == vnames[12]] <- results_list[["2018"]]$statistic[12] #temp2d
-covs$ep[covs$var == vnames[13]] <- results_list[["2018"]]$statistic[13] #um1d
-covs$ep[covs$var == vnames[14]] <- results_list[["2018"]]$statistic[14] #um2d
-
-
-
-plot_covs <- ggplot(data = covs) +
-  theme_bw() + 
-  labs(x = 't-statistic', y = NULL) + 
-  scale_x_continuous(breaks = c(-1.96, 0, +1.96), 
-                     labels = c(-1.96, '', 1.96), 
-                     limits = c(-12.43, 12.43)) + 
-  geom_vline(xintercept = c(-1.96, 1.96), color = 'red', linetype = 'dashed', linewidth = 1) + 
-  geom_point(aes(x = ep, y = var), color = '#1A2D99', size = 2.25) + 
-  theme(panel.grid.minor.x = element_blank(),
-        panel.grid.minor.y = element_blank()) + 
-  theme(axis.title.x = element_text(size = 25),
-        axis.title.y = element_text(size = 25),
-        axis.text.x = element_text(size = 20),
-        axis.text.y = element_text(size = 20))
-
-plot_covs
-
-ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/matched_covs_test_",2018,"_.png"), device = "png", height = 10, width = 7)
-ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/matched_covs_test_",2018,"_.eps"), device = "eps", height = 10, width = 7)
-
-rm( covs, plot_covs)
-
-##### 2019 ----
-covs <- data.frame(
-  ano = rep(2017:2017, length(vnames)),
-  var = vnames,
-  ep = rep(NA, times = length(vnames))
-) %>% 
-  mutate(
-    ano = "2019"
-  )
-
-
-covs$ep[covs$var == vnames[1]] <- rlist[["2019_id18"]]$z[[3]]#id18
-covs$ep[covs$var == vnames[2]] <- rlist[["2019_fem"]]$z[[3]] #fem
-covs$ep[covs$var == vnames[3]] <- rlist[["2019_ppi"]]$z[[3]] #ppi
-covs$ep[covs$var == vnames[4]] <- rlist[["2019_escp"]]$z[[3]] #escp
-covs$ep[covs$var == vnames[5]] <- rlist[["2019_escm"]]$z[[3]] #escm
-covs$ep[covs$var == vnames[6]] <- rlist[["2019_dom5"]]$z[[3]] #dom5
-covs$ep[covs$var == vnames[7]] <- rlist[["2019_renda1"]]$z[[3]] #renda1
-covs$ep[covs$var == vnames[8]] <- rlist[["2019_pibpc"]]$z[[3]] #pibpc
-covs$ep[covs$var == vnames[9]] <- rlist[["2019_pai_trab_man"]]$z[[3]] #trab manual Pai
-covs$ep[covs$var == vnames[10]] <- rlist[["2019_mae_trab_man"]]$z[[3]] #trab manual Mae
-covs$ep[covs$var == vnames[11]] <- rlist[["2019_temp_1d"]]$z[[3]] #temp1d
-covs$ep[covs$var == vnames[12]] <- rlist[["2019_temp_2d"]]$z[[3]] #temp2d
-covs$ep[covs$var == vnames[13]] <- rlist[["2019_umid_1d"]]$z[[3]] #um1d
-covs$ep[covs$var == vnames[14]] <- rlist[["2019_umid_2d"]]$z[[3]] #um2d
-
-
-
-plot_covs <- ggplot(data = covs) +
-  theme_bw() + 
-  labs(x = 't-statistic', y = NULL) + 
-  scale_x_continuous(breaks = c(-1.96, 0, +1.96), 
-                     labels = c(-1.96, '', 1.96), 
-                     limits = c(-7.2, 7.2)) + 
-  geom_vline(xintercept = c(-1.96, 1.96), color = 'red', linetype = 'dashed', linewidth = 1) + 
-  geom_point(aes(x = ep, y = var), color = '#1A2D99', size = 2.25) + 
-  theme(panel.grid.minor.x = element_blank(),
-        panel.grid.minor.y = element_blank()) + 
-  theme(axis.title.x = element_text(size = 25),
-        axis.title.y = element_text(size = 25),
-        axis.text.x = element_text(size = 20),
-        axis.text.y = element_text(size = 20))
-
-plot_covs
-
-ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/matched_covs_test_",2019,"_.png"), device = "png", height = 10, width = 7)
-ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/matched_covs_test_",2019,"_.eps"), device = "eps", height = 10, width = 7)
-
-rm( covs, plot_covs)
-
-
-
-######## JUNTOS ----
+# ---------------------------------------------------------------------------- #
+####18.6.4.1 JUNTOS ----
+# ---------------------------------------------------------------------------- #
 
 covs <- data.frame(
   ano = rep(2017:2017, length(vnames)),
@@ -4845,66 +4800,66 @@ covs <- data.frame(
     ano = "Both"
   )
 
-covs$ep18[covs$var == vnames[1]] <- results_list[["2018"]]$statistic[1] #id18
-covs$ep18[covs$var == vnames[2]] <- results_list[["2018"]]$statistic[2] #fem
-covs$ep18[covs$var == vnames[3]] <- results_list[["2018"]]$statistic[3] #ppi
-covs$ep18[covs$var == vnames[4]] <- results_list[["2018"]]$statistic[4] #escp
-covs$ep18[covs$var == vnames[5]] <- results_list[["2018"]]$statistic[5] #escm
-covs$ep18[covs$var == vnames[6]] <- results_list[["2018"]]$statistic[6] #dom5
-covs$ep18[covs$var == vnames[7]] <- results_list[["2018"]]$statistic[7] #renda1
-covs$ep18[covs$var == vnames[8]] <- results_list[["2018"]]$statistic[8] #pibpc
-covs$ep18[covs$var == vnames[9]] <- results_list[["2018"]]$statistic[9] #trab manual Pai
-covs$ep18[covs$var == vnames[10]] <- results_list[["2018"]]$statistic[10] #trab manual Mae
-covs$ep18[covs$var == vnames[11]] <- results_list[["2018"]]$statistic[11] #temp1d
-covs$ep18[covs$var == vnames[12]] <- results_list[["2018"]]$statistic[12] #temp2d
-covs$ep18[covs$var == vnames[13]] <- results_list[["2018"]]$statistic[13] #um1d
-covs$ep18[covs$var == vnames[14]] <- results_list[["2018"]]$statistic[14] #um2d
+covs$ep18[covs$var == vnames[1]] <- rlist[["2018_id18"]]$z[[3]] #id18
+covs$ep18[covs$var == vnames[2]] <- rlist[["2018_fem"]]$z[[3]] #fem
+covs$ep18[covs$var == vnames[3]] <- rlist[["2018_ppi"]]$z[[3]] #ppi
+covs$ep18[covs$var == vnames[4]] <- rlist[["2018_escp"]]$z[[3]] #escp
+covs$ep18[covs$var == vnames[5]] <- rlist[["2018_escm"]]$z[[3]] #escm
+covs$ep18[covs$var == vnames[6]] <- rlist[["2018_dom5"]]$z[[3]] #dom5
+covs$ep18[covs$var == vnames[7]] <- rlist[["2018_renda1"]]$z[[3]] #renda1
+covs$ep18[covs$var == vnames[8]] <- rlist[["2018_pibpc"]]$z[[3]] #pibpc
+covs$ep18[covs$var == vnames[9]] <- rlist[["2018_pai_trab_man"]]$z[[3]] #trab manual Pai
+covs$ep18[covs$var == vnames[10]] <- rlist[["2018_mae_trab_man"]]$z[[3]] #trab manual Mae
+covs$ep18[covs$var == vnames[11]] <- rlist[["2018_temp_d1"]]$z[[3]] #temp1d
+covs$ep18[covs$var == vnames[12]] <- rlist[["2018_temp_d2"]]$z[[3]] #temp2d
+covs$ep18[covs$var == vnames[13]] <- rlist[["2018_umid_d1"]]$z[[3]] #um1d
+covs$ep18[covs$var == vnames[14]] <- rlist[["2018_umid_d2"]]$z[[3]] #um2d
 
 
 
 
-covs$ep19[covs$var == vnames[1]] <- results_list[["2019"]]$statistic[1] #id19
-covs$ep19[covs$var == vnames[2]] <- results_list[["2019"]]$statistic[2] #fem
-covs$ep19[covs$var == vnames[3]] <- results_list[["2019"]]$statistic[3] #ppi
-covs$ep19[covs$var == vnames[4]] <- results_list[["2019"]]$statistic[4] #escp
-covs$ep19[covs$var == vnames[5]] <- results_list[["2019"]]$statistic[5] #escm
-covs$ep19[covs$var == vnames[6]] <- results_list[["2019"]]$statistic[6] #dom5
-covs$ep19[covs$var == vnames[7]] <- results_list[["2019"]]$statistic[7] #renda1
-covs$ep19[covs$var == vnames[8]] <- results_list[["2019"]]$statistic[8] #pibpc
-covs$ep19[covs$var == vnames[9]] <- results_list[["2019"]]$statistic[9] #trab manual Pai
-covs$ep19[covs$var == vnames[10]] <- results_list[["2019"]]$statistic[10] #trab manual Mae
-covs$ep19[covs$var == vnames[11]] <- results_list[["2019"]]$statistic[11] #temp1d
-covs$ep19[covs$var == vnames[12]] <- results_list[["2019"]]$statistic[12] #temp2d
-covs$ep19[covs$var == vnames[13]] <- results_list[["2019"]]$statistic[13] #um1d
-covs$ep19[covs$var == vnames[14]] <- results_list[["2019"]]$statistic[14] #um2d
+covs$ep19[covs$var == vnames[1]] <- rlist[["2019_id18"]]$z[[3]] #id19
+covs$ep19[covs$var == vnames[2]] <- rlist[["2019_fem"]]$z[[3]] #fem
+covs$ep19[covs$var == vnames[3]] <- rlist[["2019_ppi"]]$z[[3]] #ppi
+covs$ep19[covs$var == vnames[4]] <- rlist[["2019_escp"]]$z[[3]] #escp
+covs$ep19[covs$var == vnames[5]] <- rlist[["2019_escm"]]$z[[3]] #escm
+covs$ep19[covs$var == vnames[6]] <- rlist[["2019_dom5"]]$z[[3]] #dom5
+covs$ep19[covs$var == vnames[7]] <- rlist[["2019_renda1"]]$z[[3]] #renda1
+covs$ep19[covs$var == vnames[8]] <- rlist[["2019_pibpc"]]$z[[3]] #pibpc
+covs$ep19[covs$var == vnames[9]] <- rlist[["2019_pai_trab_man"]]$z[[3]] #trab manual Pai
+covs$ep19[covs$var == vnames[10]] <- rlist[["2019_mae_trab_man"]]$z[[3]] #trab manual Mae
+covs$ep19[covs$var == vnames[11]] <- rlist[["2019_temp_d1"]]$z[[3]] #temp1d
+covs$ep19[covs$var == vnames[12]] <- rlist[["2019_temp_d2"]]$z[[3]] #temp2d
+covs$ep19[covs$var == vnames[13]] <- rlist[["2019_umid_d1"]]$z[[3]] #um1d
+covs$ep19[covs$var == vnames[14]] <- rlist[["2019_umid_d2"]]$z[[3]] #um2d
 
 
-plot_covs <- ggplot(data = covs) +
-  theme_bw() + 
-  labs(x = 't-statistic', y = NULL) + 
-  scale_x_continuous(breaks = c(-1.96, 0, +1.96), 
-                     labels = c(-1.96, '', 1.96), 
-                     limits = c(-5.1, 5.1)) + 
-  geom_vline(xintercept = c(-1.96, 1.96), color = 'red', linetype = 'dashed', linewidth = 1) + 
-  geom_point(aes(x = ep18, y = var), color = '#1A2D99', size = 2.25) + 
-  geom_point(aes(x = ep19, y = var), color = '#fc8d62', size = 2.25) + 
-  
-  scale_color_manual(
-    values = c("2018" = '#1A2D99', "2019" = '#fc8d62')
-  ) +
-  theme(
-    panel.grid.minor.x = element_blank(),
-    panel.grid.minor.y = element_blank(),
-    axis.title.x = element_text(size = 25),
-    axis.title.y = element_text(size = 25),
-    axis.text.x = element_text(size = 20),
-    axis.text.y = element_text(size = 20),
-    legend.title = element_text(size = 20),
-    legend.text = element_text(size = 19)
-  )
-
-
-plot_covs
+# plot_covs <- ggplot(data = covs) +
+#   theme_bw() + 
+#   labs(x = 't-statistic', y = NULL) + 
+#   scale_x_continuous(breaks = c(-1.96, 0, +1.96), 
+#                      labels = c(-1.96, '', 1.96), 
+#                      limits = c(-5.1, 5.1)) + 
+#   geom_vline(xintercept = c(-1.96, 1.96), color = 'red', linetype = 'dashed', linewidth = 1) + 
+#   geom_point(aes(x = ep18, y = var), color = '#1A2D99', size = 2.25) + 
+#   geom_point(aes(x = ep19, y = var), color = '#fc8d62', size = 2.25) + 
+#   
+#   scale_color_manual(
+#     values = c("2018" = '#1A2D99', "2019" = '#fc8d62')
+#   ) +
+#   theme(
+#     panel.grid.minor.x = element_blank(),
+#     panel.grid.minor.y = element_blank(),
+#     axis.title.x = element_text(size = 25),
+#     axis.title.y = element_text(size = 25),
+#     axis.text.x = element_text(size = 20),
+#     axis.text.y = element_text(size = 20),
+#     legend.title = element_text(size = 20),
+#     legend.text = element_text(size = 19)
+#   )
+# 
+# 
+# plot_covs
 
 library(tidyverse)
 
@@ -4919,22 +4874,28 @@ covs_long <- covs_long %>%
                             "ep18" = "2018",
                             "ep19" = "2019"))
 
+covs_long <- covs_long %>%
+  mutate(ep = factor(ep, levels = c("2018", "2019")))
+
 # Step 3: Plot
-plot_covs <- ggplot(data = covs_long) +
+plot_covs <- ggplot(data = covs_long, aes(x = tstat, y = var, color = ep, shape = ep)) +
   theme_bw() + 
-  labs(x = 't-statistic', y = NULL, color = "Year") + 
+  labs(x = 't-statistic', y = NULL, color = "Year", shape = "Year") + 
   scale_x_continuous(
     breaks = c(-1.96, 0, +1.96), 
-    labels = c("-1.96", "", "1.96"), 
-    limits = c(-6.35, 12.35)
+    labels = c("-1.96", "", "1.96") 
   ) + 
   geom_vline(xintercept = c(-1.96, 1.96), 
              color = 'red', 
              linetype = 'dashed', 
              linewidth = 1) + 
   geom_point(aes(x = tstat, y = var, color = ep), size = 2.25) +
-  scale_color_manual(
-    values = c("2018" = "#1A2D99", "2019" = "#D55E00")
+  scale_color_manual(values = c("2018" = "#1A2D99", "2019" = "#D55E00")) +
+  scale_shape_manual(values = c("2018" = 16, "2019" = 17)) +
+  # garante que a legenda mostre os shapes com os mesmos estéticos do plot
+  guides(
+    color = guide_legend(override.aes = list(shape = c(16, 17), size = 4)),
+    shape = "none"
   ) +
   theme(
     panel.grid.minor.x = element_blank(),
@@ -4946,8 +4907,8 @@ plot_covs <- ggplot(data = covs_long) +
     legend.title = element_text(size = 20),
     legend.text = element_text(size = 19),
     
-    legend.position = c(1.01, 0),  
-    legend.justification = c(0, 0),  
+    legend.position = "right",  
+    #legend.justification = c(0, 0),  
     
     plot.margin = margin(c(10, 80, 10, 10), "pt")  
   )
@@ -4956,10 +4917,214 @@ plot_covs
 
 
 
-ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/both_matched_covs_test.png"), device = "png", height = 10, width = 8)
-ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/both_matched_covs_test.eps"), device = "eps", height = 10, width = 8)
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/both_matched_covs_test_lvl.png"), device = "png", height = 10, width = 8)
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/both_matched_covs_test_lvl.eps"), device = "eps", height = 10, width = 8)
+
+rm( covs, plot_covs, covs_long)
+
+# ---------------------------------------------------------------------------- #
+### 18.6.5 Mun  -----
+#### 18.6.5.1 Regression ----
+# ---------------------------------------------------------------------------- #
+
+
+mun_agre <- list()
+mun_nopair <- list()
+
+for (i in var_list) {
+  
+  #Base
+  temp <- base_inpe_t %>% 
+    filter(priv0 == 1) %>% 
+    filter(!is.na(.data[[i]]))
+  
+  # --- Municipal Level ---- #
+  
+  base_mun <- temp %>% 
+    filter(!is.na(pair_id)) %>% 
+    group_by(mun_prova, lat, lon, seg, dist_hv_border, ano) %>% 
+    summarise(
+      var_y = mean(.data[[i]], na.rm = T),
+      pair_id = first(pair_id),
+      obs = n(),
+      .groups = "drop"
+    ) %>% 
+    #Organizing
+    filter(as.numeric(ano) %in% c(2018, 2019)) %>%
+    arrange(mun_prova, ano) %>%
+    group_by(mun_prova) %>%
+    
+    #Year difference
+    mutate(
+      dup1 = 1,
+      dup2 = sum(dup1),
+      v1_var_y = ifelse(ano == 2018, var_y, NA),
+      v2_var_y = max(v1_var_y, na.rm = T),
+      dvar_y = var_y - v2_var_y
+    ) %>%
+    ungroup() %>%
+    filter(dup2 == 2) %>%
+    select(-c(dup2, dup1, v1_var_y, v2_var_y))
+  
+  #Seg dummy 
+  ef <- dummy_cols(base_mun$seg[base_mun$ano == 2018]) 
+  ef <- ef %>% select(-1,-2)
+  
+  #Pair dummy 
+  pair_dum <- dummy_cols(base_mun$pair_id[base_mun$ano == 2018]) 
+  pair_dum <- pair_dum %>% select(-1,-2)
+  
+  #Mun results
+  mun_agre[[as.character(paste0("dif_",i))]] <-
+    rdrobust(
+      y = base_mun$var_y[base_mun$ano == 2019],
+      x = base_mun$dist_hv_border[base_mun$ano == 2018],
+      c = 0,
+      p = 1,
+      h = bw_main_a,
+      b = bw_bias_a,
+      weights = base_mun$obs[base_mun$ano == 2018],
+      cluster = base_mun$pair_id[base_mun$ano == 2018],
+      vce = "hc0",
+      covs = cbind(ef, pair_dum,
+                   base_mun$lat[base_mun$ano == 2018],
+                   base_mun$lon[base_mun$ano == 2018]  )
+    )
+  
+  #Mun results - No pairing
+  mun_nopair[[as.character(paste0("dif_",i))]] <-
+    rdrobust(
+      y = base_mun$var_y[base_mun$ano == 2019],
+      x = base_mun$dist_hv_border[base_mun$ano == 2018],
+      c = 0,
+      p = 1,
+      h = bw_main_a,
+      b = bw_bias_a,
+      weights = base_mun$obs[base_mun$ano == 2018],
+      cluster = base_mun$seg[base_mun$ano == 2018],
+      vce = "hc0",
+      covs = cbind(ef,
+                   base_mun$lat[base_mun$ano == 2018],
+                   base_mun$lon[base_mun$ano == 2018]  )
+    )
+  
+  
+  
+  message("Finished for: ", i)
+  
+  rm(base_mun, pair_dum, ef )
+  
+}
+
+
+
+covs <- data.frame(
+  ano = rep(2017:2017, length(vnames)),
+  var = vnames,
+  ep18 = rep(NA, times = length(vnames))
+) %>% 
+  mutate(
+    ano = "Both"
+  )
+
+covs$ep18[covs$var == vnames[1]] <- mun_agre[["dif_id18"]]$z[[3]] #id18
+covs$ep18[covs$var == vnames[2]] <- mun_agre[["dif_fem"]]$z[[3]] #fem
+covs$ep18[covs$var == vnames[3]] <- mun_agre[["dif_ppi"]]$z[[3]] #ppi
+covs$ep18[covs$var == vnames[4]] <- mun_agre[["dif_escp"]]$z[[3]] #escp
+covs$ep18[covs$var == vnames[5]] <- mun_agre[["dif_escm"]]$z[[3]] #escm
+covs$ep18[covs$var == vnames[6]] <- mun_agre[["dif_dom5"]]$z[[3]] #dom5
+covs$ep18[covs$var == vnames[7]] <- mun_agre[["dif_renda1"]]$z[[3]] #renda1
+covs$ep18[covs$var == vnames[8]] <- mun_agre[["dif_pibpc"]]$z[[3]] #pibpc
+covs$ep18[covs$var == vnames[9]] <- mun_agre[["dif_pai_trab_man"]]$z[[3]] #trab manual Pai
+covs$ep18[covs$var == vnames[10]] <- mun_agre[["dif_mae_trab_man"]]$z[[3]] #trab manual Mae
+covs$ep18[covs$var == vnames[11]] <- mun_agre[["dif_temp_d1"]]$z[[3]] #temp1d
+covs$ep18[covs$var == vnames[12]] <- mun_agre[["dif_temp_d2"]]$z[[3]] #temp2d
+covs$ep18[covs$var == vnames[13]] <- mun_agre[["dif_umid_d1"]]$z[[3]] #um1d
+covs$ep18[covs$var == vnames[14]] <- mun_agre[["dif_umid_d2"]]$z[[3]] #um2d
+
+
+
+# ----------------- #
+# ---- No Pair ---- #
+# ----------------- #
+
+covs_np <- data.frame(
+  ano = rep(2017:2017, length(vnames)),
+  var = vnames,
+  ep18 = rep(NA, times = length(vnames))
+) %>% 
+  mutate(
+    ano = "Both"
+  )
+
+covs_np$ep18[covs_np$var == vnames[1]] <- mun_nopair[["dif_id18"]]$z[[3]] #id18
+covs_np$ep18[covs_np$var == vnames[2]] <- mun_nopair[["dif_fem"]]$z[[3]] #fem
+covs_np$ep18[covs_np$var == vnames[3]] <- mun_nopair[["dif_ppi"]]$z[[3]] #ppi
+covs_np$ep18[covs_np$var == vnames[4]] <- mun_nopair[["dif_escp"]]$z[[3]] #escp
+covs_np$ep18[covs_np$var == vnames[5]] <- mun_nopair[["dif_escm"]]$z[[3]] #escm
+covs_np$ep18[covs_np$var == vnames[6]] <- mun_nopair[["dif_dom5"]]$z[[3]] #dom5
+covs_np$ep18[covs_np$var == vnames[7]] <- mun_nopair[["dif_renda1"]]$z[[3]] #renda1
+covs_np$ep18[covs_np$var == vnames[8]] <- mun_nopair[["dif_pibpc"]]$z[[3]] #pibpc
+covs_np$ep18[covs_np$var == vnames[9]] <- mun_nopair[["dif_pai_trab_man"]]$z[[3]] #trab manual Pai
+covs_np$ep18[covs_np$var == vnames[10]] <- mun_nopair[["dif_mae_trab_man"]]$z[[3]] #trab manual Mae
+covs_np$ep18[covs_np$var == vnames[11]] <- mun_nopair[["dif_temp_d1"]]$z[[3]] #temp1d
+covs_np$ep18[covs_np$var == vnames[12]] <- mun_nopair[["dif_temp_d2"]]$z[[3]] #temp2d
+covs_np$ep18[covs_np$var == vnames[13]] <- mun_nopair[["dif_umid_d1"]]$z[[3]] #um1d
+covs_np$ep18[covs_np$var == vnames[14]] <- mun_nopair[["dif_umid_d2"]]$z[[3]] #um2d
+
+
+# ---------------------------------------------------------------------------- #
+#### 18.6.5.2 Plot  ---- 
+# ---------------------------------------------------------------------------- #
+
+
+plot_covs <- ggplot(data = covs) +
+  theme_bw() +
+  labs(x = 't-statistic', y = NULL) +
+  scale_x_continuous(breaks = c(-1.96, 0, +1.96),
+                     labels = c(-1.96, '', 1.96)) +
+  geom_vline(xintercept = c(-1.96, 1.96), color = 'red', linetype = 'dashed', linewidth = 1) +
+  geom_point(aes(x = ep18, y = var), color = '#1A2D99', size = 2.25) +
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank()) +
+  theme(axis.title.x = element_text(size = 25),
+        axis.title.y = element_text(size = 25),
+        axis.text.x = element_text(size = 20),
+        axis.text.y = element_text(size = 20))
+
+plot_covs
+
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/matched_covs_test_dif_.png"), device = "png", height = 10, width = 7)
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/matched_covs_test_dif_.eps"), device = "eps", height = 10, width = 7)
 
 rm( covs, plot_covs)
+
+
+# ----------------- #
+# ---- No Pair ---- #
+# ----------------- #
+
+plot_covs <- ggplot(data = covs_np) +
+  theme_bw() +
+  labs(x = 't-statistic', y = NULL) +
+  scale_x_continuous(breaks = c(-1.96, 0, +1.96),
+                     labels = c(-1.96, '', 1.96)) +
+  geom_vline(xintercept = c(-1.96, 1.96), color = 'red', linetype = 'dashed', linewidth = 1) +
+  geom_point(aes(x = ep18, y = var), color = '#1A2D99', size = 2.25) +
+  theme(panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank()) +
+  theme(axis.title.x = element_text(size = 25),
+        axis.title.y = element_text(size = 25),
+        axis.text.x = element_text(size = 20),
+        axis.text.y = element_text(size = 20))
+
+plot_covs
+
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/covs_test_dif_.png"), device = "png", height = 10, width = 7)
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/covs_test_dif_.eps"), device = "eps", height = 10, width = 7)
+
+rm( covs, plot_covs)
+
 
 
 # ---------------------------------------------------------------------------- #
