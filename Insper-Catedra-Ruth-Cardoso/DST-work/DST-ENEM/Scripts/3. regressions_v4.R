@@ -151,8 +151,41 @@ base <- base %>%
             )) 
 
 
+# ---------------------------------------------------------------------------- #
+### 1.0.1 INPE ----
+# ---------------------------------------------------------------------------- #
 
+inpe18 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2018.rds")
+inpe19 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2019.rds")
 
+base <- base %>% 
+  mutate(
+    temp_d1 = case_when(
+      ano == 2019 ~ inpe19$temp_3[match(mun_prova, inpe19$codmun)],
+      ano == 2018 ~ inpe18$temp_4[match(mun_prova, inpe18$codmun)],
+      TRUE ~ NA
+    ),
+    
+    temp_d2 = case_when(
+      ano == 2019 ~ inpe19$temp_10[match(mun_prova, inpe19$codmun)],
+      ano == 2018 ~ inpe18$temp_11[match(mun_prova, inpe18$codmun)],
+      TRUE ~ NA
+    ),
+    
+    umid_d1 = case_when(
+      ano == 2019 ~ inpe19$umid_3[match(mun_prova, inpe19$codmun)],
+      ano == 2018 ~ inpe18$umid_4[match(mun_prova, inpe18$codmun)],
+      TRUE ~ NA
+    ),
+    
+    umid_d2 = case_when(
+      ano == 2019 ~ inpe19$umid_10[match(mun_prova, inpe19$codmun)],
+      ano == 2018 ~ inpe18$umid_11[match(mun_prova, inpe18$codmun)],
+      TRUE ~ NA
+    )
+  )
+
+rm(inpe18, inpe19)
 # ---------------------------------------------------------------------------- #
 ### 1.0.2 Dist ----
 # ---------------------------------------------------------------------------- #
@@ -223,7 +256,7 @@ rm(mun_hv)
 # ---------------------------------------------------------------------------- #
 base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
                             idade = mean(id18, na.rm = T),
-                            esc_mae = mean(escm, na.rm = T),
+                            temp_d1 = mean(temp_d1, na.rm = T),
                             h13 = first(h13),
                             h12 = first(h12),
                             h11 = first(h11),
@@ -238,11 +271,19 @@ base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
     dup2 = sum(dup1),
     v1_nota = ifelse(ano == 2018, media, NA),
     v2_nota = max(v1_nota, na.rm = T),
-    d.media = media - v2_nota
+    d.media = media - v2_nota,
+    
+    v1idade = ifelse(ano == 2018, idade, NA),
+    v2idade = max(v1idade, na.rm = T),
+    didade = idade - v2idade,
+    
+    v1temp = ifelse(ano == 2018, temp_d1, NA),
+    v2temp = max(v1temp, na.rm = T),
+    dtemp  = temp_d1 - v2temp
   ) %>%
   ungroup() %>% 
   filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota)) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota, v1idade, v2idade, v1temp, v2temp)) %>% 
   group_by(mun_prova) %>% 
   mutate(
     d.h13 = h13[ano == 2019] + h13[ano == 2018], #2 = Manteve, 1 mudou, 0 nunca
@@ -323,10 +364,11 @@ list[[as.character(paste0(2019,"-",2018,"|fuso+C"))]] <- rdrobust(
     ef,
     base_a$lat[base_a$ano == 2018],
     base_a$lon[base_a$ano == 2018],
-    base_a$esc_mae[base_a$ano == 2018],
-    base_a$idade[base_a$ano == 2018],
-    base_a$esc_mae[base_a$ano == 2018],
-    base_a$idade[base_a$ano == 2018]
+    base_a$dtemp[base_a$ano == 2019],
+    base_a$didade[base_a$ano == 2019],
+    base_a$h13[base_a$ano == 2019],
+    base_a$h12[base_a$ano == 2019],
+    base_a$h11[base_a$ano == 2019]
   )
 )
 
@@ -388,11 +430,11 @@ list[[as.character(paste0(2019,"-",2018,"|pol+fuso+C"))]] <- rdrobust(
     ef,
     base_a$lat[base_a$ano == 2018],
     base_a$lon[base_a$ano == 2018],
+    base_a$dtemp[base_a$ano == 2019],
+    base_a$didade[base_a$ano == 2019],
     base_a$h13[base_a$ano == 2019],
     base_a$h12[base_a$ano == 2019],
-    base_a$h11[base_a$ano == 2019],
-    base_a$esc_mae[base_a$ano == 2018],
-    base_a$idade[base_a$ano == 2018]
+    base_a$h11[base_a$ano == 2019]
   )
 )
 
