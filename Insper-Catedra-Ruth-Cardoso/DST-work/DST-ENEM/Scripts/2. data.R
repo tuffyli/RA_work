@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 26/08/2025
+# Date: 02/03/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1796,8 +1796,8 @@ for(ano in 2018:2019){
       dom5 = ifelse(pessoas_dom == "C", 1, 0),
       ppi = ifelse(raca %in% c("C","D","F"), 1, 0),
       escp = case_when(
-        esc_pai %in% c("D","E","F") ~ 0,
-        esc_pai %in% c("A","B","C") ~ 1,
+        esc_pai %in% c("D","E","F") ~ 1,
+        esc_pai %in% c("A","B","C") ~ 0,
         .default = NA
       ),
       renda1 = ifelse(renda_dom %in% c("A","B"),1,0),

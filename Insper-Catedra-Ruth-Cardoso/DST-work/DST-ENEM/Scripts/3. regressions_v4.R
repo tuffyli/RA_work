@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 25/02/2026
+# Date: 02/03/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -117,15 +117,21 @@ base <- base %>%
       esc_mae %in% c("A","B","C") ~ 0,
       .default = NA),
     
+    escp = case_when(
+      esc_pai %in% c("D","E","F") ~ 1, #With High schooç
+      esc_pai %in% c("A","B","C") ~ 0,
+      .default = NA
+    ),
+    
     mae_trab_man = case_when(
       emp_mae %in% c("A","B","C") ~ 1,
-      emp_mae %in% c("D","E","F") ~ 0,
+      emp_mae %in% c("D","E") ~ 0,
       .default = NA
     ),
     
     pai_trab_man = case_when(
       emp_pai %in% c("A","B","C") ~ 1,
-      emp_pai %in% c("D","E","F") ~ 0,
+      emp_pai %in% c("D","E") ~ 0,
       .default = NA
     )
   ) %>% 

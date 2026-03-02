@@ -3925,7 +3925,7 @@ rm(inpe)
 # ---------------------------------------------------------------------------- #
 
 
-readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2019.rds")
+inpe <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2019.rds")
 # ---------------------------------------------------------------------------- #
 ### 18.2.2 Unidos ----
 # ---------------------------------------------------------------------------- #
@@ -3977,15 +3977,22 @@ base_inpe <- base_inpe %>%
       esc_mae %in% c("A","B","C") ~ 1,
       .default = NA),
     
+    escp = case_when(
+      esc_pai %in% c("D","E","F") ~ 1,
+      esc_pai %in% c("A","B","C") ~ 0,
+      .default = NA
+    ),
+    
+    
     mae_trab_man = case_when(
       emp_mae %in% c("A","B","C") ~ 1,
-      emp_mae %in% c("D","E","F") ~ 0,
+      emp_mae %in% c("D","E") ~ 0,
       .default = NA
     ),
     
     pai_trab_man = case_when(
       emp_pai %in% c("A","B","C") ~ 1,
-      emp_pai %in% c("D","E","F") ~ 0,
+      emp_pai %in% c("D","E") ~ 0,
       .default = NA
     )
   )
