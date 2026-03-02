@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Data description
 # Last edited by: Tuffy Licciardi Issa
-# Date: 13/02/2026
+# Date: 02/03/2026
 # ---------------------------------------------------------------------------- #
 # Library -----
 # ---------------------------------------------------------------------------- #
@@ -35,23 +35,73 @@ base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2
   filter(conclusao == 2)
 
 
+#Temperature data
+inpe_18 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2018.rds") %>% 
+  rename(vento_d1 = vento_4,
+         vento_d2 = vento_11,
+         temp_d1 = temp_4,
+         temp_d2 = temp_11,
+         prec_d1 = prec_4,
+         prec_d2 = prec_11,
+         umid_d1 = umid_4,
+         umid_d2 = umid_11,
+         pm25_d1 = pm25_4,
+         pm25_d2 = pm25_11,
+         o3_d1 = o3_4,
+         o3_d2 = o3_11
+  ) %>% 
+  mutate(ano = 2018)
+
+inpe_19 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2019.rds") %>% 
+  rename(vento_d1 = vento_3,
+         vento_d2 = vento_10,
+         temp_d1 = temp_3,
+         temp_d2 = temp_10,
+         prec_d1 = prec_3,
+         prec_d2 = prec_10,
+         umid_d1 = umid_3,
+         umid_d2 = umid_10,
+         pm25_d1 = pm25_3,
+         pm25_d2 = pm25_10,
+         o3_d1 = o3_3,
+         o3_d2 = o3_10
+  ) %>% 
+  mutate(ano = 2019)
+
+
+inpe <- inpe_18 %>% bind_rows(inpe_19)
+
+base <- base %>% 
+  left_join(inpe %>% mutate(codmun = as.integer(codmun)), by = c("mun_prova" = "codmun", "ano"))
+
+
+rm(inpe_18, inpe_19, inpe)
+
+
+# Creating the variables
 base <- base %>% 
   mutate(
     
     escm = case_when(
-      esc_mae %in% c("D","E","F") ~ 0,
-      esc_mae %in% c("A","B","C") ~ 1,
+      esc_mae %in% c("D","E","F") ~ 1, #With high school
+      esc_mae %in% c("A","B","C") ~ 0,
       .default = NA),
+    
+    escp = case_when(
+      esc_pai %in% c("D","E","F") ~ 1,
+      esc_pai %in% c("A","B","C") ~ 0,
+      .default = NA
+    ),
     
     mae_trab_man = case_when(
       emp_mae %in% c("A","B","C") ~ 1,
-      emp_mae %in% c("D","E","F") ~ 0,
+      emp_mae %in% c("D","E") ~ 0,
       .default = NA
     ),
     
     pai_trab_man = case_when(
       emp_pai %in% c("A","B","C") ~ 1,
-      emp_pai %in% c("D","E","F") ~ 0,
+      emp_pai %in% c("D","E") ~ 0,
       .default = NA
     )
   ) %>%
@@ -96,7 +146,12 @@ vlist <- c(
   "mae_trab_man",
   "dom5",
   "renda1",
-  "pibpc"
+  "pibpc",
+  "id18",
+  "temp_d1",
+  "temp_d2",
+  "umid_d1",
+  "umid_d2"
 )
 
 base_nota <- base %>%
@@ -215,68 +270,43 @@ medias <- data.frame(
     format(x = medias1[9:10], digits = 2, scientific = F),
     format(x = medias1[11], digits = 1, scientific = F),
     format(x = medias1[12:20], digits = 2, scientific = F),
-    format(x = medias1[21], digits = 1, scientific = F, big.mark = ",")
+    format(x = medias1[21], digits = 1, scientific = F, big.mark = ","),
+    format(x = medias1[22], digits = 2, scientific = F),
+    format(x = medias1[23:26], digits = 1, scientific = F)
   ),
   dps1 = c(
     format(x = dps1[1:8], digits = 1, scientific = F),
     format(x = dps1[9:10], digits = 1, scientific = F),
     format(x = dps1[11], digits = 1, scientific = F),
     format(x = dps1[12:20], digits = 2, scientific = F),
-    format(x = dps1[21], digits = 1, scientific = F, big.mark = ",")
+    format(x = dps1[21], digits = 1, scientific = F, big.mark = ","),
+    format(x = dps1[22], digits = 2, scientific = F),
+    format(x = dps1[23:26], digits = 1, scientific = F)
   ),
-  obs1 = format(x = obs1[1:21], digits = 1, scientific = F, big.mark = ","),
+  obs1 = format(x = obs1[1:26], digits = 1, scientific = F, big.mark = ","),
+  
   medias0 = c(
     format(x = medias0[1:8], digits = 1, scientific = F),
     format(x = medias0[9:10], digits = 2, scientific = F),
     format(x = medias0[11], digits = 1, scientific = F),
     format(x = medias0[12:20], digits = 2, scientific = F),
-    format(x = medias0[21], digits = 1, scientific = F, big.mark = ",")
+    format(x = medias0[21], digits = 1, scientific = F, big.mark = ","),
+    format(x = medias0[22], digits = 2, scientific = F),
+    format(x = medias0[23:26], digits = 1, scientific = F)
   ),
   dps0 = c(
     format(x = dps0[1:8], digits = 1, scientific = F),
     format(x = dps0[9:10], digits = 1, scientific = F),
     format(x = dps0[11], digits = 1, scientific = F),
     format(x = dps0[12:20], digits = 2, scientific = F),
-    format(x = dps0[21], digits = 1, scientific = F, big.mark = ",")
+    format(x = dps0[21], digits = 1, scientific = F, big.mark = ","),
+    format(x = dps0[22], digits = 2, scientific = F),
+    format(x = dps0[23:26], digits = 1, scientific = F)
   ),
-  obs0 = format(x = obs0[1:21], digits = 1, scientific = F, big.mark = ",")
+  obs0 = format(x = obs0[1:26], digits = 1, scientific = F, big.mark = ",")
 )
 
 
-
-
-medias <- data.frame(
-  medias1 = c(
-    format(x = medias1[1:8], digits = 1, scientific = F),
-    format(x = medias1[9:10], digits = 2, scientific = F),
-    format(x = medias1[11], digits = 1, scientific = F),
-    format(x = medias1[12:20], digits = 2, scientific = F),
-    format(x = medias1[21], digits = 1, scientific = F, big.mark = ",")
-  ),
-  dps1 = c(
-    format(x = dps1[1:8], digits = 1, scientific = F),
-    format(x = dps1[9:10], digits = 1, scientific = F),
-    format(x = dps1[11], digits = 1, scientific = F),
-    format(x = dps1[12:20], digits = 2, scientific = F),
-    format(x = dps1[21], digits = 1, scientific = F, big.mark = ",")
-  ),
-  obs1 = format(x = obs1[1:21], digits = 1, scientific = F, big.mark = ","),
-  medias0 = c(
-    format(x = medias0[1:8], digits = 1, scientific = F),
-    format(x = medias0[9:10], digits = 2, scientific = F),
-    format(x = medias0[11], digits = 1, scientific = F),
-    format(x = medias0[12:20], digits = 2, scientific = F),
-    format(x = medias0[21], digits = 1, scientific = F, big.mark = ",")
-  ),
-  dps0 = c(
-    format(x = dps0[1:8], digits = 1, scientific = F),
-    format(x = dps0[9:10], digits = 1, scientific = F),
-    format(x = dps0[11], digits = 1, scientific = F),
-    format(x = dps0[12:20], digits = 2, scientific = F),
-    format(x = dps0[21], digits = 1, scientific = F, big.mark = ",")
-  ),
-  obs0 = format(x = obs0[1:21], digits = 1, scientific = F, big.mark = ",")
-)
 
 
 
@@ -289,9 +319,18 @@ row.names(medias) <- c(
   "Pr. Right Answers",
   "Absence",
   "Distance to DST border (km)",
-  "Age", "Female", "African Brazilian or native", "Father completed middle school",
-  "Mother completed middle school", "Father in manual labor", "Mother in manual labor",
-  "Big household", "Household income up to 1 MW", "Municipal per capita GDP"
+  "Age", "Female", "African Brazilian or native",
+  "Father with high school", "Mother with high school",
+  "Father in manual labor", "Mother in manual labor",
+  "Household with 5 or more people",
+  "Household income up to 1 MW", 
+  "Municipal per capita GDP",
+  "18 years-old",
+  "Temperature - Day 1",
+  "Temperature - Day 2",
+  "Humidity - Day 1",
+  "Humidity - Day 2"
+  
 )
 
 colnames(medias) <- c(
@@ -308,7 +347,7 @@ print.xtable(
   x = medias,
   include.rownames = T,
   include.colnames = T,
-  file = "Z:/Tuffy/Paper - HV/Resultados/desc_table_v2.tex",
+  file = "Z:/Tuffy/Paper - HV/Resultados/definitive/desc_table_v2.tex",
   sanitize.colnames.function = function(x) {
     x
   },
@@ -332,26 +371,7 @@ base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2
 mun_list19 <- unique(base$mun_prova[base$ano == 2019])
 mun_list18 <- unique(base$mun_prova[base$ano == 2018])
 
-base <- base %>% 
-  mutate(
-    
-    escm = case_when(
-      esc_mae %in% c("D","E","F") ~ 0,
-      esc_mae %in% c("A","B","C") ~ 1,
-      .default = NA),
-    
-    mae_trab_man = case_when(
-      emp_mae %in% c("A","B","C") ~ 1,
-      emp_mae %in% c("D","E","F") ~ 0,
-      .default = NA
-    ),
-    
-    pai_trab_man = case_when(
-      emp_pai %in% c("A","B","C") ~ 1,
-      emp_pai %in% c("D","E","F") ~ 0,
-      .default = NA
-    )
-  ) %>%
+base <- base %>%
   mutate(
     old = ifelse(
       idade > 18 & conclusao == 2, 1,
