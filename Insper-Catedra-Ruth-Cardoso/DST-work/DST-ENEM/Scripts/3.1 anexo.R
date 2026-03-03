@@ -975,7 +975,7 @@ p <- ggplot(t10cc, aes(x = ano, y = coef)) +
   geom_errorbar(aes(ymin = coef - se, ymax = coef + se), width = 0.2, size = 0.8, color = "black") +
   geom_point(size = 3, color = "black") +
   geom_hline(yintercept = 0, color = "#D62728", linewidth = 1) +
-  labs(x = "Year", y = "Average ENEM Score") +
+  labs(x = "Year", y = "Average ENEM Score Coefficient") +
   geom_vline(xintercept = 2018.5, color = "#BEBEBE", linetype = "dashed", size = 0.8) +
   theme_minimal(base_size = 20) +
   theme(
@@ -2174,8 +2174,9 @@ names <- c(
 
 result <- data.frame(
   var = names,
-  cc= rep(NA, times = length(names)),
-  bw = rep(NA, times = length(names))
+  cc= rep(NA, times = length(names))
+  #,
+  #bw = rep(NA, times = length(names))
   
 )
 
@@ -2187,24 +2188,24 @@ result$bw[1] <- tab$coef[[2]]
 result$bw[2] <- tab$se[[2]]
 result$bw[3] <- tab$N[[2]]
 
+# 
+# result$cc[4] <- tab$coef[[3]]
+# result$cc[5] <- tab$se[[3]]
+# result$cc[6] <- tab$N[[3]]
+# result$bw[4] <- tab$coef[[4]]
+# result$bw[5] <- tab$se[[4]]
+# result$bw[6] <- tab$N[[4]]
 
-result$cc[4] <- tab$coef[[3]]
-result$cc[5] <- tab$se[[3]]
-result$cc[6] <- tab$N[[3]]
-result$bw[4] <- tab$coef[[4]]
-result$bw[5] <- tab$se[[4]]
-result$bw[6] <- tab$N[[4]]
 
 
-
-colnames(result) <- c("", "(1)", "(2)")
+colnames(result) <- c("", "(1)")
 
 # Cria a tabela LaTeX
 latex_table <- knitr::kable(
   result,
   format = "latex",
   booktabs = TRUE,
-  align = "lcc",
+  align = "lc",
   linesep = ""
 )
 
@@ -5782,23 +5783,23 @@ t10 <- t10 %>%
 
 
 
-names <- c("Concluded High School",
-           " "," ",
+names <- c("%Concluded High School",
+           "% ","% ",
            "Mock Examinees",
            " ", " ",
-           "Senior Year",
+           "All Administrative School Types",
            " "," ",
-           "Senior Year Public School",
+           "Main Result",
            " ", " ",
-           "Senior Year Private School",
+           "Private School",
            " "," ",
-           "Senior Municipal + State School",
+           "Municipal + State School",
            " ", " ",
-           "Senior State School",
+           "State School",
            " "," ",
-           "Senior Federal School",
+           "Federal School",
            " ", " ",
-           "Senior Municipal School",
+           "Municipal School",
            " ", " ")
 
 result <- data.frame(

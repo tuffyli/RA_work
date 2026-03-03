@@ -852,9 +852,10 @@ names2 <- c("Residency",
 result <- data.frame(
   var = names2,
   b07 = rep(NA, times = length(names2)),
-  b09 = rep(NA, times = length(names2)),
-  bw7 = rep(NA, times = length(names2)),
-  bw9 = rep(NA, times = length(names2))
+  b09 = rep(NA, times = length(names2))
+  # ,
+  # bw7 = rep(NA, times = length(names2)),
+  # bw9 = rep(NA, times = length(names2))
 )
 
 
@@ -863,23 +864,23 @@ result <- data.frame(
 #Building result table
 # ---------------- #
 
-#BW Res.
-result$bw7[1] <- t10$coef[[5]] #18-17
-result$bw7[2] <- t10$se[[5]]
-result$bw7[3] <- t10$N[[5]]
-
-result$bw9[1] <- t10$coef[[1]] #19-18
-result$bw9[2] <- t10$se[[1]]
-result$bw9[3] <- t10$N[[1]]
-
-#BW Esc.
-result$bw7[4] <- t10$coef[[7]] #18-17
-result$bw7[5] <- t10$se[[7]]
-result$bw7[6] <- t10$N[[7]]
-
-result$bw9[4] <- t10$coef[[3]] #19-18
-result$bw9[5] <- t10$se[[3]]
-result$bw9[6] <- t10$N[[3]]
+# #BW Res.
+# result$bw7[1] <- t10$coef[[5]] #18-17
+# result$bw7[2] <- t10$se[[5]]
+# result$bw7[3] <- t10$N[[5]]
+# 
+# result$bw9[1] <- t10$coef[[1]] #19-18
+# result$bw9[2] <- t10$se[[1]]
+# result$bw9[3] <- t10$N[[1]]
+# 
+# #BW Esc.
+# result$bw7[4] <- t10$coef[[7]] #18-17
+# result$bw7[5] <- t10$se[[7]]
+# result$bw7[6] <- t10$N[[7]]
+# 
+# result$bw9[4] <- t10$coef[[3]] #19-18
+# result$bw9[5] <- t10$se[[3]]
+# result$bw9[6] <- t10$N[[3]]
 
 #0 Res.
 result$b07[1] <- t10$coef[[6]] #18-17
@@ -903,14 +904,14 @@ result$b09[6] <- t10$N[[4]]
 #### 1.2.3.1 Saving to latex ----
 # ----------------- #
 
-colnames(result) <- c("", "(1)", "(2)","(3)", "(4)")
+colnames(result) <- c("", "(1)", "(2)")
 
 # Cria a tabela LaTeX
 latex_table <- knitr::kable(
   result,
   format = "latex",
   booktabs = TRUE,
-  align = "lcccc",
+  align = "lcc",
   linesep = ""
 )
 
@@ -1253,63 +1254,63 @@ years <- c(2019)
 cutoff <- 0.5
 span_val <- 0.5   # loess span ~ Stata bw
 
-for (y in years) {
-  options(scipen = 999)
-  d <- subset(base_a, ano == y)
-  d$dist_km <- d$dist_hv_border/1000
-  
-  # compute lowess for treated and control (if they exist)
-  d1 <- subset(d, trat == 1)
-  d0 <- subset(d, trat == 0)
-  
-  lw1 <- if (nrow(d1) > 1) stats::lowess(d1$dist_km, d1$d.media, f = span_val) else NULL
-  lw0 <- if (nrow(d0) > 1) stats::lowess(d0$dist_km, d0$d.media, f = span_val) else NULL
-  
-  png_filename <- paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/lowess/media_rdd", y, "_base_lowess.png")
-  png(png_filename, width = 1200, height = 800, res = 150)
-  par(mar = c(5,5,4,2) + 0.1)
-  
-  
-  # Scatter
-  plot(d$dist_km, d$d.media,
-       pch = 20, cex = 0.6,
-       xlab = "Distance to DST Border (km)", ylab = "ENEM Score",
-       #main = paste("Lowess —", y),
-       xlim = range(d$dist_km, na.rm = TRUE),
-       ylim = range(d$d.media, na.rm = TRUE),
-       xaxt = "n")
-  
-  # vertical cutoff line
-  abline(v = cutoff, lty = 2, col = "darkgray", lwd = 3)
-  
-  x_range <- range(d$dist_km, na.rm = TRUE)
-  ticks <- seq(floor(x_range[1] / 400) * 400,
-               ceiling(x_range[2] / 400) * 400,
-               by = 400)
-  
-  axis(1,
-       at = ticks,
-       labels = format(ticks, scientific = FALSE),
-       las = 2)
-  
-  
-  
-  # add lowess lines (use different colors)
-  if (!is.null(lw1)) lines(lw1, col = "red", lwd = 2)
-  if (!is.null(lw0)) lines(lw0, col = "red", lwd = 2)
-  
-  dev.off()
-  message("Wrote: ", png_filename)
-}
-
-rm(d, d0, d1, lw0, lw1, cutoff, png_filename, x_range, ticks, years, span_val,)
-
-
-# ---------------------------------------------------------------------------- #
-####2.1.1.2 CMOGRAM -----
-# ---------------------------------------------------------------------------- #
-###### 2.1.1.2.1 Data -----
-# ---------------------------------------------------------------------------- #
+# for (y in years) {
+#   options(scipen = 999)
+#   d <- subset(base_a, ano == y)
+#   d$dist_km <- d$dist_hv_border/1000
+#   
+#   # compute lowess for treated and control (if they exist)
+#   d1 <- subset(d, trat == 1)
+#   d0 <- subset(d, trat == 0)
+#   
+#   lw1 <- if (nrow(d1) > 1) stats::lowess(d1$dist_km, d1$d.media, f = span_val) else NULL
+#   lw0 <- if (nrow(d0) > 1) stats::lowess(d0$dist_km, d0$d.media, f = span_val) else NULL
+#   
+#   png_filename <- paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/lowess/media_rdd", y, "_base_lowess.png")
+#   png(png_filename, width = 1200, height = 800, res = 150)
+#   par(mar = c(5,5,4,2) + 0.1)
+#   
+#   
+#   # Scatter
+#   plot(d$dist_km, d$d.media,
+#        pch = 20, cex = 0.6,
+#        xlab = "Distance to DST Border (km)", ylab = "ENEM Score",
+#        #main = paste("Lowess —", y),
+#        xlim = range(d$dist_km, na.rm = TRUE),
+#        ylim = range(d$d.media, na.rm = TRUE),
+#        xaxt = "n")
+#   
+#   # vertical cutoff line
+#   abline(v = cutoff, lty = 2, col = "darkgray", lwd = 3)
+#   
+#   x_range <- range(d$dist_km, na.rm = TRUE)
+#   ticks <- seq(floor(x_range[1] / 400) * 400,
+#                ceiling(x_range[2] / 400) * 400,
+#                by = 400)
+#   
+#   axis(1,
+#        at = ticks,
+#        labels = format(ticks, scientific = FALSE),
+#        las = 2)
+#   
+#   
+#   
+#   # add lowess lines (use different colors)
+#   if (!is.null(lw1)) lines(lw1, col = "red", lwd = 2)
+#   if (!is.null(lw0)) lines(lw0, col = "red", lwd = 2)
+#   
+#   dev.off()
+#   message("Wrote: ", png_filename)
+# }
+# 
+# rm(d, d0, d1, lw0, lw1, cutoff, png_filename, x_range, ticks, years, span_val,)
+# 
+# 
+# # ---------------------------------------------------------------------------- #
+# ####2.1.1.2 CMOGRAM -----
+# # ---------------------------------------------------------------------------- #
+# ###### 2.1.1.2.1 Data -----
+# # ---------------------------------------------------------------------------- #
 
 
 df_cmo <- base[priv0 == 1,.(media = mean(media, na.rm = T),
@@ -2482,73 +2483,73 @@ ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pd
 
 rm(fig,fig_gg,x_r_sta,x_r_end,x_l_sta,x_l_end,y_r_sta,y_r_end,y_l_sta,y_l_end,xtips)
 
-# ---------------------------------------------------------------------------- #
-#### 2.1.2.3 Lowess (2017) ----
-# ---------------------------------------------------------------------------- #
-
-base_c <- base_c %>% 
+# # ---------------------------------------------------------------------------- #
+# #### 2.1.2.3 Lowess (2017) ----
+# # ---------------------------------------------------------------------------- #
+# 
+base_c <- base_c %>%
   mutate(trat = ifelse(dist_hv_border > 0, 1, 0))
-
-years <- c(2018)
-cutoff <- 0.5
-span_val <- 0.5   # loess span ~ Stata bw
-
-for (y in years) {
-  options(scipen = 999)
-  d <- subset(base_c, ano == y)
-  d$dist_km <- d$dist_hv_border/1000
-  
-  # compute lowess for treated and control (if they exist)
-  d1 <- subset(d, trat == 1)
-  d0 <- subset(d, trat == 0)
-  
-  lw1 <- if (nrow(d1) > 1) stats::lowess(d1$dist_km, d1$d.media, f = span_val) else NULL
-  lw0 <- if (nrow(d0) > 1) stats::lowess(d0$dist_km, d0$d.media, f = span_val) else NULL
-  
-  png_filename <- paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/lowess/media_rdd", y, "_base_lowess.png")
-  png(png_filename, width = 1200, height = 800, res = 150)
-  par(mar = c(5,5,4,2) + 0.1)
-  
-  
-  # Scatter
-  plot(d$dist_km, d$d.media,
-       pch = 20, cex = 0.6,
-       xlab = "Distance to DST Border (km)", ylab = "ENEM Score",
-       #main = paste("Lowess —", y),
-       xlim = range(d$dist_km, na.rm = TRUE),
-       ylim = range(d$d.media, na.rm = TRUE),
-       xaxt = "n")
-  
-  # vertical cutoff line
-  abline(v = cutoff, lty = 2, col = "darkgray", lwd = 3)
-  
-  x_range <- range(d$dist_km, na.rm = TRUE)
-  ticks <- seq(floor(x_range[1] / 400) * 400,
-               ceiling(x_range[2] / 400) * 400,
-               by = 400)
-  
-  axis(1,
-       at = ticks,
-       labels = format(ticks, scientific = FALSE),
-       las = 2)
-  
-  
-  
-  # add lowess lines (use different colors)
-  if (!is.null(lw1)) lines(lw1, col = "red", lwd = 2)
-  if (!is.null(lw0)) lines(lw0, col = "red", lwd = 2)
-  
-  dev.off()
-  message("Wrote: ", png_filename)
-}
-
-rm(d, d0, d1, lw0, lw1, cutoff, png_filename, x_range, ticks, years, span_val, y)
-
-# ---------------------------------------------------------------------------- #
-#### 2.1.2.4 CMOGRAM -----
-# ---------------------------------------------------------------------------- #
-###### 2.1.2.4.1 Stata Export ----
-# ---------------------------------------------------------------------------- #
+# 
+# years <- c(2018)
+# cutoff <- 0.5
+# span_val <- 0.5   # loess span ~ Stata bw
+# 
+# for (y in years) {
+#   options(scipen = 999)
+#   d <- subset(base_c, ano == y)
+#   d$dist_km <- d$dist_hv_border/1000
+#   
+#   # compute lowess for treated and control (if they exist)
+#   d1 <- subset(d, trat == 1)
+#   d0 <- subset(d, trat == 0)
+#   
+#   lw1 <- if (nrow(d1) > 1) stats::lowess(d1$dist_km, d1$d.media, f = span_val) else NULL
+#   lw0 <- if (nrow(d0) > 1) stats::lowess(d0$dist_km, d0$d.media, f = span_val) else NULL
+#   
+#   png_filename <- paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/lowess/media_rdd", y, "_base_lowess.png")
+#   png(png_filename, width = 1200, height = 800, res = 150)
+#   par(mar = c(5,5,4,2) + 0.1)
+#   
+#   
+#   # Scatter
+#   plot(d$dist_km, d$d.media,
+#        pch = 20, cex = 0.6,
+#        xlab = "Distance to DST Border (km)", ylab = "ENEM Score",
+#        #main = paste("Lowess —", y),
+#        xlim = range(d$dist_km, na.rm = TRUE),
+#        ylim = range(d$d.media, na.rm = TRUE),
+#        xaxt = "n")
+#   
+#   # vertical cutoff line
+#   abline(v = cutoff, lty = 2, col = "darkgray", lwd = 3)
+#   
+#   x_range <- range(d$dist_km, na.rm = TRUE)
+#   ticks <- seq(floor(x_range[1] / 400) * 400,
+#                ceiling(x_range[2] / 400) * 400,
+#                by = 400)
+#   
+#   axis(1,
+#        at = ticks,
+#        labels = format(ticks, scientific = FALSE),
+#        las = 2)
+#   
+#   
+#   
+#   # add lowess lines (use different colors)
+#   if (!is.null(lw1)) lines(lw1, col = "red", lwd = 2)
+#   if (!is.null(lw0)) lines(lw0, col = "red", lwd = 2)
+#   
+#   dev.off()
+#   message("Wrote: ", png_filename)
+# }
+# 
+# rm(d, d0, d1, lw0, lw1, cutoff, png_filename, x_range, ticks, years, span_val, y)
+# 
+# # ---------------------------------------------------------------------------- #
+# #### 2.1.2.4 CMOGRAM -----
+# # ---------------------------------------------------------------------------- #
+# ###### 2.1.2.4.1 Stata Export ----
+# # ---------------------------------------------------------------------------- #
 
 df_cmo <- df_cmo %>% 
   left_join(base_c %>% filter(ano == 2018) %>% select(mun_prova, d.media) %>% 
