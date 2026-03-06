@@ -260,9 +260,14 @@ rm(mun_hv)
 # ---------------------------------------------------------------------------- #
 ## 1.1 Base agregada ----
 # ---------------------------------------------------------------------------- #
-base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
-                            idade = mean(id18, na.rm = T),
-                            temp_d1 = mean(temp_d1, na.rm = T),
+base_a <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
+                            idade    = mean(id18, na.rm = T),
+                            temp_d1  = mean(temp_d1, na.rm = T),
+                            renda    = mean(renda1, na.rm = T),
+                            escm     = mean(escm, na.rm = T),
+                            mae_trab = mean(mae_trab_man, na.rm = T),
+                            fem      = mean(fem1, na.rm = T),
+                            dom5     = mean(dom5, na.rm = T),
                             h13 = first(h13),
                             h12 = first(h12),
                             h11 = first(h11),
@@ -279,17 +284,42 @@ base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
     v2_nota = max(v1_nota, na.rm = T),
     d.media = media - v2_nota,
     
-    v1idade = ifelse(ano == 2018, idade, NA),
-    v2idade = max(v1idade, na.rm = T),
-    didade = idade - v2idade,
+    # v1idade = ifelse(ano == 2018, idade, NA),
+    # v2idade = max(v1idade, na.rm = T),
+    # didade  = idade - v2idade,
     
     v1temp = ifelse(ano == 2018, temp_d1, NA),
     v2temp = max(v1temp, na.rm = T),
-    dtemp  = temp_d1 - v2temp
+    dtemp  = temp_d1 - v2temp,
+    
+    v1rend = ifelse(ano == 2018, renda, NA),
+    v2rend = max(v1rend, na.rm = T),
+    drenda = renda - v2rend,
+    
+    v1escm = ifelse(ano == 2018, escm, NA),
+    v2escm = max(v1escm, na.rm = T),
+    descm  = escm - v2escm,
+    
+    v1maet = ifelse(ano == 2018, mae_trab, NA),
+    v2maet = max(v1maet, na.rm = T),
+    dmaet  = mae_trab - v2temp,
+    
+    v1fem  = ifelse(ano == 2018, fem, NA),
+    v2fem  = max(v1fem, na.rm = T),
+    dfem   = fem - v2fem,
+    
+    v1dom5 = ifelse(ano == 2018, dom5, NA),
+    v2dom5 = max(v1dom5, na.rm = T),
+    ddom5  = dom5 - v2dom5
+    
+    
+    
   ) %>%
   ungroup() %>% 
   filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota, v1idade, v2idade, v1temp, v2temp)) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota, v1fem, v2fem, v1dom5, v2dom5,
+            #v1idade, v2idade,
+            v1temp, v2temp, v1rend, v2rend, v1escm, v2escm, v1maet, v2maet)) %>% 
   group_by(mun_prova) %>% 
   mutate(
     d.h13 = h13[ano == 2019] + h13[ano == 2018], #2 = Manteve, 1 mudou, 0 nunca
@@ -372,8 +402,14 @@ list[[as.character(paste0(2019,"-",2018,"|fuso+C"))]] <- rdrobust(
     ef,
     base_a$lat[base_a$ano == 2018],
     base_a$lon[base_a$ano == 2018],
+    #Controls
     base_a$dtemp[base_a$ano == 2019],
-    base_a$didade[base_a$ano == 2019],
+    base_a$drenda[base_a$ano == 2019],
+    base_a$descm[base_a$ano == 2019],
+    base_a$dmaet[base_a$ano == 2019],
+    base_a$dfem[base_a$ano == 2019],
+    base_a$ddom5[base_a$ano == 2019],
+    #Timezones
     base_a$h13[base_a$ano == 2019],
     base_a$h12[base_a$ano == 2019],
     base_a$h11[base_a$ano == 2019]
@@ -445,8 +481,14 @@ list[[as.character(paste0(2019,"-",2018,"|pol+fuso+C"))]] <- rdrobust(
     ef,
     base_a$lat[base_a$ano == 2018],
     base_a$lon[base_a$ano == 2018],
+    #Controls
     base_a$dtemp[base_a$ano == 2019],
-    base_a$didade[base_a$ano == 2019],
+    base_a$drenda[base_a$ano == 2019],
+    base_a$descm[base_a$ano == 2019],
+    base_a$dmaet[base_a$ano == 2019],
+    base_a$dfem[base_a$ano == 2019],
+    base_a$ddom5[base_a$ano == 2019],
+    #Timezones
     base_a$h13[base_a$ano == 2019],
     base_a$h12[base_a$ano == 2019],
     base_a$h11[base_a$ano == 2019]
@@ -4198,6 +4240,7 @@ for (i in var_list) {
   #Base
   temp <- base_inpe_t %>% 
     filter(priv0 == 1) %>% 
+    filter(abs(dist_hv_border) < bw_main_a) %>% 
     filter(!is.na(.data[[i]]))
   
   # --- Municipal Level ---- #
@@ -4325,10 +4368,939 @@ plot_covs <- ggplot(data = covs_np) +
         axis.text.x = element_text(size = 20),
         axis.text.y = element_text(size = 20))
 
-plot_covs
+print(plot_covs)
 
 ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/covs_test_dif_.png"), device = "png", height = 10, width = 7)
 ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/covs_test_dif_.eps"), device = "eps", height = 10, width = 7)
 
-rm( covs_np, plot_covs, temp, mun_agre, mun_nopair, var_list, vnames, i, covs, base_inpe_t)
+rm( covs_np, plot_covs, temp, mun_nopair, var_list, vnames, i, covs, base_inpe_t,
+    base, base_a)
+
+
+
+# ---------------------------------------------------------------------------- #
+# 13. SAEB ----
+# ---------------------------------------------------------------------------- #
+
+saeb_base <- readRDS("Z:/Tuffy/Paper - HV/Bases/saeb_total.RDS") %>% 
+  setDT()
+
+
+# ---------------------------------------------------------------------------- #
+##13.1 Base ----
+# ---------------------------------------------------------------------------- #
+
+mun_exp <- base_a %>%
+  filter(ano == 2019) %>% 
+  select(mun_prova)
+
+
+saeb_base <- saeb_base %>% 
+  mutate(in_base = ifelse(mun_prova %in% mun_exp$mun_prova, 1, 0))
+
+saeb_base <- saeb_base %>% 
+  filter(in_base == 1 )
+rm(mun_exp)
+
+temp <- base_a %>% 
+  filter(ano == 2018) %>% 
+  select(mun_prova, lat, lon, dist_hv_border, seg)
+
+
+saeb_base <- saeb_base %>% 
+  left_join(temp, by = c("mun_prova" = "mun_prova"))
+
+rm(temp)
+
+# ---------------------------------------------------------------------------- #
+## 13.2 Regression (BW) ----
+# ---------------------------------------------------------------------------- #
+
+# Lista para armazenar resultados
+rlist_saeb <- list()
+
+
+for (i in c("5","9","3")) {
+  
+  temp <- saeb_base %>% 
+    filter(serie == i,
+           !is.na(seg)) %>% 
+    group_by(mun_prova) %>% 
+    mutate( 
+      dup1 = 1,
+      dup2 = sum(dup1),
+      v1 = ifelse(ano == 2017, lp, NA),
+      v2 = max(v1, na.rm = T),
+      d.media_lp = lp - v2) %>%
+    
+    #Média Mat
+    mutate(
+      v1 = ifelse(ano == 2017, mt, NA),
+      v2 = max(v1, na.rm = T),
+      d.media_mt = mt - v2) %>%
+    filter(dup2 == 2) %>% 
+    ungroup() %>%
+    select(-c(v1,v2, dup1, dup2))  
+  
+  
+  
+  
+  
+  # 
+  # temp <- saeb_base %>% 
+  #   mutate(subset = case_when(
+  #     abs(dist_hv_border) < bw_main_a ~ 1,
+  #     .default = 0
+  #   )
+  #   ) %>% 
+  #   filter(
+  #     !is.na(d.media),
+  #     subset == 1
+  #   )
+  # 
+  # Dependent variable
+  yv_lp <- temp %>%
+    filter(ano == 2019) %>% 
+    select(d.media_lp) 
+  
+  yv_mt <- temp %>%
+    filter(ano == 2019) %>% 
+    select(d.media_mt) 
+  
+  #45696
+  # Running variable
+  xv <- temp %>%
+    filter(ano == 2017) %>% 
+    select(dist_hv_border)
+  
+  # Clusters
+  clu <- temp %>% 
+    filter(ano == 2017) %>% 
+    select(seg)
+  
+  # Latitude
+  latv <- temp %>%
+    filter(ano == 2017) %>% 
+    select(lat)
+  
+  # Longitude
+  lonv <- temp %>% 
+    filter(ano == 2017) %>% 
+    select(lon)
+  
+  #peso
+  
+  w_lp <- temp %>% 
+    filter(ano == 2017) %>% 
+    select(lp_peso)
+  
+  w_mt <- temp %>% 
+    filter(ano == 2017) %>% 
+    select(mt_peso)
+  
+  ef <- dummy_cols(clu$seg)
+  ef <- ef %>% select(-1,-2)
+  
+  
+  
+  
+  
+  
+  # Lista para armazenamento dos resultados
+  
+  # Regressão LP --------------------------------------------------------------#
+  rlist_saeb[[paste0("LP|",i)]] <- rdrobust(
+    y = yv_lp$d.media_lp,
+    x = xv$dist_hv_border,
+    c = 0,
+    h = bw_main_a,
+    b = bw_bias_a,
+    weights = w_lp,
+    cluster = clu,
+    vce = "hc0",
+    covs = cbind(ef,
+                 latv,
+                 lonv)
+  )
+  
+  # # Calculating average values of the dependent variable, within the optimal bandwidth
+  # bw <- rlist_saeb[[ind]][[1]]$bws[1, 1]
+  # media_l <- base %>% 
+  #   filter(dist_hv_border %between% c(-bw,0) & !is.na(lp) & !is.na(peso_aluno_lp)) %>% 
+  #   summarise(media_l = weighted.mean(lp,peso_aluno_lp))
+  # 
+  # media_h <- base %>% 
+  #   filter(dist_hv_border %between% c(0,bw) & !is.na(lp) & !is.na(peso_aluno_lp)) %>% 
+  #   summarise(media_l = weighted.mean(lp,peso_aluno_lp))
+  # 
+  # rlist_saeb[[ind]][[1]]$media_l <- media_l
+  # rlist_saeb[[ind]][[1]]$media_h <- media_h
+  # 
+  # rm(bw,media_l,media_h)
+  
+  # Regressão MT --------------------------------------------------------------#
+  
+  rlist_saeb[[paste0("MT|",i)]] <- rdrobust(
+    y = yv_mt$d.media_mt,
+    x = xv$dist_hv_border,
+    c = 0,
+    h = bw_main_a,
+    b = bw_bias_a,
+    weights = w_mt,
+    cluster = clu,
+    vce = "hc0",
+    covs = cbind(ef,
+                 latv,
+                 lonv)
+  )
+  
+  # # Calculating average values of the dependent variable, within the optimal bandwidth
+  # bw <- rlist_saeb[[ind]][[2]]$bws[1, 1]
+  # media_l <- base %>% 
+  #   filter(dist_hv_border %between% c(-bw,0) & !is.na(mt) & !is.na(peso_aluno_mt)) %>% 
+  #   summarise(media_l = weighted.mean(mt,peso_aluno_mt))
+  # 
+  # media_h <- base %>% 
+  #   filter(dist_hv_border %between% c(0,bw) & !is.na(mt) & !is.na(peso_aluno_mt)) %>% 
+  #   summarise(media_l = weighted.mean(mt,peso_aluno_mt))
+  # 
+  # rlist_saeb[[ind]][[2]]$media_l <- media_l
+  # rlist_saeb[[ind]][[2]]$media_h <- media_h
+  # 
+  # rm(bw,media_l,media_h)
+  # 
+  # -------------------------------------------------------------------------#
+  
+  message("Finished for group: ", i)
+  rm(ef)
+  
+  
+}
+rm(clu, latv, lonv, temp, w_lp, w_mt, xv, yv_lp, yv_mt, i)
+
+# ---------------------------------------------------------------------------- #
+## 13.3 Tabelas ----
+# ---------------------------------------------------------------------------- #
+
+tab <- data.frame(
+  coef = do.call(rbind,lapply(rlist_saeb, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(rlist_saeb, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(rlist_saeb, FUN = function(x){x$pv[3]})),
+  n.1 = do.call(rbind, lapply(rlist_saeb, FUN = function(x){x$N_h[1]})),
+  n.2 = do.call(rbind, lapply(rlist_saeb, FUN = function(x){x$N_h[2]}))
+  
+)
+
+
+tab <- tab %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0(" (",formatC(x = se, digits = 2, format = "f"),")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ", n.1 + n.2, "]")
+  ) %>%
+  select(-c(pv))
+
+names <- c("Language",
+           " "," ",
+           "Math",
+           " ", " ")
+
+result <- data.frame(
+  var = names,
+  ef5 = rep(NA, times = length(names)),
+  ef9 = rep(NA, times = length(names)),
+  em3 = rep(NA, times = length(names))
+)
+
+#5EF
+#Lp
+result$ef5[1] <- tab$coef[[1]]
+result$ef5[2] <- tab$se[[1]]
+result$ef5[3] <- tab$N[[1]]
+##Mt
+result$ef5[4] <- tab$coef[[2]]
+result$ef5[5] <- tab$se[[2]]
+result$ef5[6] <- tab$N[[2]]
+
+
+#9EF
+#Lp
+result$ef9[1] <- tab$coef[[3]]
+result$ef9[2] <- tab$se[[3]]
+result$ef9[3] <- tab$N[[3]]
+##Mt
+result$ef9[4] <- tab$coef[[4]]
+result$ef9[5] <- tab$se[[4]]
+result$ef9[6] <- tab$N[[4]]
+
+#3EM
+#Lp
+result$em3[1] <- tab$coef[[5]]
+result$em3[2] <- tab$se[[5]]
+result$em3[3] <- tab$N[[5]]
+##Mt
+result$em3[4] <- tab$coef[[6]]
+result$em3[5] <- tab$se[[6]]
+result$em3[6] <- tab$N[[6]]
+
+
+colnames(result) <- c("", "(1)", "(2)", "(3)")
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lccc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Saeb.tex")
+
+rm(rlist_saeb, saeb_base, tab,result, names)
+
+
+# ---------------------------------------------------------------------------- #
+# 14. Year Lvl. ----
+# ---------------------------------------------------------------------------- #
+## 14.1 Data ----
+# ---------------------------------------------------------------------------- #
+#' Vamos inciar a estimação das diferenças anuais através da abertura das bases de dados
+#' e da agregação destas para o nível municipal.
+
+# 1) Abrindo a base de dados:
+base <- data.frame() #Criando a base de dados vazia que será preenchida pelos dados anuais
+
+for(ano in 2013:2019) { #loop para abertura das bases de dados
+  
+  #Abrindo a base de dados de cada ano
+  base_temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_",ano,".RDS")) %>% 
+    select( #selecionando apenas as colunas principais
+      mun_prova, ano, id_enem, hv, priv0, lon, lat, dist_hv_border, seg, media, idade, conclusao
+    ) %>% 
+    filter(
+      conclusao == 2 #mantendo apenas alunos concluintes
+    )
+  
+  
+  #Agregando a base de dados para o nível municipal
+  base_nota <- base_temp[priv0 == 1,.(media_nota = mean(media, na.rm = T), #nota média
+                                      obs = .N), #n° de observações
+                         by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] #variáveis de agregação
+  
+  base_nota <- base_nota %>% 
+    filter(abs(dist_hv_border) <= bw_main_a) #selecionando apenas os municípios dentro da janela ótima
+  
+  
+  summary(base$conclusao)
+  
+  #Salvando a base de dados agregada no nível municipal:
+  saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/Agregados/base_nota_ag_",ano,".RDS"))
+  
+  base <- rbind(base, base_temp) %>%  #unindo as bases de dados]
+    setDT()
+  message("Finalizado para ", ano)
+  
+  rm(base_temp, base_nota, ano_ref) #removendo os itensque não serão mais utilizados
+}
+
+
+
+base_a <- base[priv0 == 1,.(media_nota = mean(media, na.rm = T),
+                            obs = .N),
+               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)]
+
+# ---------------------------------------------------------------------------- #
+## 14.2 Regression Yearly ----
+# ---------------------------------------------------------------------------- #
+
+#2) Com os resultados da nota em nível:
+c_rlist <- list() #lista para armazenar os resultados
+#t_rlist <- list()
+
+
+ano_list <- c(2013:2019) #Lista dos anos que serão comparados no loop
+
+#Loop de regressão por ano:
+for(ano_ref in ano_list) {
+  
+  base_t <- base_a %>% 
+    filter(ano == ano_ref) #Selecionando apenas os dados no ano de referência
+  
+  #Com controles no ano de referência
+  ef <- dummy_cols(base_t$seg[base_t$ano == ano_ref]) #EF de segmento
+  ef <- ef %>% select(-1,-2)
+  
+  c_rlist[[as.character(paste0(ano_ref,"C|TC"))]] <- rdrobust( #Resultado armazenado na lista
+    y = base_t$media_nota[base_t$ano == ano_ref], #nota media no município
+    x = base_t$dist_hv_border[base_t$ano == ano_ref], #RV de distância
+    c = 0, #Ponto de corte
+    p =1,
+    h = bw_main_a, #Limitando para a banda ótima de ref.
+    b = bw_bias_a, #Limitando para a banda ótima de ref.
+    cluster = base_t$seg[base_t$ano == ano_ref], #cluster no segmento
+    weights = base_t$obs[base_t$ano == ano_ref], #peso nas amostras
+    vce = "hc0", 
+    covs = cbind( #covariadas
+      ef,
+      base_t$lat[base_t$ano == ano_ref],
+      base_t$lon[base_t$ano == ano_ref]
+    )
+  )
+  
+  
+}
+
+# ---------------------------------------------------------------------------- #
+##14.3 Plot ----
+# ---------------------------------------------------------------------------- #
+t10cc <- data.frame(
+  coef = do.call(rbind,lapply(c_rlist, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(c_rlist, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(c_rlist, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(c_rlist, FUN = function(x){x$N_h})),
+  t = do.call(rbind, lapply(c_rlist, FUN = function(x){x$N}))
+) %>% 
+  mutate(
+    N = n.1 + n.2,
+    Tot = t.1 + t.2,
+    ano = 2013:2019,
+    ymin = coef - 1.96 * se,
+    ymax = coef + 1.96 * se
+  ) %>% 
+  select(-c(n.1, n.2))
+
+
+
+
+
+p <- ggplot(t10cc, aes(x = ano, y = coef)) +
+  geom_errorbar(aes(ymin = coef - se, ymax = coef + se), width = 0.2, size = 0.8, color = "black") +
+  geom_point(size = 3, color = "black") +
+  geom_hline(yintercept = 0, color = "#D62728", linewidth = 1) +
+  labs(x = "Year", y = "Average ENEM Score Coefficient") +
+  geom_vline(xintercept = 2018.5, color = "#BEBEBE", linetype = "dashed", size = 0.8) +
+  theme_minimal(base_size = 20) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(),
+    axis.text.y = element_text(size = 18),
+    axis.text.x = element_text(size = 18),
+    legend.position = "none"
+  ) +
+  scale_x_continuous(breaks = t10cc$ano) 
+
+
+p
+
+ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/anos_lvl.png"), device = "png", height = 7, width = 10)
+ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/anos_lvl.eps"), device = "eps", height = 7, width = 10)
+
+
+
+rm(base_a, base_t, c_rlist, result, rlist, t10cc, t10nc, ano, ano_list,
+   latex_table, names, ef, p)
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+# 19. Filter + Desc ----
+# ---------------------------------------------------------------------------- #
+
+
+
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2019.RDS")) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2018.RDS"))) %>%
+  setDT()
+
+
+
+base_con <- base %>% filter(conclusao == 1)
+
+base_trei <- base %>% filter(treineiro == 1)
+
+gc()
+
+rm(base)
+
+
+summary(base_con$mun_escola)
+summary(base_trei$mun_escola)
+
+# ---------------------------------------------------------------------------- #
+## 19.1 EST C+T ----
+# ---------------------------------------------------------------------------- #
+
+base_con <- base_con[,.(media = mean(media, na.rm = T), obs = .N),
+                     by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+
+
+base_trei <- base_trei[,.(media = mean(media, na.rm = T), obs = .N),
+                       by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+# ---------------------------------------------------------------------------- #
+### 19.1.1 Regs ----
+# ---------------------------------------------------------------------------- #
+
+ef <- dummy_cols(base_con$seg[base_con$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+ef2 <- dummy_cols(base_trei$seg[base_trei$ano == 2018])
+ef2 <- ef2 %>% select(-1,-2)
+
+all.equal(ef, ef2)
+
+
+list <- list()
+
+#### A. Formandos ----
+list[[as.character(paste0(2019,"-",2018,"C|Conc"))]] <- rdrobust(
+  y = base_con$d.media[base_con$ano == 2019],
+  x = base_con$dist_hv_border[base_con$ano == 2018],
+  c = 0,
+  cluster = base_con$seg[base_con$ano == 2018],
+  weights = base_con$obs[base_con$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_con$lat[base_con$ano == 2018],
+    base_con$lon[base_con$ano == 2018]
+  )
+)
+
+#### B. Treineiros -----
+list[[as.character(paste0(2019,"-",2018,"C|Trei"))]] <- rdrobust(
+  y = base_trei$d.media[base_trei$ano == 2019],
+  x = base_trei$dist_hv_border[base_trei$ano == 2018],
+  c = 0,
+  cluster = base_trei$seg[base_trei$ano == 2018],
+  weights = base_trei$obs[base_trei$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef2,
+    base_trei$lat[base_trei$ano == 2018],
+    base_trei$lon[base_trei$ano == 2018]
+  )
+)
+
+# ---------------------------------------------------------------------------- #
+## 19.2. TC ----
+# ---------------------------------------------------------------------------- #
+
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
+  setDT() %>% 
+  filter(conclusao == 2)
+
+
+
+
+#Todos
+base_t <- base[,.(media = mean(media, na.rm = T), obs = .N),
+               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+
+
+
+#Todos con em Pub
+base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+#Todos conc em Priv
+base_p <- base[priv1 == 1,.(media = mean(media, na.rm = T), obs = .N),
+               by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+#Todos con, pub - Fed
+base_psf <- base[dep_adm %in% c(2,3),.(media = mean(media, na.rm = T), obs = .N),
+                 by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+#Todos con, pub - Fed
+base_et <- base[dep_adm == 2,.(media = mean(media, na.rm = T), obs = .N),
+                by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+
+#Todos con, pub - Fed
+base_fed <- base[dep_adm == 1,.(media = mean(media, na.rm = T), obs = .N),
+                 by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+base_mun <- base[dep_adm == 3,.(media = mean(media, na.rm = T), obs = .N),
+                 by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_prova,ano) %>%
+  group_by(mun_prova) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+
+# ---------------------------------------------------------------------------- #
+###19.2.1 Reg -----
+# ---------------------------------------------------------------------------- #
+
+
+ef <- dummy_cols(base_t$seg[base_t$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+
+#### C. Todos Concluintes ----
+list[[as.character(paste0(2019,"-",2018,"C|TC"))]] <- rdrobust(
+  y = base_t$d.media[base_t$ano == 2019],
+  x = base_t$dist_hv_border[base_t$ano == 2018],
+  c = 0,
+  cluster = base_t$seg[base_t$ano == 2018],
+  weights = base_t$obs[base_t$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_t$lat[base_t$ano == 2018],
+    base_t$lon[base_t$ano == 2018]
+  )
+)
+
+
+#### D.  Escola P ----
+ef <- dummy_cols(base_a$seg[base_a$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+
+
+list[[as.character(paste0(2019,"-",2018,"C|TCPub"))]] <- rdrobust(
+  y = base_a$d.media[base_a$ano == 2019],
+  x = base_a$dist_hv_border[base_a$ano == 2018],
+  c = 0,
+  cluster = base_a$seg[base_a$ano == 2018],
+  weights = base_a$obs[base_a$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_a$lat[base_a$ano == 2018],
+    base_a$lon[base_a$ano == 2018]
+  )
+)
+
+#### E. Escola Priv ----
+ef <- dummy_cols(base_p$seg[base_p$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+
+
+list[[as.character(paste0(2019,"-",2018,"C|Priv"))]] <- rdrobust(
+  y = base_p$d.media[base_p$ano == 2019],
+  x = base_p$dist_hv_border[base_p$ano == 2018],
+  c = 0,
+  cluster = base_p$seg[base_p$ano == 2018],
+  weights = base_p$obs[base_p$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_p$lat[base_p$ano == 2018],
+    base_p$lon[base_p$ano == 2018]
+  )
+)
+
+
+#### F. Esc Pub - Fed ----
+ef <- dummy_cols(base_psf$seg[base_psf$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+
+
+list[[as.character(paste0(2019,"-",2018,"C|PubSF"))]] <- rdrobust(
+  y = base_psf$d.media[base_psf$ano == 2019],
+  x = base_psf$dist_hv_border[base_psf$ano == 2018],
+  c = 0,
+  cluster = base_psf$seg[base_psf$ano == 2018],
+  weights = base_psf$obs[base_psf$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_psf$lat[base_psf$ano == 2018],
+    base_psf$lon[base_psf$ano == 2018]
+  )
+)
+
+#### G. Esc Estadual ----
+ef <- dummy_cols(base_et$seg[base_et$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+
+
+list[[as.character(paste0(2019,"-",2018,"C|PubEsd"))]] <- rdrobust(
+  y = base_et$d.media[base_et$ano == 2019],
+  x = base_et$dist_hv_border[base_et$ano == 2018],
+  c = 0,
+  cluster = base_et$seg[base_et$ano == 2018],
+  weights = base_et$obs[base_et$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_et$lat[base_et$ano == 2018],
+    base_et$lon[base_et$ano == 2018]
+  )
+)
+
+#### H. Esc FED ----
+ef <- dummy_cols(base_fed$seg[base_fed$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+
+
+list[[as.character(paste0(2019,"-",2018,"C|PubFed"))]] <- rdrobust(
+  y = base_fed$d.media[base_fed$ano == 2019],
+  x = base_fed$dist_hv_border[base_fed$ano == 2018],
+  c = 0,
+  cluster = base_fed$seg[base_fed$ano == 2018],
+  weights = base_fed$obs[base_fed$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_fed$lat[base_fed$ano == 2018],
+    base_fed$lon[base_fed$ano == 2018]
+  )
+)
+
+#### I. Esc MUN ----
+ef <- dummy_cols(base_mun$seg[base_mun$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+
+
+list[[as.character(paste0(2019,"-",2018,"C|PubMun"))]] <- rdrobust(
+  y = base_mun$d.media[base_mun$ano == 2019],
+  x = base_mun$dist_hv_border[base_mun$ano == 2018],
+  c = 0,
+  cluster = base_mun$seg[base_mun$ano == 2018],
+  weights = base_mun$obs[base_mun$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    ef,
+    base_mun$lat[base_mun$ano == 2018],
+    base_mun$lon[base_mun$ano == 2018]
+  )
+)
+
+
+###4. Tabelas -----
+t10 <- data.frame(
+  coef = do.call(rbind,lapply(list, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(list, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(list, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind,lapply(list, FUN = function(x){x$N_h}))
+)
+print(t10)
+
+bw_main_a  <- list[["2019-2018C|TC"]]$bws[1]
+bw_bias_a  <- list[["2019-2018C|TC"]]$bws[2]
+
+t10 <- t10 %>%
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se =  paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
+    N = paste0("[N = ", n.1 + n.2, "]")
+  ) %>%
+  select( coef, se, N ) %>%
+  setDT()
+
+
+
+names <- c("%Concluded High School",
+           "% ","% ",
+           "Mock Examinees",
+           " ", " ",
+           "All Administrative School Types",
+           " "," ",
+           "Main Result",
+           " ", " ",
+           "Private School",
+           " "," ",
+           "Municipal + State School",
+           " ", " ",
+           "State School",
+           " "," ",
+           "Federal School",
+           " ", " ",
+           "Municipal School",
+           " ", " ")
+
+result <- data.frame(
+  var = names,
+  con = rep(NA, times = length(names)))
+
+
+
+result$con[1] <- t10$coef[[1]]
+result$con[2] <- t10$se[[1]]
+result$con[3] <- t10$N[[1]]
+
+result$con[4] <- t10$coef[[2]]
+result$con[5] <- t10$se[[2]]
+result$con[6] <- t10$N[[2]]
+
+result$con[7] <- t10$coef[[3]]
+result$con[8] <- t10$se[[3]]
+result$con[9] <- t10$N[[3]]
+
+result$con[10] <- t10$coef[[4]]
+result$con[11] <- t10$se[[4]]
+result$con[12] <- t10$N[[4]]
+
+result$con[13] <- t10$coef[[5]]
+result$con[14] <- t10$se[[5]]
+result$con[15] <- t10$N[[5]]
+
+result$con[16] <- t10$coef[[6]]
+result$con[17] <- t10$se[[6]]
+result$con[18] <- t10$N[[6]]
+
+result$con[19] <- t10$coef[[7]]
+result$con[20] <- t10$se[[7]]
+result$con[21] <- t10$N[[7]]
+
+result$con[22] <- t10$coef[[8]]
+result$con[23] <- t10$se[[8]]
+result$con[24] <- t10$N[[8]]
+
+result$con[25] <- t10$coef[[9]]
+result$con[26] <- t10$se[[9]]
+result$con[27] <- t10$N[[9]]
+
+colnames(result) <- c("", "(1)")
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/comp_amostras_v1.tex")
+rm(ef, list, result, t10, latex_table)
 
