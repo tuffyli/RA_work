@@ -5,7 +5,7 @@
 # Data de criação: 14/11/2023
 # Criado por: Bruno Komatsu
 
-# Última modificação: 09/01/2025
+# Última modificação: 09/03/2025
 # Modificado por: Tuffy Issa
 
 # Descrição: 
@@ -136,7 +136,7 @@ map <- ggplot(mun_hv) +
         legend.text = element_text(size = 15))
 
 
-map
+print(map)
 
 
 # Salvando o mapa
@@ -193,7 +193,7 @@ map <- ggplot(mun_hv) +
     name = "Groups",
     values = c(
       "Out"           = "#E0E0E0",     
-      "Bandwidth"         = "#E0D268",     
+      "Bandwidth"         = "#BDB76B",     
       "ENEM and Bandwidth"  = "#1B9E77"      
     ),
     drop = FALSE
@@ -384,4 +384,5 @@ map
 
 ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_h19.png"),plot = map,device = "png", dpi = 300)
 
-
+rm(list = ls())
+gc()

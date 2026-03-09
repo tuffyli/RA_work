@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Data description
 # Last edited by: Tuffy Licciardi Issa
-# Date: 02/03/2026
+# Date: 09/03/2026
 # ---------------------------------------------------------------------------- #
 # Library -----
 # ---------------------------------------------------------------------------- #
@@ -27,7 +27,7 @@ library(stringi)
 library(readxl)
 
 # ---------------------------------------------------------------------------- #
-# Base e Descrição ------
+# 1. Main Data and Description ------
 # ---------------------------------------------------------------------------- #
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
@@ -185,52 +185,9 @@ rm(mun_presente_ambos_anos)
 
 summary(base_nota$abs)
 
-# Valores -----
-
-# base_nota <- base_nota[priv0 == 1,
-#                 c(
-#                   .(obs = .N),  # conta de observações
-#                   lapply(.SD, mean, na.rm = TRUE)  # média das variáveis de interesse
-#                 ),
-#                 .SDcols = vlist,
-#                 by = .(mun_prova, ano, dist_hv_border, seg, lat, lon, hv, priv)
-# ]
-
-# medias0 <- base_nota[priv == 0 & hv == 0,
-#                 lapply(.SD, mean
-#                        #weighted.mean, w = obs
-#                        , na.rm = T),
-#                 .SDcols = vlist] %>%
-#   as.numeric()
-# 
-# 
-# medias1 <- base_nota[priv == 0 & hv == 1,
-#                      lapply(.SD, mean
-#                             #weighted.mean,
-#                             na.rm = T),
-#                      .SDcols = vlist] %>%
-#   as.numeric()
-# 
-# dps0 <- base_nota[priv == 0 & hv == 0,
-#                   lapply(.SD, sd, na.rm = T),
-#                   .SDcols = vlist] %>%
-#   as.numeric()
-# 
-# dps1 <- base_nota[priv == 0 & hv == 1,
-#                   lapply(.SD, sd, na.rm = T),
-#                   .SDcols = vlist] %>%
-#   as.numeric()
-# 
-# 
-# obs0 <- base[priv == 0 & hv == 0,
-#                  lapply(.SD, function(x) sum(!is.na(x))),
-#                  .SDcols = vlist] %>% 
-#   as.numeric()
-# 
-# obs1 <- base[priv == 0 & hv == 1,
-#                  lapply(.SD, function(x) sum(!is.na(x))),
-#                  .SDcols = vlist] %>% 
-#   as.numeric()
+# ---------------------------------------------------------------------------- #
+## 1.1 Values -----
+# ---------------------------------------------------------------------------- #
 
 
 medias0 <- base_nota[priv == 0 & hv == 0,
@@ -357,8 +314,10 @@ print.xtable(
 
 rm(list = ls())
 gc()
+
+
 # ---------------------------------------------------------------------------- #
-# Migração ----
+# 2. Migration ----
 # ---------------------------------------------------------------------------- #
 
 
@@ -398,7 +357,7 @@ base <- base %>%
 
 
 # ---------------------------------------------------------------------------- #
-## Desc ----
+##2.1 Desc Table ----
 # ---------------------------------------------------------------------------- #
 
 base_desc <- base %>% 
@@ -428,7 +387,7 @@ df_tidy <- base_desc %>%
 
 
 # ---------------------------------------------------------------------------- #
-## Saving ----
+## 2.2 Saving ----
 # ---------------------------------------------------------------------------- #
 
 latex_table <- knitr::kable(
@@ -443,9 +402,9 @@ latex_table <- knitr::kable(
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/migration_desc.tex")
 
 # ---------------------------------------------------------------------------- #
-# 21. Base Desc ----
+# 3. Base Desc ----
 # ---------------------------------------------------------------------------- #
-## 21.1 19 ----
+## 3.1 (2019) ----
 # ---------------------------------------------------------------------------- #
 gc()
 
@@ -504,7 +463,7 @@ pub_em_19 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))/nrow(temp)
 npub_em_19 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))
 
 # ---------------------------------------------------------------------------- #
-##21.2 18 ----
+##3.2 (2018) ----
 # ---------------------------------------------------------------------------- #
 gc()
 
@@ -563,27 +522,6 @@ pub_em_18 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))/nrow(temp)
 npub_em_18 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))
 
 
-
-
-
-#Amostras TC e JC
-# > View(base)
-# > nrow(base %>% filter(ano == 2018))
-# [1] 1130696
-# > nrow(base %>% filter(ano == 2019))
-# [1] 953912
-# > nrow(base %>% filter(ano == 2018))/5513747
-# [1] 0.2050685
-# > nrow(base %>% filter(ano == 2019))/5513747
-# [1] 0.1730061
-# > nrow(base %>% filter(ano == 2018, idade %in% c(17:18)))
-# [1] 921311
-# > nrow(base %>% filter(ano == 2019, idade %in% c(17:18)))
-# [1] 794091
-# > nrow(base %>% filter(ano == 2018, idade %in% c(17:18)))/5513747
-# [1] 0.1670934
-# > nrow(base %>% filter(ano == 2019, idade %in% c(17:18)))/5513747
-# [1] 0.1440202
 
 
 ##13.3 Tabela
@@ -707,3 +645,4 @@ rm(both_days18, both_days19, conc_18, conc_19,
    in_em_18, in_em_19, latex_table, n_both_days18, n_both_days19,
    names, nconc_18, nconc_19, nin_em_18, nin_em_19, npub_em_18, npub_em_19,
    ntrei_18, ntrei_19, pub_em_18, pub_em_19, total18, total19, trei_18, trei_19)
+
