@@ -4663,7 +4663,7 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Saeb.tex")
 
-rm(rlist_saeb, saeb_base, tab,result, names)
+rm(rlist_saeb, saeb_base, tab,result, names, latex_table, base, base_a )
 
 
 # ---------------------------------------------------------------------------- #
@@ -4798,7 +4798,7 @@ p <- ggplot(t10cc, aes(x = ano, y = coef)) +
   scale_x_continuous(breaks = t10cc$ano) 
 
 
-p
+print(p)
 
 ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/anos_lvl.png"), device = "png", height = 7, width = 10)
 ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/anos_lvl.eps"), device = "eps", height = 7, width = 10)
@@ -4806,14 +4806,14 @@ ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/no
 
 
 rm(base_a, base_t, c_rlist, result, rlist, t10cc, t10nc, ano, ano_list,
-   latex_table, names, ef, p)
+   latex_table, names, ef, p, base, ano_ref, bw_main_a, bw_main_p, bw_bias_a, bw_bias_p)
 
 
 
 
 
 # ---------------------------------------------------------------------------- #
-# 19. Filter + Desc ----
+# 15. Filter + Desc ----
 # ---------------------------------------------------------------------------- #
 
 
@@ -4823,9 +4823,6 @@ base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2019.RD
   setDT()
 
 
-
-base_con <- base %>% filter(conclusao == 1)
-
 base_trei <- base %>% filter(treineiro == 1)
 
 gc()
@@ -4833,28 +4830,12 @@ gc()
 rm(base)
 
 
-summary(base_con$mun_escola)
 summary(base_trei$mun_escola)
 
 # ---------------------------------------------------------------------------- #
-## 19.1 EST C+T ----
+## 15.1 Data Mock ----
 # ---------------------------------------------------------------------------- #
 
-base_con <- base_con[,.(media = mean(media, na.rm = T), obs = .N),
-                     by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
-  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
-  arrange(mun_prova,ano) %>%
-  group_by(mun_prova) %>%
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    v1_nota = ifelse(ano == 2018, media, NA),
-    v2_nota = max(v1_nota, na.rm = T),
-    d.media = media - v2_nota 
-  ) %>%
-  ungroup() %>% 
-  filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota))
 
 
 
@@ -4875,36 +4856,24 @@ base_trei <- base_trei[,.(media = mean(media, na.rm = T), obs = .N),
   select(-c(dup2, dup1, v1_nota, v2_nota))
 
 # ---------------------------------------------------------------------------- #
-### 19.1.1 Regs ----
+## 15.2 Regs ----
 # ---------------------------------------------------------------------------- #
 
-ef <- dummy_cols(base_con$seg[base_con$ano == 2018])
-ef <- ef %>% select(-1,-2)
+
 
 ef2 <- dummy_cols(base_trei$seg[base_trei$ano == 2018])
 ef2 <- ef2 %>% select(-1,-2)
 
-all.equal(ef, ef2)
-
 
 list <- list()
 
-#### A. Formandos ----
-list[[as.character(paste0(2019,"-",2018,"C|Conc"))]] <- rdrobust(
-  y = base_con$d.media[base_con$ano == 2019],
-  x = base_con$dist_hv_border[base_con$ano == 2018],
-  c = 0,
-  cluster = base_con$seg[base_con$ano == 2018],
-  weights = base_con$obs[base_con$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_con$lat[base_con$ano == 2018],
-    base_con$lon[base_con$ano == 2018]
-  )
-)
 
-#### B. Treineiros -----
+
+# ---------------------------------------------------------------------------- #
+### 15.2.1 Mock -----
+# ---------------------------------------------------------------------------- #
+
+
 list[[as.character(paste0(2019,"-",2018,"C|Trei"))]] <- rdrobust(
   y = base_trei$d.media[base_trei$ano == 2019],
   x = base_trei$dist_hv_border[base_trei$ano == 2018],
@@ -4920,7 +4889,7 @@ list[[as.character(paste0(2019,"-",2018,"C|Trei"))]] <- rdrobust(
 )
 
 # ---------------------------------------------------------------------------- #
-## 19.2. TC ----
+## 15.3 TC ----
 # ---------------------------------------------------------------------------- #
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
@@ -5055,15 +5024,16 @@ base_mun <- base[dep_adm == 3,.(media = mean(media, na.rm = T), obs = .N),
 
 
 # ---------------------------------------------------------------------------- #
-###19.2.1 Reg -----
+###15.3.1 Reg -----
 # ---------------------------------------------------------------------------- #
 
 
 ef <- dummy_cols(base_t$seg[base_t$ano == 2018])
 ef <- ef %>% select(-1,-2)
 
-
-#### C. Todos Concluintes ----
+# ---------------------------------------------------------------------------- #
+#### 15.3.1.1 Todos Concluintes ----
+# ---------------------------------------------------------------------------- #
 list[[as.character(paste0(2019,"-",2018,"C|TC"))]] <- rdrobust(
   y = base_t$d.media[base_t$ano == 2019],
   x = base_t$dist_hv_border[base_t$ano == 2018],
@@ -5078,8 +5048,10 @@ list[[as.character(paste0(2019,"-",2018,"C|TC"))]] <- rdrobust(
   )
 )
 
+# ---------------------------------------------------------------------------- #
+#### 15.3.1.2  Escola P ----
+# ---------------------------------------------------------------------------- #
 
-#### D.  Escola P ----
 ef <- dummy_cols(base_a$seg[base_a$ano == 2018])
 ef <- ef %>% select(-1,-2)
 
@@ -5099,7 +5071,9 @@ list[[as.character(paste0(2019,"-",2018,"C|TCPub"))]] <- rdrobust(
   )
 )
 
-#### E. Escola Priv ----
+# ---------------------------------------------------------------------------- #
+#### 15.3.1.3 Escola Priv ----
+# ---------------------------------------------------------------------------- #
 ef <- dummy_cols(base_p$seg[base_p$ano == 2018])
 ef <- ef %>% select(-1,-2)
 
@@ -5119,8 +5093,9 @@ list[[as.character(paste0(2019,"-",2018,"C|Priv"))]] <- rdrobust(
   )
 )
 
-
-#### F. Esc Pub - Fed ----
+# ---------------------------------------------------------------------------- #
+#### 15.3.1.4 Esc Pub - Fed ----
+# ---------------------------------------------------------------------------- #
 ef <- dummy_cols(base_psf$seg[base_psf$ano == 2018])
 ef <- ef %>% select(-1,-2)
 
@@ -5140,7 +5115,10 @@ list[[as.character(paste0(2019,"-",2018,"C|PubSF"))]] <- rdrobust(
   )
 )
 
-#### G. Esc Estadual ----
+# ---------------------------------------------------------------------------- #
+#### 15.3.1.5 Esc Estadual ----
+# ---------------------------------------------------------------------------- #
+
 ef <- dummy_cols(base_et$seg[base_et$ano == 2018])
 ef <- ef %>% select(-1,-2)
 
@@ -5160,7 +5138,9 @@ list[[as.character(paste0(2019,"-",2018,"C|PubEsd"))]] <- rdrobust(
   )
 )
 
-#### H. Esc FED ----
+# ---------------------------------------------------------------------------- #
+#### 15.3.1.6 Esc FED ----
+# ---------------------------------------------------------------------------- #
 ef <- dummy_cols(base_fed$seg[base_fed$ano == 2018])
 ef <- ef %>% select(-1,-2)
 
@@ -5180,7 +5160,10 @@ list[[as.character(paste0(2019,"-",2018,"C|PubFed"))]] <- rdrobust(
   )
 )
 
-#### I. Esc MUN ----
+# ---------------------------------------------------------------------------- #
+#### 15.3.1.7 Esc MUN ----
+# ---------------------------------------------------------------------------- #
+
 ef <- dummy_cols(base_mun$seg[base_mun$ano == 2018])
 ef <- ef %>% select(-1,-2)
 
@@ -5200,8 +5183,9 @@ list[[as.character(paste0(2019,"-",2018,"C|PubMun"))]] <- rdrobust(
   )
 )
 
-
-###4. Tabelas -----
+# ---------------------------------------------------------------------------- #
+### 15.4 Result Table -----
+# ---------------------------------------------------------------------------- #
 t10 <- data.frame(
   coef = do.call(rbind,lapply(list, FUN = function(x){x$coef[3]})),
   se = do.call(rbind,lapply(list, FUN = function(x){x$se[3]})),
@@ -5210,8 +5194,7 @@ t10 <- data.frame(
 )
 print(t10)
 
-bw_main_a  <- list[["2019-2018C|TC"]]$bws[1]
-bw_bias_a  <- list[["2019-2018C|TC"]]$bws[2]
+
 
 t10 <- t10 %>%
   mutate(
@@ -5228,8 +5211,7 @@ t10 <- t10 %>%
 
 
 
-names <- c("%Concluded High School",
-           "% ","% ",
+names <- c(#"%Concluded High School", "% ","% ",
            "Mock Examinees",
            " ", " ",
            "All Administrative School Types",
@@ -5285,9 +5267,6 @@ result$con[22] <- t10$coef[[8]]
 result$con[23] <- t10$se[[8]]
 result$con[24] <- t10$N[[8]]
 
-result$con[25] <- t10$coef[[9]]
-result$con[26] <- t10$se[[9]]
-result$con[27] <- t10$N[[9]]
 
 colnames(result) <- c("", "(1)")
 
@@ -5302,5 +5281,6 @@ latex_table <- knitr::kable(
 
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/comp_amostras_v1.tex")
-rm(ef, list, result, t10, latex_table)
 
+rm(list = ls())
+gc()
