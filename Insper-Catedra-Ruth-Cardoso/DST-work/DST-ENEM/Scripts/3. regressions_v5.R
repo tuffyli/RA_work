@@ -45,6 +45,11 @@ base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2
   setDT() %>% 
   filter(conclusao == 2)
 
+base2 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019_v2.RDS")) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018_v2.RDS"))) %>%
+  setDT() %>% 
+  filter(conclusao == 2)
+
 #Exam start time dummies
 base <- base %>% 
   mutate(
@@ -406,9 +411,9 @@ list[[as.character(paste0(2019,"-",2018,"|fuso+C"))]] <- rdrobust(
     base_a$dtemp[base_a$ano == 2019],
     base_a$drenda[base_a$ano == 2019],
     base_a$descm[base_a$ano == 2019],
-    base_a$dmaet[base_a$ano == 2019],
+    #base_a$dmaet[base_a$ano == 2019],
     base_a$dfem[base_a$ano == 2019],
-    base_a$ddom5[base_a$ano == 2019],
+    #base_a$ddom5[base_a$ano == 2019],
     #Timezones
     base_a$h13[base_a$ano == 2019],
     base_a$h12[base_a$ano == 2019],
@@ -418,55 +423,7 @@ list[[as.character(paste0(2019,"-",2018,"|fuso+C"))]] <- rdrobust(
 
 
 # ---------------------------------------------------------------------------- #
-### 1.1.4 Pol ----
-# ---------------------------------------------------------------------------- #
-
-list[[as.character(paste0(2019,"-",2018,"|pol"))]] <- rdrobust(
-  y = base_a$d.media[base_a$ano == 2019],
-  x = base_a$dist_hv_border[base_a$ano == 2018],
-  c = 0,
-  p = 2, 
-  cluster = base_a$seg[base_a$ano == 2018],
-  weights = base_a$obs[base_a$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_a$lat[base_a$ano == 2018],
-    base_a$lon[base_a$ano == 2018]
-  )
-)
-
-#Saving Pol2 bandwidth
-# ----------------------------------------- #
-bw_main_p  <- list[["2019-2018|pol"]]$bws[1]
-bw_bias_p  <- list[["2019-2018|pol"]]$bws[2]
-
-# ----------------------------------------- #
-
-# ---------------------------------------------------------------------------- #
-### 1.1.5 Pol + Fuso ----
-# ---------------------------------------------------------------------------- #
-
-list[[as.character(paste0(2019,"-",2018,"|pol+fuso"))]] <- rdrobust(
-  y = base_a$d.media[base_a$ano == 2019],
-  x = base_a$dist_hv_border[base_a$ano == 2018],
-  c = 0,
-  p = 2, 
-  cluster = base_a$seg[base_a$ano == 2018],
-  weights = base_a$obs[base_a$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_a$lat[base_a$ano == 2018],
-    base_a$lon[base_a$ano == 2018],
-    base_a$h13[base_a$ano == 2019],
-    base_a$h12[base_a$ano == 2019],
-    base_a$h11[base_a$ano == 2019]
-  )
-)
-
-# ---------------------------------------------------------------------------- #
-### 1.1.6 Pol + Fuso + Cont ----
+### 1.1.4 Pol + Fuso + Cont ----
 # ---------------------------------------------------------------------------- #
 
 list[[as.character(paste0(2019,"-",2018,"|pol+fuso+C"))]] <- rdrobust(
@@ -485,9 +442,9 @@ list[[as.character(paste0(2019,"-",2018,"|pol+fuso+C"))]] <- rdrobust(
     base_a$dtemp[base_a$ano == 2019],
     base_a$drenda[base_a$ano == 2019],
     base_a$descm[base_a$ano == 2019],
-    base_a$dmaet[base_a$ano == 2019],
+    #base_a$dmaet[base_a$ano == 2019],
     base_a$dfem[base_a$ano == 2019],
-    base_a$ddom5[base_a$ano == 2019],
+    #base_a$ddom5[base_a$ano == 2019],
     #Timezones
     base_a$h13[base_a$ano == 2019],
     base_a$h12[base_a$ano == 2019],
@@ -496,7 +453,7 @@ list[[as.character(paste0(2019,"-",2018,"|pol+fuso+C"))]] <- rdrobust(
 )
 
 # ---------------------------------------------------------------------------- #
-### 1.7.1 Tabela  ----
+### 1.6.1 Tabela  ----
 # ---------------------------------------------------------------------------- #
 
 t10 <- data.frame(
@@ -531,8 +488,6 @@ result <- data.frame(
   con = rep(NA, times = length(names)),
   fus = rep(NA, times = length(names)),
   mor = rep(NA, times = length(names)),
-  po2 = rep(NA, times = length(names)),
-  pfu = rep(NA, times = length(names)),
   pfc = rep(NA, times = length(names))
 )
 
@@ -556,25 +511,14 @@ result$mor[1] <- t10$coef[[3]]
 result$mor[2] <- t10$se[[3]]
 result$mor[3] <- t10$N[[3]]
 
-
-#TC Pol 2° Grau
-result$po2[1] <- t10$coef[[4]]
-result$po2[2] <- t10$se[[4]]
-result$po2[3] <- t10$N[[4]]
-
-#TC Pol 2° Grau + Fuso
-result$pfu[1] <- t10$coef[[5]]
-result$pfu[2] <- t10$se[[5]]
-result$pfu[3] <- t10$N[[5]]
-
 #TC Pol 2° Grau + Fuso + C
-result$pfc[1] <- t10$coef[[6]]
-result$pfc[2] <- t10$se[[6]]
-result$pfc[3] <- t10$N[[6]]
+result$pfc[1] <- t10$coef[[4]]
+result$pfc[2] <- t10$se[[4]]
+result$pfc[3] <- t10$N[[4]]
 
 
 
-colnames(result) <- c("", "(1)", "(2)", "(3)", "(4)", "(5)","(6)")
+colnames(result) <- c("", "(1)", "(2)", "(3)", "(4)")
 
 # Cria a tabela LaTeX
 latex_table <- knitr::kable(
@@ -4204,8 +4148,8 @@ rm(graph, tablist_bw, rlist_bw, h, b, c, base_a)
 # ---------------------------------------------------------------------------- #
 
 
-var_list <- c("id18", "fem", "ppi", "escp", "escm", "dom5",
-              "renda1", "pibpc", "pai_trab_man", "mae_trab_man",
+var_list <- c("id18", "fem", "ppi", "escp", "escm",# "dom5",
+              "renda1", "pibpc",# "pai_trab_man", "mae_trab_man",
               "temp_d1", "temp_d2", "umid_d1", "umid_d2")
 
 vnames <- c(
@@ -4214,11 +4158,11 @@ vnames <- c(
   'African Brazilian \n or Indigenous',
   'Father with \n highschool',
   'Mother with \n highschool',
-  '5 or more people \n in household',
+  #'5 or more people \n in household',
   'Up to 1 MW \nhousehold income',
   'GDP per capita',
-  'Father in \n manual labor',
-  'Mother in \n manual labor',
+  #'Father in \n manual labor',
+  #'Mother in \n manual labor',
   "Temperature - Day 1",
   "Temperature - Day 2",
   "Humidity - Day 1",
@@ -4333,15 +4277,15 @@ covs_np$ep18[covs_np$var == vnames[2]] <- mun_nopair[["dif_fem"]]$z[[3]] #fem
 covs_np$ep18[covs_np$var == vnames[3]] <- mun_nopair[["dif_ppi"]]$z[[3]] #ppi
 covs_np$ep18[covs_np$var == vnames[4]] <- mun_nopair[["dif_escp"]]$z[[3]] #escp
 covs_np$ep18[covs_np$var == vnames[5]] <- mun_nopair[["dif_escm"]]$z[[3]] #escm
-covs_np$ep18[covs_np$var == vnames[6]] <- mun_nopair[["dif_dom5"]]$z[[3]] #dom5
-covs_np$ep18[covs_np$var == vnames[7]] <- mun_nopair[["dif_renda1"]]$z[[3]] #renda1
-covs_np$ep18[covs_np$var == vnames[8]] <- mun_nopair[["dif_pibpc"]]$z[[3]] #pibpc
-covs_np$ep18[covs_np$var == vnames[9]] <- mun_nopair[["dif_pai_trab_man"]]$z[[3]] #trab manual Pai
-covs_np$ep18[covs_np$var == vnames[10]] <- mun_nopair[["dif_mae_trab_man"]]$z[[3]] #trab manual Mae
-covs_np$ep18[covs_np$var == vnames[11]] <- mun_nopair[["dif_temp_d1"]]$z[[3]] #temp1d
-covs_np$ep18[covs_np$var == vnames[12]] <- mun_nopair[["dif_temp_d2"]]$z[[3]] #temp2d
-covs_np$ep18[covs_np$var == vnames[13]] <- mun_nopair[["dif_umid_d1"]]$z[[3]] #um1d
-covs_np$ep18[covs_np$var == vnames[14]] <- mun_nopair[["dif_umid_d2"]]$z[[3]] #um2d
+#covs_np$ep18[covs_np$var == vnames[6]] <- mun_nopair[["dif_dom5"]]$z[[3]] #dom5
+covs_np$ep18[covs_np$var == vnames[6]] <- mun_nopair[["dif_renda1"]]$z[[3]] #renda1
+covs_np$ep18[covs_np$var == vnames[7]] <- mun_nopair[["dif_pibpc"]]$z[[3]] #pibpc
+#covs_np$ep18[covs_np$var == vnames[9]] <- mun_nopair[["dif_pai_trab_man"]]$z[[3]] #trab manual Pai
+#covs_np$ep18[covs_np$var == vnames[10]] <- mun_nopair[["dif_mae_trab_man"]]$z[[3]] #trab manual Mae
+covs_np$ep18[covs_np$var == vnames[8]] <- mun_nopair[["dif_temp_d1"]]$z[[3]] #temp1d
+covs_np$ep18[covs_np$var == vnames[9]] <- mun_nopair[["dif_temp_d2"]]$z[[3]] #temp2d
+covs_np$ep18[covs_np$var == vnames[10]] <- mun_nopair[["dif_umid_d1"]]$z[[3]] #um1d
+covs_np$ep18[covs_np$var == vnames[11]] <- mun_nopair[["dif_umid_d2"]]$z[[3]] #um2d
 
 
 # ---------------------------------------------------------------------------- #

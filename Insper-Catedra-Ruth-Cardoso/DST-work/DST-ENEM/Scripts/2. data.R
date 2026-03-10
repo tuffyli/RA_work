@@ -19,7 +19,6 @@ library(fastDummies)
 library(janitor)
 library(xtable)
 library(viridis)
-library(rdd)
 library(readstata13)
 library(stringr)
 library(RColorBrewer)
@@ -315,15 +314,15 @@ org_data <- function(base,ano,vlist,cnames) {
   } else if (ano >= 2012) {
     
     # Modificações somente de 2012 a 2019
-    base <- base %>%
-      mutate(
-        pessoas_dom = case_when(
-          pessoas_dom == 1 ~ 'A',
-          pessoas_dom >= 2 & pessoas_dom <= 4 ~ 'B',
-          pessoas_dom >= 5 & pessoas_dom <= 20 ~ 'C',
-          .default = 'D'
-        )
-      )
+    # base <- base %>%
+    #   mutate(
+    #     pessoas_dom = case_when(
+    #       pessoas_dom == 1 ~ 'A',
+    #       pessoas_dom >= 2 & pessoas_dom <= 4 ~ 'B',
+    #       pessoas_dom >= 5 & pessoas_dom <= 20 ~ 'C',
+    #       .default = 'D'
+    #     )
+    #   )
   }  
   
   # Renda domiciliar ----------------------------------------------------------#
@@ -856,16 +855,16 @@ filtros <- function(base,filtro) {
           !is.na(mt) &
           !is.na(rd) &   
           !is.na(dep_adm) &
-          !is.na(urb_rur) &
-          !is.na(sexo) &
-          !is.na(raca) &
-          !is.na(pessoas_dom) &
-          !is.na(renda_dom) &
-          !is.na(esc_pai) &
-          esc_pai != "H" &
-          raca != "G" &
-          renda_dom != "E" &
-          pessoas_dom != "D" &
+          # !is.na(urb_rur) &
+          # !is.na(sexo) &
+          # !is.na(raca) &
+          # !is.na(pessoas_dom) &
+          # !is.na(renda_dom) &
+          # !is.na(esc_pai) &
+          # esc_pai != "H" &
+          # raca != "G" &
+          # renda_dom != "E" &
+          # pessoas_dom != "D" &
           !is.na(mun_escola) &!is.na(func_esc)
       )
     
@@ -1583,8 +1582,8 @@ for(i in 2018:2019){
   enem_notas <- filtros(base = enem, filtro = "notas")
   enem_abs <- filtros(base = enem, filtro = "abs")
   
-  saveRDS(enem_notas, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",i,"_v4.RDS"))
-  saveRDS(enem_abs, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_abs_",i,"_v4.RDS"))
+  saveRDS(enem_notas, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",i,"_v5.RDS"))
+  saveRDS(enem_abs, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_abs_",i,"_v5.RDS"))
   
   delta_t <- Sys.time() - ini
   print(delta_t)
@@ -1606,7 +1605,7 @@ for(ano in 2018:2019){
   ini <- Sys.time()
   
   # Base de IDs para selecionar alunos
-  enem <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",ano,"_v4.RDS")) 
+  enem <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",ano,"_v5.RDS")) 
   id <- enem %>% select(id_enem)
   rm(enem)
   
@@ -1828,7 +1827,7 @@ for(ano in 2018:2019){
   print("Fim do loop nas disciplinas")
   delta_t <- Sys.time() - ini
   print(delta_t)
-  saveRDS(enem_ace, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_ace_",ano,"_v4.RDS"))
+  saveRDS(enem_ace, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_ace_",ano,"_v5.RDS"))
   rm(enem_ace, ini,delta_t,item,j)
   
   rm(ano)
@@ -1871,9 +1870,9 @@ for(ano in 2018:2019){
   
   print(ano)
   
-  temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",ano,"_v4.RDS")) %>%
+  temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",ano,"_v5.RDS")) %>%
     filtros(filtro = "notas")
-  temp2 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_ace_",ano,"_v4.RDS"))%>%
+  temp2 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_ace_",ano,"_v5.RDS"))%>%
     mutate(
       sg_area = tolower(sg_area)
     ) %>%
@@ -2133,11 +2132,11 @@ for(ano in 2018:2019){
   rm(temp)
   
   
-  saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_",ano,".RDS"))
+  saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_",ano,"_v2.RDS"))
   rm(base_nota)
   
   # Base de abstenções
-  base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_abs_",ano,"_v4.RDS")) %>%
+  base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_abs_",ano,"_v5.RDS")) %>%
     select(-sexo,-status_rd) %>%
     left_join(mun_hv,
               by = c(
@@ -2183,7 +2182,7 @@ for(ano in 2018:2019){
       dist_hv_border = ifelse(hv == 1, dist_hv_border,-dist_hv_border)
     )
   
-  saveRDS(base_abs, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",ano,".RDS"))
+  saveRDS(base_abs, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",ano,"_v2.RDS"))
   rm(base_abs)
   rm(ano)
   
