@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Data description
 # Last edited by: Tuffy Licciardi Issa
-# Date: 09/03/2026
+# Date: 11/03/2026
 # ---------------------------------------------------------------------------- #
 # Library -----
 # ---------------------------------------------------------------------------- #
@@ -25,6 +25,7 @@ library(rddensity)
 library(tidyr)
 library(stringi)
 library(readxl)
+library(scales)
 
 # ---------------------------------------------------------------------------- #
 # 1. Main Data and Description ------
@@ -116,12 +117,16 @@ base <- base %>%
       ifelse(!is.na(mun_prova) & !is.na(mun_res), 0 , NA)
     )
   ) %>% 
-  filter(conclusao == 2)
+  filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
+                  "MT", "GO", "MG", "ES")) %>%  #In-DST
+  setDT()
 
 #Absence database
 base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",2018,".RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",2019,".RDS"))) %>%
-  select(id_enem,priv, hv, ano, abs) %>% 
+  select(id_enem,priv, hv, ano, abs, uf) %>% 
+  filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
+                  "MT", "GO", "MG", "ES")) %>%  #In-DST
   setDT()
 
 # Lista de variáveis
@@ -311,6 +316,11 @@ print.xtable(
   only.contents = T
 )
 
+# ---------------------------------------------------------------------------- #
+## 1.2 Agregated by mun ----
+# ---------------------------------------------------------------------------- #
+
+
 
 rm(list = ls())
 gc()
@@ -324,6 +334,9 @@ gc()
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
+  filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
+                   "MT", "GO", "MG", "ES")       #In DST
+         ) %>%  
   setDT()
 
 #Mun. with enem
@@ -385,6 +398,7 @@ df_tidy <- base_desc %>%
   column_to_rownames("variable")
 
 
+df_tidy[] <- lapply(df_tidy, function(x) comma(x))
 
 # ---------------------------------------------------------------------------- #
 ## 2.2 Saving ----
@@ -408,7 +422,10 @@ writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/migration_des
 # ---------------------------------------------------------------------------- #
 gc()
 
-base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2019.RDS"))
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2019.RDS")) %>% 
+  filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
+                   "MT", "GO", "MG", "ES"))
+
 summary(base %>% select(conclusao, treineiro))
 
 in_both <- unique(base$id_enem)
@@ -418,7 +435,9 @@ both_days19 <- nrow(base %>% filter(ano == 2019))
 base <- base %>% 
   select(treineiro, conclusao, mun_prova, id_enem)
 
-temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_2019_v4.RDS"))
+temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_2019_v4.RDS")) %>% 
+  filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
+                   "MT", "GO", "MG", "ES"))
 
 temp <- temp %>% 
   mutate(
@@ -467,7 +486,10 @@ npub_em_19 <- nrow(temp %>% filter(conclusao == 2, priv0 == 1))
 # ---------------------------------------------------------------------------- #
 gc()
 
-base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2018.RDS"))
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2018.RDS")) %>% 
+  filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
+                   "MT", "GO", "MG", "ES"))
+
 summary(base %>% select(conclusao, treineiro))
 
 in_both <- unique(base$id_enem)
@@ -477,7 +499,9 @@ both_days18 <- nrow(base %>% filter(ano == 2018))
 base <- base %>% 
   select(treineiro, conclusao, mun_prova, id_enem)
 
-temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_2018_v4.RDS"))
+temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_2018_v4.RDS")) %>% 
+  filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
+                   "MT", "GO", "MG", "ES"))
 
 temp <- temp %>% 
   mutate(
@@ -579,6 +603,9 @@ result$n19[8] <- ntrei_19
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
+  filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
+                   "MT", "GO", "MG", "ES")       #In DST
+         ) %>%
   setDT() %>% 
   filter(conclusao == 2)
 
@@ -625,7 +652,14 @@ options(scipen = 999)  # discourage scientific notation globally
 result[, -1] <- round(result[, -1], 3)  # assuming 1st column is text
 print(result)
 
+result <- result %>%
+  mutate(across(
+    -var,              # exclude the text column
+    ~ as.numeric(.)
+  ))
 
+result <- result %>%
+  mutate(across(where(is.numeric), comma))
 
 colnames(result) <- c("",  "N",  "N")
 

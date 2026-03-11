@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 09/03/2026
+# Date: 11/03/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -539,6 +539,150 @@ org_data <- function(base,ano,vlist,cnames) {
       )
   } 
   
+  # Dados Residenciais --------------------------------------------------------#
+  
+  if(ano < 2015) {
+    
+    base <- base %>% 
+      mutate(
+        #Domestica
+        empr_dom = case_when(
+          empr_dom == "D" ~ 0, #Sem doméstica
+          .default        ~ 1  #Com uma ou mais
+        ),
+        
+        #Banheiros
+        n_banheiro = case_when(
+          n_banheiro == "D" ~ 0,
+          n_banheiro == "A" ~ 1,
+          n_banheiro == "B" ~ 2,
+          n_banheiro == "C" ~ ">=3", # 3 ou mais
+          .default          ~ NA,
+        ),
+        
+        #Quartos
+        n_quartos = NA,
+        
+        #Carros
+        n_carros = case_when(
+          n_carros == "A" ~ 1,
+          n_carros == "B" ~ 2,
+          n_carros == "C" ~ ">=3",
+          n_carros == "D" ~ 0,
+          .default        ~ NA
+        ),
+        
+        #Geladeira
+        n_geladeira = case_when(
+          n_geladeira == "A" ~ 1,
+          n_geladeira == "B" ~ 2,
+          n_geladeira == "C" ~ ">=3",
+          n_geladeira == "D" ~ 0,
+          .default        ~ NA
+        ),
+        
+        #Celular
+        n_celular = case_when(
+          n_celular == "A" ~ 1,
+          n_celular == "B" ~ 2,
+          n_celular == "C" ~ ">=3",
+          n_celular == "D" ~ 0,
+          .default        ~ NA
+        ),
+        
+        #PC
+        pc = case_when(
+          pc == "A" ~ 1,
+          pc == "B" ~ 2,
+          pc == "C" ~ ">=3",
+          pc == "D" ~ 0,
+          .default  ~ NA
+        ),
+        
+        internet = case_when(
+          internet == "D" ~ 0,
+          .default        ~ 1
+        )
+      )} else if (ano %in% c(2015:2019)) { #Anos in 2015-2019
+    
+    base <- base %>% 
+      mutate(
+        #Domestica
+        empr_dom = case_when(
+          empr_dom == "A" ~ 0, #Sem doméstica
+          empr_dom %in% c("B", "C", "D") ~ 1,
+          .default        ~ NA  #Com uma ou mais
+        ),
+        
+        #Banheiros
+        n_banheiro = case_when(
+          n_banheiro == "A" ~ 0,
+          n_banheiro == "B" ~ 1,
+          n_banheiro == "C" ~ 2,
+          n_banheiro == "D" ~ 3, 
+          n_banheiro == "E" ~ 4, #4 ou mais
+          .default          ~ NA
+        ),
+        
+        #Quartos
+        n_quartos = case_when(
+          n_quartos == "A" ~ 0,
+          n_quartos == "B" ~ 1,
+          n_quartos == "C" ~ 2,
+          n_quartos == "D" ~ 3, 
+          n_quartos == "E" ~ 4, #4 ou mais
+          .default         ~ NA
+        ),
+        
+        #Carros
+        n_carros = case_when(
+          n_carros == "A" ~ 0,
+          n_carros == "B" ~ 1,
+          n_carros == "C" ~ 2,
+          n_carros == "D" ~ 3, 
+          n_carros == "E" ~ 4, #4 ou mais
+          .default         ~ NA
+        ),
+        
+        #Geladeira
+        n_geladeira = case_when(
+          n_geladeira == "A" ~ 0,
+          n_geladeira == "B" ~ 1,
+          n_geladeira == "C" ~ 2,
+          n_geladeira == "D" ~ 3, 
+          n_geladeira == "E" ~ 4, #4 ou mais
+          .default         ~ NA
+        ),
+        
+        #Celular
+        n_celular = case_when(
+          n_celular == "A" ~ 0,
+          n_celular == "B" ~ 1,
+          n_celular == "C" ~ 2,
+          n_celular == "D" ~ 3, 
+          n_celular == "E" ~ 4, #4 ou mais
+          .default         ~ NA
+        ),
+        
+        #PC
+        pc = case_when(
+          pc == "A" ~ 0,
+          pc == "B" ~ 1,
+          pc == "C" ~ 2,
+          pc == "D" ~ 3, 
+          pc == "E" ~ 4, #4 ou mais
+          .default         ~ NA
+        ),
+        
+        internet = case_when(
+          internet == "B" ~ 0,
+          internet == "A" ~ 1,
+          .default        ~ NA
+        )
+      )
+    
+  }
+  
   # Abstenção em redação ------------------------------------------------------#
   
   if (ano %in% c(2009,2011)) {
@@ -1050,165 +1194,6 @@ itens_medias <-
 # ---------------------------------------------------------------------------- #
 # Base de dados com listas de variáveis e labels
 vlist_df <- data.frame(
-  vl2009 = c(
-    "NU_INSCRICAO",
-    "NU_IDADE",
-    "TP_ST_CONCLUSAO",
-    "TP_DEPENDENCIA_ADM_ESC",
-    "TP_LOCALIZACAO_ESC",
-    "CO_MUNICIPIO_PROVA",
-    "CO_MUNICIPIO_RESIDENCIA",
-    "SG_UF_PROVA",
-    "NU_NOTA_CN",
-    "NU_NOTA_CH",
-    "NU_NOTA_LC",
-    "NU_NOTA_MT",
-    "NU_NOTA_REDACAO",
-    "Q15",
-    "Q21",
-    "TP_SEXO",
-    "Q3",
-    "TP_SIT_FUNC_ESC",
-    "Q17",
-    "Q18",
-    "Q19",
-    "Q20",
-    "CO_MUNICIPIO_ESC",
-    "NU_NOTA_COMP1",
-    "NU_NOTA_COMP2",
-    "NU_NOTA_COMP3",
-    "NU_NOTA_COMP4",
-    "NU_NOTA_COMP5",
-    "CO_PROVA_CN",
-    "CO_PROVA_CH",
-    "CO_PROVA_LC",
-    "CO_PROVA_MT",
-    "TP_PRESENCA_CN",
-    "TP_PRESENCA_CH",
-    "TP_PRESENCA_LC",
-    "TP_PRESENCA_MT",
-    "TP_STATUS_REDACAO",
-    ""
-  ),
-  vl2010 = c(
-    "NU_INSCRICAO",
-    "NU_IDADE",
-    "TP_ST_CONCLUSAO",
-    "TP_DEPENDENCIA_ADM_ESC",
-    "TP_LOCALIZACAO_ESC",
-    "CO_MUNICIPIO_PROVA",
-    "CO_MUNICIPIO_RESIDENCIA",
-    "SG_UF_PROVA",
-    "NU_NOTA_CN",
-    "NU_NOTA_CH",
-    "NU_NOTA_LC",
-    "NU_NOTA_MT",
-    "NU_NOTA_REDACAO",
-    "Q01",
-    "Q04",
-    "TP_SEXO",
-    "TP_COR_RACA",
-    "TP_SIT_FUNC_ESC",
-    "Q02",
-    "Q03",
-    "Q05",
-    "Q06",
-    "CO_MUNICIPIO_ESC",
-    "NU_NOTA_COMP1",
-    "NU_NOTA_COMP2",
-    "NU_NOTA_COMP3",
-    "NU_NOTA_COMP4",
-    "NU_NOTA_COMP5",
-    "CO_PROVA_CN",
-    "CO_PROVA_CH",
-    "CO_PROVA_LC",
-    "CO_PROVA_MT",
-    "TP_PRESENCA_CN",
-    "TP_PRESENCA_CH",
-    "TP_PRESENCA_LC",
-    "TP_PRESENCA_MT",
-    "TP_STATUS_REDACAO",
-    ""
-  ),
-  vl2011 = c("NU_INSCRICAO",
-             "IDADE",
-             "ST_CONCLUSAO",
-             "ID_DEPENDENCIA_ADM",
-             "ID_LOCALIZACAO",
-             "COD_MUNICIPIO_PROVA",
-             "COD_MUNICIPIO_INSC",
-             "UF_MUNICIPIO_PROVA",
-             "NU_NT_CN",
-             "NU_NT_CH",
-             "NU_NT_LC",
-             "NU_NT_MT",
-             "NU_NOTA_REDACAO",
-             "Q01",
-             "Q04",
-             "TP_SEXO",
-             "TP_COR_RACA",
-             "SIT_FUNC",
-             "Q02",
-             "Q03",
-             "Q05",
-             "Q06",
-             "COD_MUNICIPIO_ESC",
-             "NU_NOTA_COMP1",
-             "NU_NOTA_COMP2",
-             "NU_NOTA_COMP3",
-             "NU_NOTA_COMP4",
-             "NU_NOTA_COMP5",
-             "ID_PROVA_CN",
-             "ID_PROVA_CH",
-             "ID_PROVA_LC",
-             "ID_PROVA_MT",
-             "IN_PRESENCA_CN",
-             "IN_PRESENCA_CH",
-             "IN_PRESENCA_LC",
-             "IN_PRESENCA_MT",
-             "IN_STATUS_REDACAO",
-             ""
-  ),
-  vl2012 = c(
-    "nu_inscricao",
-    "idade",
-    "st_conclusao",
-    "id_dependencia_adm",
-    "id_localizacao",
-    "cod_municipio_prova",
-    "cod_municipio_insc",
-    "uf_municipio_prova",
-    "nu_nt_cn",
-    "nu_nt_ch",
-    "nu_nt_lc",
-    "nu_nt_mt",
-    "nu_nota_redacao",
-    "q04",
-    "q03",
-    "tp_sexo",
-    "tp_cor_raca",
-    "sit_func",
-    "q01",
-    "q02",
-    "q05",
-    "q06",
-    "cod_municipio_esc",
-    "nu_nota_comp1",
-    "nu_nota_comp2",
-    "nu_nota_comp3",
-    "nu_nota_comp4",
-    "nu_nota_comp5",
-    "id_prova_cn",
-    "id_prova_ch",
-    "id_prova_lc",
-    "id_prova_mt",
-    "in_presenca_cn",
-    "in_presenca_ch",
-    "in_presenca_lc",
-    "in_presenca_mt",
-    "in_status_redacao",
-    ""
-  ),
   vl2013 = c(
     "nu_inscricao",
     "idade",
@@ -1232,6 +1217,14 @@ vlist_df <- data.frame(
     "q002",
     "q005",
     "q006",
+    "q020", #Empregada dom.
+    "q021", #Banheiro
+    "q009", #Quartos NA, in reality radio
+    "q011", #Carro
+    "q013", #Geladeira
+    "q016", #Celular
+    "q010", #PC
+    "q017", #Internet
     "cod_municipio_esc",
     "nu_nota_comp1",
     "nu_nota_comp2",
@@ -1271,6 +1264,14 @@ vlist_df <- data.frame(
              "q002",
              "q005",
              "q006",
+             "q020", #Empregada dom.
+             "q021", #Banheiro
+             "q009", #Quartos NA, in reality radio
+             "q011", #Carro
+             "q013", #Geladeira
+             "q016", #Celular
+             "q010", #PC
+             "q017", #Internet
              "cod_municipio_esc",
              "nu_nota_comp1",
              "nu_nota_comp2",
@@ -1310,6 +1311,14 @@ vlist_df <- data.frame(
     "q002",
     "q003",
     "q004",
+    "q007", #Empregada dom.
+    "q008", #Banheiro
+    "q009", #Quartos
+    "q010", #Carro
+    "q012", #Geladeira
+    "q022", #Celular
+    "q024", #PC
+    "q025", #Internet
     "co_municipio_esc",
     "nu_nota_comp1",
     "nu_nota_comp2",
@@ -1350,6 +1359,14 @@ vlist_df <- data.frame(
     "Q002",
     "Q003",
     "Q004",
+    "Q007", #Empregada dom.
+    "Q008", #Banheiro
+    "Q009", #Quartos
+    "Q010", #Carro
+    "Q012", #Geladeira
+    "Q022", #Celular
+    "Q024", #PC
+    "Q025", #Internet
     "CO_MUNICIPIO_ESC",
     "NU_NOTA_COMP1",
     "NU_NOTA_COMP2",
@@ -1390,6 +1407,14 @@ vlist_df <- data.frame(
     "Q002",
     "Q003",
     "Q004",
+    "Q007", #Empregada dom.
+    "Q008", #Banheiro
+    "Q009", #Quartos
+    "Q010", #Carro
+    "Q012", #Geladeira
+    "Q022", #Celular
+    "Q024", #PC
+    "Q025", #Internet
     "CO_MUNICIPIO_ESC",
     "NU_NOTA_COMP1",
     "NU_NOTA_COMP2",
@@ -1430,6 +1455,14 @@ vlist_df <- data.frame(
     "Q002",
     "Q003",
     "Q004",
+    "Q007", #Empregada dom.
+    "Q008", #Banheiro
+    "Q009", #Quartos
+    "Q010", #Carro
+    "Q012", #Geladeira
+    "Q022", #Celular
+    "Q024", #PC
+    "Q025", #Internet
     "CO_MUNICIPIO_ESC",
     "NU_NOTA_COMP1",
     "NU_NOTA_COMP2",
@@ -1470,6 +1503,14 @@ vlist_df <- data.frame(
     "Q002",
     "Q003",
     "Q004",
+    "Q007", #Empregada dom.
+    "Q008", #Banheiro
+    "Q009", #Quartos
+    "Q010", #Carro
+    "Q012", #Geladeira
+    "Q022", #Celular
+    "Q024", #PC
+    "Q025", #Internet
     "CO_MUNICIPIO_ESC",
     "NU_NOTA_COMP1",
     "NU_NOTA_COMP2",
@@ -1509,6 +1550,14 @@ vlist_df <- data.frame(
              "esc_mae",
              "emp_pai",
              "emp_mae",
+             "empr_dom",
+             "n_banheiro",
+             "n_quartos",
+             "n_carros",
+             "n_geladeira",
+             "n_celular",
+             "pc",
+             "internet",
              "mun_escola",
              "rd1",
              "rd2",
@@ -1532,10 +1581,10 @@ vlist_df <- data.frame(
 
 
 flist <- c(
-  "Z:/Arquivos IFB/Enem/2009/Dados/MICRODADOS_ENEM_2009.csv",
-  "Z:/Arquivos IFB/Enem/2010/Dados/MICRODADOS_ENEM_2010.csv",
-  "Z:/Arquivos IFB/Enem/2011/DADOS/MICRODADOS_ENEM_2011.dta",
-  "Z:/Arquivos IFB/Enem/2012/DADOS/MICRODADOS_ENEM_2012.dta",
+  # "Z:/Arquivos IFB/Enem/2009/Dados/MICRODADOS_ENEM_2009.csv",
+  # "Z:/Arquivos IFB/Enem/2010/Dados/MICRODADOS_ENEM_2010.csv",
+  # "Z:/Arquivos IFB/Enem/2011/DADOS/MICRODADOS_ENEM_2011.dta",
+  # "Z:/Arquivos IFB/Enem/2012/DADOS/MICRODADOS_ENEM_2012.dta",
   "Z:/Arquivos IFB/Enem/2013/microdados_enem2013/DADOS/MICRODADOS_ENEM_2013.dta",
   "Z:/Arquivos IFB/Enem/2014/microdados_enem2014/DADOS/MICRODADOS_ENEM_2014.dta",
   "Z:/Arquivos IFB/Enem/2015/DADOS/MICRODADOS_ENEM_2015.dta",
@@ -1549,12 +1598,12 @@ flist <- c(
 ### 2.2.2 Loop grades + absence ----
 # ---------------------------------------------------------------------------- #
 
-for(i in 2018:2019){
+for(i in 2013:2019){
   
-  print(paste0("Ano: ",i))
+  message(paste0("Ano: ",i))
   ini <- Sys.time()
   
-  j <- i - 2008
+  j <- i - 2012
   delta <- ifelse(i <= 2014,1,0)
   vlist <- vlist_df[1:(nrow(vlist_df) - delta),j]
   cnames <- vlist_df[1:(nrow(vlist_df) - delta),ncol(vlist_df)]
@@ -1571,6 +1620,8 @@ for(i in 2018:2019){
     enem <- read_dta(file = flist[j], col_select = vlist)
   }
   
+  message("Opened database. Now organizing...")
+  
   enem <-
     org_data(
       base = enem,
@@ -1579,15 +1630,27 @@ for(i in 2018:2019){
       cnames = cnames
     )
   
+  message("Saving data")
   enem_notas <- filtros(base = enem, filtro = "notas")
   enem_abs <- filtros(base = enem, filtro = "abs")
   
-  saveRDS(enem_notas, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",i,"_v5.RDS"))
-  saveRDS(enem_abs, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_abs_",i,"_v5.RDS"))
+  saveRDS(enem_notas, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",i,"_v4.RDS"))
+  message("Saved scores data")
+  saveRDS(enem_abs, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_abs_",i,"_v4.RDS"))
   
-  delta_t <- Sys.time() - ini
-  print(delta_t)
-  rm(enem,i,j,cnames,vlist,enem_notas,enem_abs, ini,delta_t)
+  message("Saved absent data. Finished for year: ",i)
+  
+  fim <- Sys.time()
+  delta <- difftime(fim, ini, units = "secs")
+  mins <- floor(as.numeric(delta) / 60)
+  secs <- round(as.numeric(delta) %% 60)
+  hours <- round(mins /60)
+  
+  message("---------------------------------------------")
+  message("Elapsed time: ", hours, " hours, ",mins," mins, and ", secs, " s")
+  message("---------------------------------------------")
+  
+  rm(enem,i,j,cnames,vlist,enem_notas,enem_abs, ini,delta, fim, mins, secs, hours)
 }
 
 #------------------------------------------------------------------------------#
@@ -1599,13 +1662,13 @@ for(i in 2018:2019){
 dlist <- c("cn","ch","lc","mt")
 
 # Loop nos anos
-for(ano in 2018:2019){
+for(ano in 2013:2019){
   
-  print(paste0("Ano: ",ano))
+  message(paste0("Ano: ",ano))
   ini <- Sys.time()
   
   # Base de IDs para selecionar alunos
-  enem <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",ano,"_v5.RDS")) 
+  enem <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",ano,"_v4.RDS")) 
   id <- enem %>% select(id_enem)
   rm(enem)
   
@@ -1628,9 +1691,16 @@ for(ano in 2018:2019){
     item <- read_dta(file = flist[j], col_select = vlist)
   }
   
-  delta_t <- Sys.time() - ini
-  print(delta_t)
-  rm(delta_t)
+  fim <- Sys.time()
+  delta <- difftime(fim, ini, units = "secs")
+  mins <- floor(as.numeric(delta) / 60)
+  secs <- round(as.numeric(delta) %% 60)
+  hours <- round(mins /60)
+  
+  message("---------------------------------------------")
+  message("Elapsed time for data opening: ",hours, " hours, ",mins," mins, and ", secs, " s")
+  message("---------------------------------------------")
+  rm(fim, delta, mins, secs, hours)
   
   # Organização da base de dados
   item <- item %>% relocate(all_of(vlist))
@@ -1824,11 +1894,21 @@ for(ano in 2018:2019){
     
   } # fim do loop nas disciplinas (i)
   
-  print("Fim do loop nas disciplinas")
-  delta_t <- Sys.time() - ini
-  print(delta_t)
-  saveRDS(enem_ace, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_ace_",ano,"_v5.RDS"))
-  rm(enem_ace, ini,delta_t,item,j)
+  message("----------------------------")
+  message("Ended topic loop for: ", item," in ",ano)
+  
+  fim <- Sys.time()
+  delta <- difftime(fim, ini, units = "secs")
+  mins <- floor(as.numeric(delta) / 60)
+  secs <- round(as.numeric(delta) %% 60)
+  hours <- round(mins /60)
+  message("Elapsed time: ",hours, " hours, ",mins," mins, and ", secs, " s")
+  message("---------------------------------------------")
+  
+  rm(fim, delta, mins, secs, hours)
+  
+  saveRDS(enem_ace, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_ace_",ano,"_v4.RDS"))
+  rm(enem_ace, ini,item,j)
   
   rm(ano)
   
@@ -1866,13 +1946,14 @@ mun_hv <- mun_hv %>%
 rm(coordenadas)
 
 # Bases de dados de todos os anos
-for(ano in 2018:2019){
+for(ano in 2013:2019){
   
-  print(ano)
+  ini <- Sys.time()
+  message("Starting for: ", ano)
   
-  temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",ano,"_v5.RDS")) %>%
+  temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_notas_",ano,"_v4.RDS")) %>%
     filtros(filtro = "notas")
-  temp2 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_ace_",ano,"_v5.RDS"))%>%
+  temp2 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_ace_",ano,"_v4.RDS"))%>%
     mutate(
       sg_area = tolower(sg_area)
     ) %>%
@@ -1894,6 +1975,9 @@ for(ano in 2018:2019){
   temp <- temp %>% merge(temp2, by = "id_enem", all.y = F,all.x = F)
   rm(temp2)
   
+  
+  
+  message("Creating the variables")
   temp <- temp %>%
     select(-sexo,-status_rd) %>%
     left_join(mun_hv,
@@ -2131,12 +2215,14 @@ for(ano in 2018:2019){
   
   rm(temp)
   
-  
-  saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_",ano,"_v2.RDS"))
+  message("Saving main scores data base...")
+  saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_",ano,".RDS"))
   rm(base_nota)
   
+  
+  message("Saving absent students data base...")
   # Base de abstenções
-  base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_abs_",ano,"_v5.RDS")) %>%
+  base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/enem_abs_",ano,"_v4.RDS")) %>%
     select(-sexo,-status_rd) %>%
     left_join(mun_hv,
               by = c(
@@ -2182,10 +2268,21 @@ for(ano in 2018:2019){
       dist_hv_border = ifelse(hv == 1, dist_hv_border,-dist_hv_border)
     )
   
-  saveRDS(base_abs, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",ano,"_v2.RDS"))
+  saveRDS(base_abs, file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",ano,".RDS"))
   rm(base_abs)
   rm(ano)
   
+  fim <- Sys.time()
+  delta <- difftime(fim, ini, units = "secs")
+  mins <- floor(as.numeric(delta) / 60)
+  secs <- round(as.numeric(delta) %% 60)
+  hours <- round(mins /60)
+  
+  message("---------------------------------------------")
+  message("Elapsed time: ",hours, " hours, ",mins," mins, and ", secs, " s")
+  message("---------------------------------------------")
+  
+  rm(ini, fim, delta, mins, secs, hours)
 }
 
 rm(mun_hv,pib)
@@ -2771,6 +2868,7 @@ org_data <- function(base,ano,vlist,cnames) {
     # Modificações somente de 2012 a 2019
     base <- base %>%
       mutate(
+        npessoas_dom = as.numeric(pessoas_dom)
         pessoas_dom = case_when(
           pessoas_dom == 1 ~ 'A',
           pessoas_dom >= 2 & pessoas_dom <= 4 ~ 'B',

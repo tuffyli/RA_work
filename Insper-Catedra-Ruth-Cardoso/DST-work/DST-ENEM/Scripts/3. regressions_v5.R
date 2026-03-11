@@ -45,10 +45,6 @@ base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2
   setDT() %>% 
   filter(conclusao == 2)
 
-base2 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019_v2.RDS")) %>%
-  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018_v2.RDS"))) %>%
-  setDT() %>% 
-  filter(conclusao == 2)
 
 #Exam start time dummies
 base <- base %>% 
