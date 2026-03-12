@@ -118,7 +118,7 @@ base <- base %>%
     )
   ) %>% 
   filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
-                  "MT", "GO", "MG", "ES")) %>%  #In-DST
+                  "MT", "GO", "MG", "ES", "DF")) %>%  #In-DST
   setDT()
 
 #Absence database
@@ -126,7 +126,7 @@ base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_ab
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",2019,".RDS"))) %>%
   select(id_enem,priv, hv, ano, abs, uf) %>% 
   filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
-                  "MT", "GO", "MG", "ES")) %>%  #In-DST
+                   "MT", "GO", "MG", "ES", "DF")) %>%  #In-DST
   setDT()
 
 # Lista de variáveis
@@ -335,7 +335,7 @@ gc()
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
   filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
-                   "MT", "GO", "MG", "ES")       #In DST
+                   "MT", "GO", "MG", "ES", "DF")       #In DST
          ) %>%  
   setDT()
 
@@ -424,7 +424,7 @@ gc()
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2019.RDS")) %>% 
   filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
-                   "MT", "GO", "MG", "ES"))
+                   "MT", "GO", "MG", "ES", "DF"))
 
 summary(base %>% select(conclusao, treineiro))
 
@@ -437,7 +437,7 @@ base <- base %>%
 
 temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_2019_v4.RDS")) %>% 
   filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
-                   "MT", "GO", "MG", "ES"))
+                   "MT", "GO", "MG", "ES", "DF"))
 
 temp <- temp %>% 
   mutate(
@@ -488,7 +488,7 @@ gc()
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2018.RDS")) %>% 
   filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
-                   "MT", "GO", "MG", "ES"))
+                   "MT", "GO", "MG", "ES", "DF"))
 
 summary(base %>% select(conclusao, treineiro))
 
@@ -501,7 +501,7 @@ base <- base %>%
 
 temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_2018_v4.RDS")) %>% 
   filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
-                   "MT", "GO", "MG", "ES"))
+                   "MT", "GO", "MG", "ES", "DF"))
 
 temp <- temp %>% 
   mutate(
@@ -604,7 +604,7 @@ result$n19[8] <- ntrei_19
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
   filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
-                   "MT", "GO", "MG", "ES")       #In DST
+                   "MT", "GO", "MG", "ES", "DF")       #In DST
          ) %>%
   setDT() %>% 
   filter(conclusao == 2)

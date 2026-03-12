@@ -139,8 +139,145 @@ map <- ggplot(mun_hv) +
 print(map)
 
 
+uf_boundaries <- mun_hv %>%
+  group_by(uf) %>%
+  summarise(do_union = TRUE) %>%      # dissolve just to get outer border
+  st_boundary()                       # keep only the border lines
+
+uf_layer <- mun_hv %>%
+  group_by(uf) %>%
+  summarise(geometry = st_union(geometry), .groups = "drop")
+
+map <- ggplot(mun_hv) +
+  
+  # Base municipalities with clusters
+  geom_sf(aes(fill = factor(seg)),
+          color = "grey85",
+          linewidth = 0.1) +
+  
+  # UF borders ON TOP (clean highlighting layer)
+  geom_sf(data = uf_boundaries,
+          color = "black",
+          linewidth = 0.8) +
+  
+  # DST border
+  geom_sf(data = line,
+          color = "blue",
+          linewidth = 1.2) +
+  
+  scale_fill_manual(
+    name = "Clusters",
+    values = brewer.pal(n = 7, name = "Set2"),
+    guide = guide_legend(
+      direction = "horizontal",
+      title.position = "top",
+      nrow = 1
+    )
+  ) +
+  
+  coord_sf(
+    xlim = c(bbox_line$xmin - pad_x, bbox_line$xmax + pad_x),
+    ylim = c(bbox_line$ymin - pad_y, bbox_line$ymax + pad_y),
+    expand = FALSE
+  ) +
+  
+  theme_void() +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(size = 12),
+    legend.text  = element_text(size = 11)
+  )
+
+print(map)
+
+
+
+library(ggpattern)
+
+mun_hv <- mun_hv %>%
+  ungroup() %>%
+  st_as_sf()
+
+
+library(ggplot2)
+library(sf)
+library(ggpattern)
+library(RColorBrewer)
+
+# Convert UF to factor (important for manual scales)
+mun_hv$uf <- factor(mun_hv$uf)
+
+# Define angles and spacing for each UF
+uf_levels <- levels(mun_hv$uf)
+
+angle_values <- setNames(
+  seq(0, 150, length.out = length(uf_levels)),
+  uf_levels
+)
+
+spacing_values <- setNames(
+  seq(0.015, 0.045, length.out = length(uf_levels)),
+  uf_levels
+)
+
+map <- ggplot(mun_hv) +
+  
+  geom_sf_pattern(
+    aes(
+      fill = factor(seg),
+      pattern_angle = uf,
+      pattern_spacing = uf
+    ),
+    pattern = "stripe",
+    pattern_density = 0.4,
+    pattern_fill = "black",
+    pattern_colour = "black",
+    pattern_size = 0.3,
+    color = "grey60"
+  ) +
+  
+  scale_pattern_angle_manual(
+    values = angle_values
+  ) +
+  
+  scale_pattern_spacing_manual(
+    values = spacing_values
+  ) +
+  
+  scale_fill_manual(
+    name = "Clusters",
+    values = brewer.pal(n = 7, name = "Set2")
+  ) +
+  
+  geom_sf(
+    data = line,
+    color = "blue",
+    linewidth = 1.5
+  ) +
+  
+  coord_sf(
+    xlim = c(bbox_line$xmin - pad_x, bbox_line$xmax + pad_x),
+    ylim = c(bbox_line$ymin - pad_y, bbox_line$ymax + pad_y)
+  ) +
+  guides(
+    pattern_angle = "none",
+    pattern_spacing = "none"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 25, face = "bold"),
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 15)
+  )
+
+map
+
+print(map)
+
 # Salvando o mapa
-ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_seg.png",plot = map,device = "png",dpi = 300)
+ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_seg2.png",plot = map,device = "png",dpi = 300)
 #ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_seg.eps",plot = map,device = "eps")
 #ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_seg.pdf",plot = map,device = "pdf")
 

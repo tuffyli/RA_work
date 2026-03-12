@@ -548,7 +548,8 @@ org_data <- function(base,ano,vlist,cnames) {
         #Domestica
         empr_dom = case_when(
           empr_dom == "D" ~ 0, #Sem doméstica
-          .default        ~ 1  #Com uma ou mais
+          empr_dom %in% c("A", "B", "C") ~ 1,
+          .default        = NA  #Com uma ou mais
         ),
         
         #Banheiros
@@ -556,8 +557,8 @@ org_data <- function(base,ano,vlist,cnames) {
           n_banheiro == "D" ~ 0,
           n_banheiro == "A" ~ 1,
           n_banheiro == "B" ~ 2,
-          n_banheiro == "C" ~ ">=3", # 3 ou mais
-          .default          ~ NA,
+          n_banheiro == "C" ~ 3, # 3 ou mais
+          .default          = NA,
         ),
         
         #Quartos
@@ -567,43 +568,45 @@ org_data <- function(base,ano,vlist,cnames) {
         n_carros = case_when(
           n_carros == "A" ~ 1,
           n_carros == "B" ~ 2,
-          n_carros == "C" ~ ">=3",
+          n_carros == "C" ~ 3,
           n_carros == "D" ~ 0,
-          .default        ~ NA
+          .default        = NA
         ),
         
         #Geladeira
         n_geladeira = case_when(
           n_geladeira == "A" ~ 1,
           n_geladeira == "B" ~ 2,
-          n_geladeira == "C" ~ ">=3",
+          n_geladeira == "C" ~ 3,
           n_geladeira == "D" ~ 0,
-          .default        ~ NA
+          .default           = NA
         ),
         
         #Celular
         n_celular = case_when(
           n_celular == "A" ~ 1,
           n_celular == "B" ~ 2,
-          n_celular == "C" ~ ">=3",
+          n_celular == "C" ~ 3,
           n_celular == "D" ~ 0,
-          .default        ~ NA
+          .default         = NA
         ),
         
         #PC
         pc = case_when(
           pc == "A" ~ 1,
           pc == "B" ~ 2,
-          pc == "C" ~ ">=3",
+          pc == "C" ~ 3,
           pc == "D" ~ 0,
-          .default  ~ NA
+          .default  = NA
         ),
         
         internet = case_when(
           internet == "D" ~ 0,
-          .default        ~ 1
+          internet %in% c("A", "B", "C") ~ 1,
+          .default      = NA
         )
-      )} else if (ano %in% c(2015:2019)) { #Anos in 2015-2019
+      )
+    } else if (ano %in% c(2015:2019)) { #Anos in 2015-2019
     
     base <- base %>% 
       mutate(
@@ -611,7 +614,7 @@ org_data <- function(base,ano,vlist,cnames) {
         empr_dom = case_when(
           empr_dom == "A" ~ 0, #Sem doméstica
           empr_dom %in% c("B", "C", "D") ~ 1,
-          .default        ~ NA  #Com uma ou mais
+          .default        = NA  #Com uma ou mais
         ),
         
         #Banheiros
@@ -621,7 +624,7 @@ org_data <- function(base,ano,vlist,cnames) {
           n_banheiro == "C" ~ 2,
           n_banheiro == "D" ~ 3, 
           n_banheiro == "E" ~ 4, #4 ou mais
-          .default          ~ NA
+          .default          = NA
         ),
         
         #Quartos
@@ -631,7 +634,7 @@ org_data <- function(base,ano,vlist,cnames) {
           n_quartos == "C" ~ 2,
           n_quartos == "D" ~ 3, 
           n_quartos == "E" ~ 4, #4 ou mais
-          .default         ~ NA
+          .default         = NA
         ),
         
         #Carros
@@ -641,7 +644,7 @@ org_data <- function(base,ano,vlist,cnames) {
           n_carros == "C" ~ 2,
           n_carros == "D" ~ 3, 
           n_carros == "E" ~ 4, #4 ou mais
-          .default         ~ NA
+          .default        = NA
         ),
         
         #Geladeira
@@ -651,7 +654,7 @@ org_data <- function(base,ano,vlist,cnames) {
           n_geladeira == "C" ~ 2,
           n_geladeira == "D" ~ 3, 
           n_geladeira == "E" ~ 4, #4 ou mais
-          .default         ~ NA
+          .default           = NA
         ),
         
         #Celular
@@ -661,7 +664,7 @@ org_data <- function(base,ano,vlist,cnames) {
           n_celular == "C" ~ 2,
           n_celular == "D" ~ 3, 
           n_celular == "E" ~ 4, #4 ou mais
-          .default         ~ NA
+          .default         = NA
         ),
         
         #PC
@@ -671,13 +674,13 @@ org_data <- function(base,ano,vlist,cnames) {
           pc == "C" ~ 2,
           pc == "D" ~ 3, 
           pc == "E" ~ 4, #4 ou mais
-          .default         ~ NA
+          .default  = NA
         ),
         
         internet = case_when(
           internet == "B" ~ 0,
           internet == "A" ~ 1,
-          .default        ~ NA
+          .default        = NA
         )
       )
     
@@ -1673,7 +1676,7 @@ for(ano in 2013:2019){
   rm(enem)
   
   # Especificações da base de dados
-  j <- ano - 2008
+  j <- ano - 2012
   delta <- ifelse(ano == 2009, 1, 0)
   vlist <- vlist_item_df[1:(nrow(vlist_item_df) - delta),j]
   cnames <- vlist_item_df[1:(nrow(vlist_item_df) - delta),ncol(vlist_item_df)]
