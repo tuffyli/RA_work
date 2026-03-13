@@ -1046,28 +1046,6 @@ filtros <- function(base,filtro) {
 # ---------------------------------------------------------------------------- #
 
 dlist <- c("CN","CH","LC","MT")
-vlist2009 <- c(
-  "NU_INSCRICAO",
-  paste0(rep("TX_RESPOSTAS_", times= length(dlist)), dlist),
-  paste0(rep("CO_PROVA_", times= length(dlist)), dlist),
-  paste0(rep("TX_GABARITO_", times= length(dlist)), dlist),
-  ""
-)
-vlist2010 <- c(
-  "NU_INSCRICAO",
-  paste0(rep("TX_RESPOSTAS_", times= length(dlist)), dlist),
-  paste0(rep("CO_PROVA_", times= length(dlist)), dlist),
-  paste0(rep("TX_GABARITO_", times= length(dlist)), dlist),
-  "TP_LINGUA"
-)
-vlist2011 <- c(
-  "NU_INSCRICAO",
-  paste0(rep("TX_RESPOSTAS_", times= length(dlist)), dlist),
-  paste0(rep("ID_PROVA_", times= length(dlist)), dlist),
-  paste0(rep("DS_GABARITO_", times= length(dlist)), dlist),
-  "TP_LINGUA"
-)
-vlist2012 <- tolower(vlist2011)
 vlist2013 <- c(
   "NU_INSCRICAO",
   paste0(rep("TX_RESPOSTAS_", times= length(dlist)), dlist),
@@ -1097,10 +1075,6 @@ vnames <- c(
   "lingua"
 )
 vlist_item_df <- data.frame(
-  vl2009 = vlist2009,
-  vl2010 = vlist2010,
-  vl2011 = vlist2011,
-  vl2012 = vlist2012,
   vl2013 = vlist2013,
   vl2014 = vlist2013,
   vl2015 = vlist2015,
@@ -1110,7 +1084,7 @@ vlist_item_df <- data.frame(
   vl2019 = vlist2016,
   vnames = vnames
 )
-rm(vlist2009,vlist2010,vlist2011,vlist2012,vlist2013,vlist2015,vlist2016,vnames,dlist)
+rm(vlist2013,vlist2015,vlist2016,vnames,dlist)
 
 # ---------------------------------------------------------------------------- #
 ## 2.2 Begin -----
@@ -1677,7 +1651,7 @@ for(ano in 2013:2019){
   
   # Especificações da base de dados
   j <- ano - 2012
-  delta <- ifelse(ano == 2009, 1, 0)
+  delta <- ifelse(ano == 2019, 1, 0)
   vlist <- vlist_item_df[1:(nrow(vlist_item_df) - delta),j]
   cnames <- vlist_item_df[1:(nrow(vlist_item_df) - delta),ncol(vlist_item_df)]
   

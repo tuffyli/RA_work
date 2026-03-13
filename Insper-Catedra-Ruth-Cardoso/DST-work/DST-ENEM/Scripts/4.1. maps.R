@@ -34,6 +34,7 @@ library(stringi)
 library(readxl)
 library(knitr)
 library(stargazer)
+library(ggpattern)
 
 
 
@@ -109,8 +110,8 @@ bbox_line <- st_bbox(line)
 
 #Adicionando um limite de plottagem menor, mas dentro do intervalo estabelecido
 
-pad_x <- (bbox_line$xmax - bbox_line$xmin) * 0.15
-pad_y <- (bbox_line$ymax - bbox_line$ymin) * 0.15
+pad_x <- (bbox_line$xmax - bbox_line$xmin) * 0.20
+pad_y <- (bbox_line$ymax - bbox_line$ymin) * 0.20
 
 map <- ggplot(mun_hv) +
   geom_sf(aes(fill = factor(seg))) +
@@ -191,96 +192,97 @@ map <- ggplot(mun_hv) +
 print(map)
 
 
-
-library(ggpattern)
-
-mun_hv <- mun_hv %>%
-  ungroup() %>%
-  st_as_sf()
-
-
-library(ggplot2)
-library(sf)
-library(ggpattern)
-library(RColorBrewer)
-
-# Convert UF to factor (important for manual scales)
-mun_hv$uf <- factor(mun_hv$uf)
-
-# Define angles and spacing for each UF
-uf_levels <- levels(mun_hv$uf)
-
-angle_values <- setNames(
-  seq(0, 150, length.out = length(uf_levels)),
-  uf_levels
-)
-
-spacing_values <- setNames(
-  seq(0.015, 0.045, length.out = length(uf_levels)),
-  uf_levels
-)
-
-map <- ggplot(mun_hv) +
-  
-  geom_sf_pattern(
-    aes(
-      fill = factor(seg),
-      pattern_angle = uf,
-      pattern_spacing = uf
-    ),
-    pattern = "stripe",
-    pattern_density = 0.4,
-    pattern_fill = "black",
-    pattern_colour = "black",
-    pattern_size = 0.3,
-    color = "grey60"
-  ) +
-  
-  scale_pattern_angle_manual(
-    values = angle_values
-  ) +
-  
-  scale_pattern_spacing_manual(
-    values = spacing_values
-  ) +
-  
-  scale_fill_manual(
-    name = "Clusters",
-    values = brewer.pal(n = 7, name = "Set2")
-  ) +
-  
-  geom_sf(
-    data = line,
-    color = "blue",
-    linewidth = 1.5
-  ) +
-  
-  coord_sf(
-    xlim = c(bbox_line$xmin - pad_x, bbox_line$xmax + pad_x),
-    ylim = c(bbox_line$ymin - pad_y, bbox_line$ymax + pad_y)
-  ) +
-  guides(
-    pattern_angle = "none",
-    pattern_spacing = "none"
-  ) +
-  theme_bw() +
-  theme(
-    legend.position = "bottom",
-    axis.text = element_text(size = 20),
-    axis.title = element_text(size = 25, face = "bold"),
-    legend.title = element_text(size = 20),
-    legend.text = element_text(size = 15)
-  )
-
-map
-
-print(map)
+# 
+# library(ggpattern)
+# 
+# mun_hv <- mun_hv %>%
+#   ungroup() %>%
+#   st_as_sf()
+# 
+# 
+# library(ggplot2)
+# library(sf)
+# library(ggpattern)
+# library(RColorBrewer)
+# 
+# # Convert UF to factor (important for manual scales)
+# mun_hv$uf <- factor(mun_hv$uf)
+# 
+# # Define angles and spacing for each UF
+# uf_levels <- levels(mun_hv$uf)
+# 
+# angle_values <- setNames(
+#   seq(0, 150, length.out = length(uf_levels)),
+#   uf_levels
+# )
+# 
+# spacing_values <- setNames(
+#   seq(0.015, 0.045, length.out = length(uf_levels)),
+#   uf_levels
+# )
+# 
+# map <- ggplot(mun_hv) +
+#   
+#   geom_sf_pattern(
+#     aes(
+#       fill = factor(seg),
+#       pattern_angle = uf,
+#       pattern_spacing = uf
+#     ),
+#     pattern = "stripe",
+#     pattern_density = 0.4,
+#     pattern_fill = "black",
+#     pattern_colour = "black",
+#     pattern_size = 0.3,
+#     color = "grey60"
+#   ) +
+#   
+#   scale_pattern_angle_manual(
+#     values = angle_values
+#   ) +
+#   
+#   scale_pattern_spacing_manual(
+#     values = spacing_values
+#   ) +
+#   
+#   scale_fill_manual(
+#     name = "Clusters",
+#     values = brewer.pal(n = 7, name = "Set2")
+#   ) +
+#   
+#   geom_sf(
+#     data = line,
+#     color = "blue",
+#     linewidth = 1.5
+#   ) +
+#   
+#   coord_sf(
+#     xlim = c(bbox_line$xmin - pad_x, bbox_line$xmax + pad_x),
+#     ylim = c(bbox_line$ymin - pad_y, bbox_line$ymax + pad_y)
+#   ) +
+#   guides(
+#     pattern_angle = "none",
+#     pattern_spacing = "none"
+#   ) +
+#   theme_bw() +
+#   theme(
+#     legend.position = "bottom",
+#     axis.text = element_text(size = 20),
+#     axis.title = element_text(size = 25, face = "bold"),
+#     legend.title = element_text(size = 20),
+#     legend.text = element_text(size = 15)
+#   )
+# 
+# map
+# 
+# print(map)
 
 # Salvando o mapa
 ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_seg2.png",plot = map,device = "png",dpi = 300)
 #ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_seg.eps",plot = map,device = "eps")
 #ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_seg.pdf",plot = map,device = "pdf")
 
+rm(uf_layer, uf_boundaries)
 
 # ---------------------------------------------------------------------------- #
 #4. Mapa da banda ----
@@ -371,9 +373,50 @@ map <- ggplot(mun_hv) +
 
 map
 
+map_aer <- ggplot(mun_hv) +
+  
+  # Base municipalities (very light borders)
+  geom_sf(aes(fill = final),
+          color = "grey90",
+          linewidth = 0.08) +
+  
+  # Policy border (black, slightly thick)
+  geom_sf(data = line,
+          color = "black",
+          linewidth = 1.1) +
+  
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "Out" = "grey85",               # very neutral
+      "Bandwidth" = "#C2B280",        # muted sand
+      "ENEM and Bandwidth" = "#4C9F70"  # muted green
+    ),
+    drop = FALSE
+  ) +
+  
+  coord_sf(
+    xlim = c(bbox_line$xmin - pad_x, bbox_line$xmax + pad_x),
+    ylim = c(bbox_line$ymin - pad_y, bbox_line$ymax + pad_y),
+    expand = FALSE
+  ) +
+  
+  theme_void() +   # removes axes and background
+  
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.2, "cm"),
+    legend.key.height = unit(0.4, "cm")
+  )
+
+map_aer
+
 ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_v2.png"),plot = map,device = "png", dpi = 300)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_v3.png"),plot = map_aer,device = "png", dpi = 300)
 
-
+rm(map_aer)
 # --------------------------------------------------------------------------- #
 # 5. Horário de Início ----
 # --------------------------------------------------------------------------- #
@@ -416,6 +459,9 @@ mun_hv <- mun_hv %>%
 #------------------------------------------------------------------------------#
 ## 5.2 Com HV ----
 # -----------------------------------------------------------------------------#
+
+
+
 
 # Mapa de clusters
 map <- ggplot(mun_hv %>% arrange(horario_18)) +
@@ -467,6 +513,74 @@ map
 
 ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_h18.png"),plot = map,device = "png", dpi = 300)
 
+library(ggpattern)
+library(dplyr)
+
+mun_hv <- mun_hv %>%
+  mutate(dst_area = ifelse(hv == 1, "DST Area", "No DST"))
+
+map <- ggplot(mun_hv) +
+  
+  # Base fill
+  geom_sf(aes(fill = factor(horario_18)),
+          color = NA) +
+  
+  # Stripe overlay for DST area
+  geom_sf_pattern(
+    aes(pattern = dst_area),
+    fill = NA,
+    pattern = "stripe",
+    pattern_angle = 45,
+    pattern_spacing = 0.08,   # wider spacing
+    pattern_density = 0.12,   # thinner lines
+    pattern_fill = "black",
+    pattern_colour = "black",
+    pattern_alpha = 0.6,
+    color = NA
+  ) +
+  
+  # DST border
+  geom_sf(data = line,
+          color = "black",
+          linewidth = 1.1) +
+  
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "10h" = "#6A3D9A",
+      "11h" = "#3B6FB6",
+      "12h" = "#D89C00",
+      "13h" = "#2C8C5E"
+    )
+  ) +
+  
+  scale_pattern_manual(
+    name = NULL,
+    values = c(
+      "DST Area" = "stripe",
+      "No DST"   = "none"
+    ),
+    breaks = "DST Area"   # only show DST in legend
+  ) +
+  
+  guides(
+    fill = guide_legend(order = 1),
+    pattern = guide_legend(
+      order = 2,
+      override.aes = list(fill = "white")  # striped legend box
+    )
+  ) +
+  
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal"
+  )
+
+map
+
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_h18v2.png"),plot = map,device = "png", dpi = 300)
 
 #------------------------------------------------------------------------------#
 ## 5.3 Sem HV ----
