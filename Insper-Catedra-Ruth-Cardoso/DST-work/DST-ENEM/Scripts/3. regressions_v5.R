@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 09/03/2026
+# Date: 16/03/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -153,8 +153,9 @@ base <- base %>%
             
             acerto_ini5_d1, acerto_ini10_d1, acerto_fim5_d1, acerto_fim10_d1,
             acerto_ini5_d2, acerto_ini10_d2, acerto_fim5_d2, acerto_fim10_d2,
-            141:165, #acertos
-            167:179 #padronizadas
+            acerto_al_ch:acerto_ah_mt,
+            acerto_cl_ch:d_acerto_5mt, #acertos
+            media_p:rd5_p #padronizadas
   )) 
 
 
@@ -4144,25 +4145,39 @@ rm(graph, tablist_bw, rlist_bw, h, b, c, base_a)
 # ---------------------------------------------------------------------------- #
 
 
-var_list <- c("id18", "fem", "ppi", "escp", "escm",# "dom5",
+var_list <- c("id18", "fem", "ppi", "escp", "escm", # "dom5",
+              "pessoas_dom", "empr_dom", "n_banheiro", "n_quartos", "n_carros",
+              "n_geladeira", "n_celular", "pc", "internet",
               "renda1", "pibpc",# "pai_trab_man", "mae_trab_man",
-              "temp_d1", "temp_d2", "umid_d1", "umid_d2")
+              "temp_d1", "temp_d2", "umid_d1", "umid_d2",
+              "renda_1_10", "renda_10")
 
 vnames <- c(
-  '18 years old',
-  'Female',
-  'African Brazilian \n or Indigenous',
-  'Father with \n highschool',
-  'Mother with \n highschool',
-  #'5 or more people \n in household',
-  'Up to 1 MW \nhousehold income',
-  'GDP per capita',
-  #'Father in \n manual labor',
-  #'Mother in \n manual labor',
-  "Temperature - Day 1",
-  "Temperature - Day 2",
-  "Humidity - Day 1",
-  "Humidity - Day 2"
+  "Age 18",
+  "Female",
+  "African Brazilian\nor Indigenous",
+  "Father with\nhigh school",
+  "Mother with\nhigh school",
+  #"5 or more people\nin household",
+  "People in household",
+  "Domestic worker\npresence",
+  "Number of bathrooms",
+  "Number of bedrooms",
+  "Number of cars",
+  "Number of refrigerators",
+  "Number of cell phones",
+  "Computer presence",
+  "Internet access",
+  "Household income\nup to 1 MW",
+  "GDP per capita",
+  #"Father in\nmanual labor",
+  #"Mother in\nmanual labor",
+  "Temperature – Day 1",
+  "Temperature – Day 2",
+  "Humidity – Day 1",
+  "Humidity – Day 2",
+  "Household income\nbetween 1 and 10 MW",
+  "Household income\nmore than 10 MW"
 )
 
 # ---------------------------------------------------------------------------- #
@@ -4170,7 +4185,11 @@ vnames <- c(
 # ---------------------------------------------------------------------------- #
 
 base_inpe_t <- base %>%
-  filter(abs(dist_hv_border) <= bw_main_a) %>% 
+  filter(abs(dist_hv_border) <= bw_main_a) %>%
+  mutate(
+    renda_1_10 = ifelse(renda_dom == "C", 1 , 0),
+    renda_10   = ifelse(renda_dom == "D", 1, 0)
+  ) %>% 
   setDT()
 
 mun_nopair <- list()
@@ -4274,14 +4293,28 @@ covs_np$ep18[covs_np$var == vnames[3]] <- mun_nopair[["dif_ppi"]]$z[[3]] #ppi
 covs_np$ep18[covs_np$var == vnames[4]] <- mun_nopair[["dif_escp"]]$z[[3]] #escp
 covs_np$ep18[covs_np$var == vnames[5]] <- mun_nopair[["dif_escm"]]$z[[3]] #escm
 #covs_np$ep18[covs_np$var == vnames[6]] <- mun_nopair[["dif_dom5"]]$z[[3]] #dom5
-covs_np$ep18[covs_np$var == vnames[6]] <- mun_nopair[["dif_renda1"]]$z[[3]] #renda1
-covs_np$ep18[covs_np$var == vnames[7]] <- mun_nopair[["dif_pibpc"]]$z[[3]] #pibpc
+covs_np$ep18[covs_np$var == vnames[6]] <- mun_nopair[["dif_pessoas_dom"]]$z[[3]] #n people in household
+covs_np$ep18[covs_np$var == vnames[7]] <- mun_nopair[["dif_empr_dom"]]$z[[3]] #housekeeper
+covs_np$ep18[covs_np$var == vnames[8]] <- mun_nopair[["dif_n_banheiro"]]$z[[3]] #bathroom
+covs_np$ep18[covs_np$var == vnames[9]] <- mun_nopair[["dif_n_quartos"]]$z[[3]] #bedrooms
+covs_np$ep18[covs_np$var == vnames[10]] <- mun_nopair[["dif_n_carros"]]$z[[3]] #cars
+covs_np$ep18[covs_np$var == vnames[11]] <- mun_nopair[["dif_n_geladeira"]]$z[[3]] #refrigerator
+covs_np$ep18[covs_np$var == vnames[12]] <- mun_nopair[["dif_n_celular"]]$z[[3]] #celphone
+covs_np$ep18[covs_np$var == vnames[13]] <- mun_nopair[["dif_pc"]]$z[[3]] #pc
+covs_np$ep18[covs_np$var == vnames[14]] <- mun_nopair[["dif_internet"]]$z[[3]] #internet
+
+covs_np$ep18[covs_np$var == vnames[15]] <- mun_nopair[["dif_renda1"]]$z[[3]] #renda1
+covs_np$ep18[covs_np$var == vnames[16]] <- mun_nopair[["dif_pibpc"]]$z[[3]] #pibpc
 #covs_np$ep18[covs_np$var == vnames[9]] <- mun_nopair[["dif_pai_trab_man"]]$z[[3]] #trab manual Pai
 #covs_np$ep18[covs_np$var == vnames[10]] <- mun_nopair[["dif_mae_trab_man"]]$z[[3]] #trab manual Mae
-covs_np$ep18[covs_np$var == vnames[8]] <- mun_nopair[["dif_temp_d1"]]$z[[3]] #temp1d
-covs_np$ep18[covs_np$var == vnames[9]] <- mun_nopair[["dif_temp_d2"]]$z[[3]] #temp2d
-covs_np$ep18[covs_np$var == vnames[10]] <- mun_nopair[["dif_umid_d1"]]$z[[3]] #um1d
-covs_np$ep18[covs_np$var == vnames[11]] <- mun_nopair[["dif_umid_d2"]]$z[[3]] #um2d
+covs_np$ep18[covs_np$var == vnames[17]] <- mun_nopair[["dif_temp_d1"]]$z[[3]] #temp1d
+covs_np$ep18[covs_np$var == vnames[18]] <- mun_nopair[["dif_temp_d2"]]$z[[3]] #temp2d
+covs_np$ep18[covs_np$var == vnames[19]] <- mun_nopair[["dif_umid_d1"]]$z[[3]] #um1d
+covs_np$ep18[covs_np$var == vnames[20]] <- mun_nopair[["dif_umid_d2"]]$z[[3]] #um2d
+
+covs_np$ep18[covs_np$var == vnames[21]] <- mun_nopair[["dif_renda_1_10"]]$z[[3]] #1-10MW
+covs_np$ep18[covs_np$var == vnames[22]] <- mun_nopair[["dif_renda_10"]]$z[[3]] #10+MW
+
 
 
 # ---------------------------------------------------------------------------- #
@@ -4310,8 +4343,8 @@ plot_covs <- ggplot(data = covs_np) +
 
 print(plot_covs)
 
-ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/covs_test_dif_.png"), device = "png", height = 10, width = 7)
-ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/covs_test_dif_.eps"), device = "eps", height = 10, width = 7)
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/covs_test_dif_.png"), device = "png", height = 13, width = 7)
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/covs_test_dif_.eps"), device = "eps", height = 13, width = 7)
 
 rm( covs_np, plot_covs, temp, mun_nopair, var_list, vnames, i, covs, base_inpe_t,
     base, base_a)

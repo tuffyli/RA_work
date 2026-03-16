@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 11/03/2026
+# Date: 16/03/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1652,8 +1652,8 @@ for(ano in 2013:2019){
   # Especificações da base de dados
   j <- ano - 2012
   delta <- ifelse(ano == 2019, 1, 0)
-  vlist <- vlist_item_df[1:(nrow(vlist_item_df) - delta),j]
-  cnames <- vlist_item_df[1:(nrow(vlist_item_df) - delta),ncol(vlist_item_df)]
+  vlist <- vlist_item_df[1:(nrow(vlist_item_df) ),j]
+  cnames <- vlist_item_df[1:(nrow(vlist_item_df) ),ncol(vlist_item_df)]
   
   # Bases de dados em CSV e em DTA, dependendo do ano
   print(paste0("Abrindo a base: ",ano))
@@ -1682,7 +1682,7 @@ for(ano in 2013:2019){
   # Organização da base de dados
   item <- item %>% relocate(all_of(vlist))
   colnames(item) <- cnames
-  rm(vlist,cnames,delta)
+  rm(vlist,cnames)
   
   # Reorganizando a base (reshape)
   if (ano == 2009){
@@ -1693,7 +1693,9 @@ for(ano in 2013:2019){
   
   item <- item %>%
     right_join(id, by = "id_enem") %>%
-    setDT() %>%
+    setDT() 
+  
+  item <- item %>% 
     melt(
       id.vars = vlist,
       measure.vars = list(
@@ -4097,6 +4099,8 @@ for(ano in 2018:2019){
         .default = NA
       ),
       renda1 = ifelse(renda_dom %in% c("A","B"),1,0),
+      renda_1_10 = ifelse(renda_dom == "C", 1 , 0), #1 MW to 10MW
+      renda_10   = ifelse(renda_dom == "D", 1, 0), #More than 10MW
       fem = ifelse(mas == 0, 1, 0),
       rd0 = ifelse(rd == 0, 1, 0),
       rd1 = ifelse(rd0 == 1,NA,rd1),

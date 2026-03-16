@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Data description
 # Last edited by: Tuffy Licciardi Issa
-# Date: 11/03/2026
+# Date: 16/03/2026
 # ---------------------------------------------------------------------------- #
 # Library -----
 # ---------------------------------------------------------------------------- #
@@ -190,6 +190,7 @@ rm(mun_presente_ambos_anos)
 
 summary(base_nota$abs)
 
+
 # ---------------------------------------------------------------------------- #
 ## 1.1 Values -----
 # ---------------------------------------------------------------------------- #
@@ -321,6 +322,68 @@ print.xtable(
 # ---------------------------------------------------------------------------- #
 
 
+
+
+
+base_munt <- base_nota %>%
+  filter(priv == 0) %>% 
+  group_by(mun_prova, hv) %>% 
+  summarise(
+    across(all_of(vlist), ~ mean(.x, na.rm = TRUE)),
+    obs = n(),
+    .groups = "drop"
+  )
+
+
+medias0 <- base_munt %>%
+  filter( hv == 0) %>%
+  summarise(
+    across(all_of(vlist),
+           ~ weighted.mean(.x, w = obs, na.rm = TRUE))
+  ) %>%
+  as.numeric()
+
+
+
+medias1 <- base_munt %>%
+  filter( hv == 1) %>%
+  summarise(
+    across(all_of(vlist),
+           ~ weighted.mean(.x, w = obs, na.rm = TRUE))
+  ) %>%
+  as.numeric()
+
+w_sd <- function(x, w){
+  m <- weighted.mean(x, w, na.rm = TRUE)
+  sqrt(sum(w * (x - m)^2, na.rm = TRUE) / sum(w, na.rm = TRUE))
+}
+
+
+dps0 <- base_munt %>%
+  filter( hv == 0) %>%
+  summarise(
+    across(all_of(vlist),
+           ~ w_sd(.x, obs))
+  ) %>%
+  as.numeric()
+
+dps1 <- base_munt %>%
+  filter( hv == 1) %>%
+  summarise(
+    across(all_of(vlist),
+           ~ w_sd(.x, obs))
+  ) %>%
+  as.numeric()
+
+obs0 <- base_munt %>%
+  filter(hv == 0) %>% 
+  summarise(
+    across(all_of(vlist),
+           ~ sum(obs))
+  )
+
+
+obs0 <- sum(base_munt$hv == 0)
 
 rm(list = ls())
 gc()
