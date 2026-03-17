@@ -136,29 +136,18 @@ base <- base %>%
       .default = NA
     )
   ) %>% 
-  select(-c(co_cn, co_ch, co_lc, co_mt,
-            pres_cn, pres_ch, pres_lc, pres_mt,
-            abs_rd, abs_cn, abs_ch, abs_lc, abs_mt,
-            mas, urb, priv,
-            acerto_ch, acerto_lc, acerto_mt, acerto_cn,
-            acerto_ini5_ch, acerto_ini5_cn, acerto_ini5_lc, acerto_ini5_mt,
-            acerto_ini10_ch, acerto_ini10_cn, acerto_ini10_lc, acerto_ini10_mt,
-            acerto_fim5_ch, acerto_fim5_cn, acerto_fim5_lc, acerto_fim5_mt,
-            acerto_fim10_ch, acerto_fim10_cn, acerto_fim10_lc, acerto_fim10_mt,
-            branco_ch, branco_cn, branco_lc, branco_mt, dupla_mt,
-            dupla_ch, dupla_cn, dupla_lc, total,
+  mutate(renda_1_10 = ifelse(renda_dom == "C", 1 , 0),
+         renda_10   = ifelse(renda_dom == "D", 1, 0)) %>% 
+  select(-c(co_cn:co_mt,
+            mas,
             
             #Only param. B captures difficulty
-            acerto_pal, acerto_pah, acerto_pcl, acerto_pch,
             
-            acerto_ini5_d1, acerto_ini10_d1, acerto_fim5_d1, acerto_fim10_d1,
-            acerto_ini5_d2, acerto_ini10_d2, acerto_fim5_d2, acerto_fim10_d2,
             acerto_al_ch:acerto_ah_mt,
-            acerto_cl_ch:d_acerto_5mt, #acertos
-            media_p:rd5_p #padronizadas
-  )) 
-
-
+            acerto_cl_ch:dupla_mt, #acertos
+            acerto:d_acerto_5mt, #padronizadas
+            media_p:rd5_p
+            )) 
 # ---------------------------------------------------------------------------- #
 ### 1.0.1 INPE ----
 # ---------------------------------------------------------------------------- #
@@ -255,7 +244,8 @@ base <- base %>%
       nonmig4 == 1 ~ seg,
       TRUE ~ mun_hv$seg[match(mun_escola, mun_hv$co_municipio)]),
     
-  )
+  ) %>% 
+  setDT()
 
 rm(mun_hv)
 
@@ -263,13 +253,14 @@ rm(mun_hv)
 ## 1.1 Base agregada ----
 # ---------------------------------------------------------------------------- #
 base_a <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
-                            idade    = mean(id18, na.rm = T),
                             temp_d1  = mean(temp_d1, na.rm = T),
                             renda    = mean(renda1, na.rm = T),
                             escm     = mean(escm, na.rm = T),
-                            mae_trab = mean(mae_trab_man, na.rm = T),
-                            fem      = mean(fem1, na.rm = T),
-                            dom5     = mean(dom5, na.rm = T),
+                            fem      = mean(fem, na.rm = T),
+                            n_dom    = mean(pessoas_dom, na.rm = T),
+                            renda10  = mean(renda_10, na.rm = T),
+                            emp_dom  = mean(empr_dom, na.rm = T),
+                            pc       = mean(pc, na.rm = T),
                             h13 = first(h13),
                             h12 = first(h12),
                             h11 = first(h11),
@@ -302,26 +293,34 @@ base_a <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
     v2escm = max(v1escm, na.rm = T),
     descm  = escm - v2escm,
     
-    v1maet = ifelse(ano == 2018, mae_trab, NA),
-    v2maet = max(v1maet, na.rm = T),
-    dmaet  = mae_trab - v2temp,
-    
     v1fem  = ifelse(ano == 2018, fem, NA),
     v2fem  = max(v1fem, na.rm = T),
     dfem   = fem - v2fem,
     
-    v1dom5 = ifelse(ano == 2018, dom5, NA),
-    v2dom5 = max(v1dom5, na.rm = T),
-    ddom5  = dom5 - v2dom5
+    v1n_dom = ifelse(ano == 2018, n_dom, NA),
+    v2n_dom = max(v1n_dom, na.rm = T),
+    dn_dom  = n_dom - v2n_dom,
     
+    v1renda10  = ifelse(ano == 2018, renda10, NA),
+    v2renda10 = max(v1renda10, na.rm = T),
+    drenda10  = renda10 - v2renda10,
     
+    v1emp_dom = ifelse(ano == 2018, emp_dom, NA),
+    v2emp_dom = max(v1emp_dom, na.rm = T),
+    demp_dom  = emp_dom - v2emp_dom,
+    
+    v1pc = ifelse(ano == 2018, pc, NA),
+    v2pc = max(v1pc, na.rm = T),
+    dpc  = pc - v2pc
     
   ) %>%
   ungroup() %>% 
   filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota, v1fem, v2fem, v1dom5, v2dom5,
+  select(-c(dup2, dup1, v1_nota, v2_nota, v1fem, v2fem,
+            v1n_dom, v2n_dom, v1renda10, v2renda10, v1emp_dom, v2emp_dom,
+            v1pc, v2pc,
             #v1idade, v2idade,
-            v1temp, v2temp, v1rend, v2rend, v1escm, v2escm, v1maet, v2maet)) %>% 
+            v1temp, v2temp, v1rend, v2rend, v1escm, v2escm)) %>% 
   group_by(mun_prova) %>% 
   mutate(
     d.h13 = h13[ano == 2019] + h13[ano == 2018], #2 = Manteve, 1 mudou, 0 nunca
@@ -406,11 +405,13 @@ list[[as.character(paste0(2019,"-",2018,"|fuso+C"))]] <- rdrobust(
     base_a$lon[base_a$ano == 2018],
     #Controls
     base_a$dtemp[base_a$ano == 2019],
+    base_a$drenda10[base_a$ano == 2019],
+    base_a$dn_dom[base_a$ano == 2019],
+    base_a$emp_dom[base_a$ano == 2019],
+    base_a$dpc[base_a$ano == 2019],
     base_a$drenda[base_a$ano == 2019],
     base_a$descm[base_a$ano == 2019],
-    #base_a$dmaet[base_a$ano == 2019],
     base_a$dfem[base_a$ano == 2019],
-    #base_a$ddom5[base_a$ano == 2019],
     #Timezones
     base_a$h13[base_a$ano == 2019],
     base_a$h12[base_a$ano == 2019],
@@ -527,7 +528,7 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/DIFF_Principal_TC_v2.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/DIFF_Principal_TC_v3.tex")
 rm(ef, list, result, t10, latex_table)
 
 # ---------------------------------------------------------------------------- #
@@ -1759,9 +1760,6 @@ for (i in fig_loop) {
 
 rm(bins, j, plist, fig_loop, base_c, bw_main_c, bw_bias_c)
 
-
-#Final adjustment for the remaining
-base <- base %>% filter(ano != 2017)
 
 # ---------------------------------------------------------------------------- #
 # 3. Matérias----
@@ -4181,7 +4179,7 @@ vnames <- c(
 )
 
 # ---------------------------------------------------------------------------- #
-## 12.2 Regression  -----
+## 12.2 Main Regression  -----
 # ---------------------------------------------------------------------------- #
 
 base_inpe_t <- base %>%
@@ -4260,7 +4258,7 @@ for (i in var_list) {
 }
 
 # ---------------------------------------------------------------------------- #
-## 12.3 Dataframe ----
+### 12.2.1 Dataframe ----
 # ---------------------------------------------------------------------------- #
 
 covs <- data.frame(
@@ -4318,7 +4316,7 @@ covs_np$ep18[covs_np$var == vnames[22]] <- mun_nopair[["dif_renda_10"]]$z[[3]] #
 
 
 # ---------------------------------------------------------------------------- #
-## 12.4 Plot  ---- 
+### 12.2.2 Plot  ---- 
 # ---------------------------------------------------------------------------- #
 
 
@@ -4346,10 +4344,118 @@ print(plot_covs)
 ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/covs_test_dif_.png"), device = "png", height = 13, width = 7)
 ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/covs_test_dif_.eps"), device = "eps", height = 13, width = 7)
 
-rm( covs_np, plot_covs, temp, mun_nopair, var_list, vnames, i, covs, base_inpe_t,
+rm( covs_np, plot_covs, temp, mun_nopair, i, covs,
     base, base_a)
 
+# ---------------------------------------------------------------------------- #
+## 12.3 Yearly Lvl ----
+# ---------------------------------------------------------------------------- #
 
+ylist <- list()
+
+for (i in var_list){
+  
+  for(j in c(2017:2019)) {
+    
+    temp <- base_inpe_t %>% 
+      filter(priv0 == 1) %>% 
+      filter(abs(dist_hv_border) < bw_main_a) %>% 
+      filter(!is.na(.data[[i]])) %>% 
+      filter(ano == j) %>% 
+      mutate(var_y = .data[[i]])
+    
+    
+    
+    #Seg dummy 
+    ef <- dummy_cols(temp$seg) 
+    ef <- ef %>% select(-1,-2)
+    
+    ylist[[as.character(paste0("lvl_",i,"|",j))]] <-
+      rdrobust(
+        y = temp$var_y,
+        x = temp$dist_hv_border,
+        c = 0,
+        p = 1,
+        h = bw_main_a,
+        b = bw_bias_a,
+        cluster = temp$seg,
+        vce = "hc0",
+        covs = cbind(ef,
+                     temp$lat,
+                     temp$lon)
+      )
+    
+    message("Year ", j," -- Finished for: ", i)
+    rm(j, temp)
+  }
+  rm(i)
+}
+
+
+library(stringr)
+library(purrr)
+
+covs_np <- map_dfr(names(ylist), function(name) {
+  
+  model <- ylist[[name]]
+  
+  tibble(
+    var = str_extract(name, "^[^|]+"),           # variable name
+    year = str_extract(name, "\\d{4}$"),         # year (2017, 2018, 2019)
+    tstat = model$coef[1] / model$se[1]          # t-stat (main effect)
+  )
+})
+
+covs_np <- covs_np %>%
+  arrange(var)
+
+plot_covs <- ggplot(data = covs_np) +
+  
+  theme_bw() +
+  
+  labs(x = 't-statistic', y = NULL, color = "Year", shape = "Year") +
+  
+  scale_x_continuous(
+    breaks = c(-1.96, 0, 1.96),
+    labels = c("-1.96", "", "1.96"),
+    limits = c(-6, 6)
+  ) +
+  
+  geom_vline(
+    xintercept = c(-1.96, 1.96),
+    color = 'red',
+    linetype = 'dashed',
+    linewidth = 1
+  ) +
+  
+  geom_point(
+    aes(x = tstat, y = var, color = year, shape = year),
+    size = 2.5
+  ) +
+  
+  scale_color_manual(values = c(
+    "2017" = "#1A2D99",
+    "2018" = "#D95F02",
+    "2019" = "#1B9E77"
+  )) +
+  
+  scale_shape_manual(values = c(
+    "2017" = 16,   # circle
+    "2018" = 17,   # triangle
+    "2019" = 15    # square
+  )) +
+  
+  theme(
+    panel.grid.minor = element_blank(),
+    
+    axis.title.x = element_text(size = 25),
+    axis.text.x  = element_text(size = 20),
+    axis.text.y  = element_text(size = 18),
+    
+    legend.position = "bottom",
+    legend.title = element_text(size = 14),
+    legend.text  = element_text(size = 12)
+  )
 
 # ---------------------------------------------------------------------------- #
 # 13. SAEB ----
