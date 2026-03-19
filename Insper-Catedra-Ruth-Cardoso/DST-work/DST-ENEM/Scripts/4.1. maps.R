@@ -5,7 +5,7 @@
 # Data de criação: 14/11/2023
 # Criado por: Bruno Komatsu
 
-# Última modificação: 09/03/2025
+# Última modificação: 17/03/2025
 # Modificado por: Tuffy Issa
 
 # Descrição: 
@@ -96,10 +96,67 @@ map <- ggplot(mun_hv) +
 
 
 map
+
+
 # Salvando o mapa
 ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_v2.png",plot = map,device = "png",dpi = 300)
 #ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_v2.eps",plot = map,device = "eps")
 #ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_v2.pdf",plot = map,device = "pdf")
+
+map_aer <- ggplot() +
+  
+  #  Municipal borders (background layer)
+  geom_sf(
+    data = mun_hv,
+    fill = NA,
+    color = "grey80",      # subtle
+    linewidth = 0.15
+  ) +
+  
+  #  Heatmap on top
+  geom_sf(
+    data = mun_hv,
+    aes(fill = dist_hv),
+    color = NA
+  ) +
+  
+  # DST border (main feature)
+  geom_sf(
+    data = line,
+    color = "blue",
+    linewidth = 1.2
+  ) +
+  
+  scale_fill_viridis_c(
+    option = "A",
+    direction = -1,
+    na.value = "transparent",
+    name = NULL,
+    guide = guide_colorbar(
+      direction = "horizontal",
+      title.position = "top",
+      barwidth = 20
+    )
+  ) +
+  
+  coord_sf(expand = FALSE) +
+  
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.major = element_line(color = "grey92", linewidth = 0.3),
+    panel.grid.minor = element_blank(),
+    
+    axis.text = element_text(size = 10, color = "grey30"),
+    axis.title = element_text(size = 11),
+    
+    legend.position = "bottom",
+    legend.text = element_text(size = 10)
+  )
+
+map_aer
+
+ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_v3.png",plot = map_aer,device = "png",dpi = 300)
+
 
 # ---------------------------------------------------------------------------- #
 #3. Mapa de clusters ---- 
@@ -164,11 +221,11 @@ map <- ggplot(mun_hv) +
   # DST border
   geom_sf(data = line,
           color = "blue",
-          linewidth = 1.2) +
+          linewidth = 1.5) +
   
   scale_fill_manual(
-    name = "Clusters",
-    values = brewer.pal(n = 7, name = "Set2"),
+    name = "Nearest Border Segment",
+    values = brewer.pal(n = 7, name = "Dark2"),
     guide = guide_legend(
       direction = "horizontal",
       title.position = "top",
@@ -185,6 +242,11 @@ map <- ggplot(mun_hv) +
   theme_void() +
   theme(
     legend.position = "bottom",
+    panel.grid.major = element_line(color = "grey92", linewidth = 0.3),
+    panel.grid.minor = element_blank(),
+    
+    axis.text = element_text(size = 10, color = "grey30"),
+    axis.title = element_text(size = 11),
     legend.title = element_text(size = 12),
     legend.text  = element_text(size = 11)
   )
@@ -375,12 +437,10 @@ map
 
 map_aer <- ggplot(mun_hv) +
   
-  # Base municipalities (very light borders)
   geom_sf(aes(fill = final),
-          color = "grey90",
-          linewidth = 0.08) +
+          color = "grey92",
+          linewidth = 0.05) +
   
-  # Policy border (black, slightly thick)
   geom_sf(data = line,
           color = "black",
           linewidth = 1.1) +
@@ -388,9 +448,9 @@ map_aer <- ggplot(mun_hv) +
   scale_fill_manual(
     name = NULL,
     values = c(
-      "Out" = "grey85",               # very neutral
-      "Bandwidth" = "#C2B280",        # muted sand
-      "ENEM and Bandwidth" = "#4C9F70"  # muted green
+      "Out" = "grey85",
+      "Bandwidth" = "#C2B280",
+      "ENEM and Bandwidth" = "#4C9F70"
     ),
     drop = FALSE
   ) +
@@ -401,14 +461,23 @@ map_aer <- ggplot(mun_hv) +
     expand = FALSE
   ) +
   
-  theme_void() +   # removes axes and background
+  theme_minimal(base_size = 11) +
   
   theme(
+    panel.grid.major = element_line(color = "grey92", linewidth = 0.3),
+    panel.grid.minor = element_blank(),
+    
+    axis.text = element_text(size = 10, color = "grey30", margin = margin(t = 5, r = 5)),
+    axis.title = element_text(size = 11),
+    
     legend.position = "bottom",
     legend.direction = "horizontal",
     legend.text = element_text(size = 10),
+    
     legend.key.width = unit(1.2, "cm"),
-    legend.key.height = unit(0.4, "cm")
+    legend.key.height = unit(0.4, "cm"),
+    
+    plot.margin = margin(8, 8, 8, 8)
   )
 
 map_aer
@@ -460,6 +529,71 @@ mun_hv <- mun_hv %>%
 ## 5.2 Com HV ----
 # -----------------------------------------------------------------------------#
 
+dst_contour <- mun_hv %>%
+  filter(hv == 1) %>%
+  st_union() %>% 
+  st_sf() %>% 
+  st_cast("POLYGON")
+
+
+map <- ggplot(mun_hv %>% arrange(horario_18)) +
+  
+  geom_sf(
+    fill = NA,
+    color = "transparent"
+  ) +
+  
+  geom_sf(aes(fill = factor(horario_18)),
+          color = NA) +
+  
+  # 🔴 DST boundary (NEW)
+  geom_sf(data = dst_contour,
+          color = "red",
+          fill = NA,
+          linewidth = 2.0) +
+  
+  # Existing line
+  geom_sf(data = line, color = "black", linewidth = 1.0) +
+  
+  scale_fill_manual(
+    name = "Groups",
+    values = c(
+      "10h" = "#6A3D9A", 
+      "11h" = "#0072B2",
+      "12h" = "#E69F00",     
+      "13h" = "#009E73"
+    )
+  ) +
+  coord_sf(
+    xlim = c(-77, -30),
+    ylim = c(-36, 7),
+    expand = FALSE
+  ) +
+  theme_bw() +
+  guides(
+    fill = guide_legend(
+      direction = "horizontal",
+      title.position = "top",
+      title.hjust = 0.5,
+      nrow = 1
+    )
+  ) +
+  theme(
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 25, face = "bold"),
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.box.just = "center",
+    legend.key.width = unit(1.4, "cm"),
+    legend.key.height = unit(0.6, "cm"),
+    legend.spacing.x = unit(0.6, "cm"),
+    legend.title = element_text(size = 20),
+    legend.text  = element_text(size = 15)
+  )
+
+print(map)
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_h18v2.png"),plot = map,device = "png", dpi = 300)
 
 
 
@@ -513,75 +647,6 @@ map
 
 ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_h18.png"),plot = map,device = "png", dpi = 300)
 
-library(ggpattern)
-library(dplyr)
-
-mun_hv <- mun_hv %>%
-  mutate(dst_area = ifelse(hv == 1, "DST Area", "No DST"))
-
-map <- ggplot(mun_hv) +
-  
-  # Base fill
-  geom_sf(aes(fill = factor(horario_18)),
-          color = NA) +
-  
-  # Stripe overlay for DST area
-  geom_sf_pattern(
-    aes(pattern = dst_area),
-    fill = NA,
-    pattern = "stripe",
-    pattern_angle = 45,
-    pattern_spacing = 0.08,   # wider spacing
-    pattern_density = 0.12,   # thinner lines
-    pattern_fill = "black",
-    pattern_colour = "black",
-    pattern_alpha = 0.6,
-    color = NA
-  ) +
-  
-  # DST border
-  geom_sf(data = line,
-          color = "black",
-          linewidth = 1.1) +
-  
-  scale_fill_manual(
-    name = NULL,
-    values = c(
-      "10h" = "#6A3D9A",
-      "11h" = "#3B6FB6",
-      "12h" = "#D89C00",
-      "13h" = "#2C8C5E"
-    )
-  ) +
-  
-  scale_pattern_manual(
-    name = NULL,
-    values = c(
-      "DST Area" = "stripe",
-      "No DST"   = "none"
-    ),
-    breaks = "DST Area"   # only show DST in legend
-  ) +
-  
-  guides(
-    fill = guide_legend(order = 1),
-    pattern = guide_legend(
-      order = 2,
-      override.aes = list(fill = "white")  # striped legend box
-    )
-  ) +
-  
-  theme_minimal() +
-  theme(
-    legend.position = "bottom",
-    legend.direction = "horizontal"
-  )
-
-map
-
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_h18v2.png"),plot = map,device = "png", dpi = 300)
-
 #------------------------------------------------------------------------------#
 ## 5.3 Sem HV ----
 # -----------------------------------------------------------------------------#
@@ -634,6 +699,68 @@ map <- ggplot(mun_hv %>% arrange(horario_19)) +
 map
 
 ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_h19.png"),plot = map,device = "png", dpi = 300)
+
+# Mapa de clusters
+map <- ggplot(mun_hv %>% arrange(horario_19)) +
+  
+  geom_sf(
+    fill = NA,
+    color = "transparent"
+  ) +
+  
+  geom_sf(aes(fill = factor(horario_19)),
+          color = NA) +
+  
+  # 🔴 DST boundary (NEW)
+  geom_sf(data = dst_contour,
+          color = "red",
+          fill = NA,
+          linewidth = 2.0) +
+  
+  # Existing line
+  geom_sf(data = line, color = "black", linewidth = 1.0) +
+  
+  scale_fill_manual(
+    name = "Groups",
+    values = c(
+      "11h" = "#0072B2",
+      "12h" = "#E69F00",     
+      "13h" = "#009E73"      
+    ),
+    drop = FALSE
+  ) +
+  coord_sf(
+    xlim = c(-77, -30),
+    ylim = c(-36, 7),
+    expand = FALSE
+  ) +
+  theme_bw()+
+  guides(
+    fill = guide_legend(
+      direction = "horizontal",
+      title.position = "top",
+      title.hjust = 0.5,
+      nrow = 1,              # force single row
+      byrow = TRUE
+    )
+  ) +
+  theme(
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 25, face = "bold"),
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.box.just = "center",
+    legend.key.width = unit(1.4, "cm"),
+    legend.key.height = unit(0.6, "cm"),
+    legend.spacing.x = unit(0.6, "cm"),
+    legend.title = element_text(size = 20),
+    legend.text  = element_text(size = 15)
+  )
+
+map
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_h19v2.png"),plot = map,device = "png", dpi = 300)
+
 
 rm(list = ls())
 gc()

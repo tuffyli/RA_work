@@ -191,134 +191,10 @@ rm(mun_presente_ambos_anos)
 summary(base_nota$abs)
 
 
-# ---------------------------------------------------------------------------- #
-## 1.1 Values -----
-# ---------------------------------------------------------------------------- #
 
-
-medias0 <- base_nota[priv == 0 & hv == 0,
-                     lapply(.SD, mean, na.rm = T),
-                     .SDcols = vlist] %>%
-  as.numeric()
-
-medias1 <- base_nota[priv == 0 & hv == 1,
-                     lapply(.SD, mean, na.rm = T),
-                     .SDcols = vlist] %>%
-  as.numeric()
-
-dps0 <- base_nota[priv == 0 & hv == 0,
-                  lapply(.SD, sd, na.rm = T),
-                  .SDcols = vlist] %>%
-  as.numeric()
-
-dps1 <- base_nota[priv == 0 & hv == 1,
-                  lapply(.SD, sd, na.rm = T),
-                  .SDcols = vlist] %>%
-  as.numeric()
-
-
-obs0 <- base_nota[priv == 0 & hv == 0,
-                  lapply(.SD, FUN = function(x) {sum(!is.na(x))}),
-                  .SDcols = vlist] %>%
-  as.numeric()
-
-obs1 <- base_nota[priv == 0 & hv == 1,
-                  lapply(.SD, FUN = function(x) {sum(!is.na(x))}),
-                  .SDcols = vlist] %>%
-  as.numeric()
-
-medias <- data.frame(
-  medias1 = c(
-    format(x = medias1[1:8], digits = 1, scientific = F),
-    format(x = medias1[9:10], digits = 2, scientific = F),
-    format(x = medias1[11], digits = 1, scientific = F),
-    format(x = medias1[12:20], digits = 2, scientific = F),
-    format(x = medias1[21], digits = 1, scientific = F, big.mark = ","),
-    format(x = medias1[22], digits = 2, scientific = F),
-    format(x = medias1[23:26], digits = 1, scientific = F)
-  ),
-  dps1 = c(
-    format(x = dps1[1:8], digits = 1, scientific = F),
-    format(x = dps1[9:10], digits = 1, scientific = F),
-    format(x = dps1[11], digits = 1, scientific = F),
-    format(x = dps1[12:20], digits = 2, scientific = F),
-    format(x = dps1[21], digits = 1, scientific = F, big.mark = ","),
-    format(x = dps1[22], digits = 2, scientific = F),
-    format(x = dps1[23:26], digits = 1, scientific = F)
-  ),
-  obs1 = format(x = obs1[1:26], digits = 1, scientific = F, big.mark = ","),
-  
-  medias0 = c(
-    format(x = medias0[1:8], digits = 1, scientific = F),
-    format(x = medias0[9:10], digits = 2, scientific = F),
-    format(x = medias0[11], digits = 1, scientific = F),
-    format(x = medias0[12:20], digits = 2, scientific = F),
-    format(x = medias0[21], digits = 1, scientific = F, big.mark = ","),
-    format(x = medias0[22], digits = 2, scientific = F),
-    format(x = medias0[23:26], digits = 1, scientific = F)
-  ),
-  dps0 = c(
-    format(x = dps0[1:8], digits = 1, scientific = F),
-    format(x = dps0[9:10], digits = 1, scientific = F),
-    format(x = dps0[11], digits = 1, scientific = F),
-    format(x = dps0[12:20], digits = 2, scientific = F),
-    format(x = dps0[21], digits = 1, scientific = F, big.mark = ","),
-    format(x = dps0[22], digits = 2, scientific = F),
-    format(x = dps0[23:26], digits = 1, scientific = F)
-  ),
-  obs0 = format(x = obs0[1:26], digits = 1, scientific = F, big.mark = ",")
-)
-
-
-
-
-
-rm(medias0,medias1,dps0,dps1,obs0,obs1,base_abs,base_ag, base)
-
-row.names(medias) <- c(
-  "ENEM Avg. Score", 
-  "Natural Sciences", "Human Sciences", "Language", "Mathematics", "Composition",
-  "Day 1", "Day 2", 
-  "Pr. Right Answers",
-  "Absence",
-  "Distance to DST border (km)",
-  "Age", "Female", "African Brazilian or native",
-  "Father with high school", "Mother with high school",
-  "Father in manual labor", "Mother in manual labor",
-  "Household with 5 or more people",
-  "Household income up to 1 MW", 
-  "Municipal per capita GDP",
-  "18 years-old",
-  "Temperature - Day 1",
-  "Temperature - Day 2",
-  "Humidity - Day 1",
-  "Humidity - Day 2"
-  
-)
-
-colnames(medias) <- c(
-  "Mean",
-  "Std. Dev.",
-  "Obs.",
-  "Mean",
-  "Std. Dev.",
-  "Obs."
-)
-
-
-print.xtable(
-  x = medias,
-  include.rownames = T,
-  include.colnames = T,
-  file = "Z:/Tuffy/Paper - HV/Resultados/definitive/desc_table_v2.tex",
-  sanitize.colnames.function = function(x) {
-    x
-  },
-  only.contents = T
-)
 
 # ---------------------------------------------------------------------------- #
-## 1.2 Agregated by mun ----
+## 1.1 Agregated by mun ----
 # ---------------------------------------------------------------------------- #
 
 
@@ -375,15 +251,107 @@ dps1 <- base_munt %>%
   ) %>%
   as.numeric()
 
-obs0 <- base_munt %>%
-  filter(hv == 0) %>% 
-  summarise(
-    across(all_of(vlist),
-           ~ sum(obs))
-  )
+
+obs0 <- base_nota[priv == 0 & hv == 0,
+                  lapply(.SD, FUN = function(x) {sum(!is.na(x))}),
+                  .SDcols = vlist] %>%
+  as.numeric()
+
+obs1 <- base_nota[priv == 0 & hv == 1,
+                  lapply(.SD, FUN = function(x) {sum(!is.na(x))}),
+                  .SDcols = vlist] %>%
+  as.numeric()
 
 
-obs0 <- sum(base_munt$hv == 0)
+
+medias <- data.frame(
+  medias1 = c(
+    format(x = medias1[1:8], digits = 1, scientific = F),
+    format(x = medias1[9:10], digits = 2, scientific = F),
+    format(x = medias1[11], digits = 1, scientific = F),
+    format(x = medias1[12:20], digits = 2, scientific = F),
+    format(x = medias1[21], digits = 1, scientific = F, big.mark = ","),
+    format(x = medias1[22], digits = 2, scientific = F),
+    format(x = medias1[23:26], digits = 1, scientific = F)
+  ),
+  dps1 = c(
+    format(x = dps1[1:8], digits = 1, scientific = F),
+    format(x = dps1[9:10], digits = 1, scientific = F),
+    format(x = dps1[11], digits = 1, scientific = F),
+    format(x = dps1[12:20], digits = 2, scientific = F),
+    format(x = dps1[21], digits = 1, scientific = F, big.mark = ","),
+    format(x = dps1[22], digits = 2, scientific = F),
+    format(x = dps1[23:26], digits = 1, scientific = F)
+  ),
+  obs1 = format(x = obs1[1:26], digits = 1, scientific = F, big.mark = ","),
+  
+  medias0 = c(
+    format(x = medias0[1:8], digits = 1, scientific = F),
+    format(x = medias0[9:10], digits = 2, scientific = F),
+    format(x = medias0[11], digits = 1, scientific = F),
+    format(x = medias0[12:20], digits = 2, scientific = F),
+    format(x = medias0[21], digits = 1, scientific = F, big.mark = ","),
+    format(x = medias0[22], digits = 2, scientific = F),
+    format(x = medias0[23:26], digits = 1, scientific = F)
+  ),
+  dps0 = c(
+    format(x = dps0[1:8], digits = 1, scientific = F),
+    format(x = dps0[9:10], digits = 1, scientific = F),
+    format(x = dps0[11], digits = 1, scientific = F),
+    format(x = dps0[12:20], digits = 2, scientific = F),
+    format(x = dps0[21], digits = 1, scientific = F, big.mark = ","),
+    format(x = dps0[22], digits = 2, scientific = F),
+    format(x = dps0[23:26], digits = 1, scientific = F)
+  ),
+  obs0 = format(x = obs0[1:26], digits = 1, scientific = F, big.mark = ",")
+)
+
+rm(medias0,medias1,dps0,dps1,obs0,obs1,base_abs,base_ag, base)
+
+row.names(medias) <- c(
+  "ENEM Avg. Score", 
+  "Natural Sciences", "Human Sciences", "Language", "Mathematics", "Composition",
+  "Day 1", "Day 2", 
+  "Pr. Right Answers",
+  "Absence",
+  "Distance to DST border (km)",
+  "Age", "Female", "African Brazilian or native",
+  "Father with high school", "Mother with high school",
+  "Father in manual labor", "Mother in manual labor",
+  "Household with 5 or more people",
+  "Household income up to 1 MW", 
+  "Municipal per capita GDP",
+  "18 years-old",
+  "Temperature - Day 1",
+  "Temperature - Day 2",
+  "Humidity - Day 1",
+  "Humidity - Day 2"
+  
+)
+
+colnames(medias) <- c(
+  "Mean",
+  "Std. Dev.",
+  "Obs.",
+  "Mean",
+  "Std. Dev.",
+  "Obs."
+)
+
+
+print.xtable(
+  x = medias,
+  include.rownames = T,
+  include.colnames = T,
+  file = "Z:/Tuffy/Paper - HV/Resultados/definitive/desc_table_v3.tex",
+  sanitize.colnames.function = function(x) {
+    x
+  },
+  only.contents = T
+)
+
+
+
 
 rm(list = ls())
 gc()
@@ -742,4 +710,22 @@ rm(both_days18, both_days19, conc_18, conc_19,
    in_em_18, in_em_19, latex_table, n_both_days18, n_both_days19,
    names, nconc_18, nconc_19, nin_em_18, nin_em_19, npub_em_18, npub_em_19,
    ntrei_18, ntrei_19, pub_em_18, pub_em_19, total18, total19, trei_18, trei_19)
+
+# ---------------------------------------------------------------------------- #
+# 4. Inscriptions ----
+# ---------------------------------------------------------------------------- #
+
+
+censo_educ <- c("Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/ts_censo_basico_situacao_2018.dta",
+                "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/ts_censo_basico_situacao_2019.dta")
+
+
+for (i in c(1:2)) {
+  
+  path <- censo_educ[[i]]
+  
+  df <- read_dta(path)
+  
+}
+
 

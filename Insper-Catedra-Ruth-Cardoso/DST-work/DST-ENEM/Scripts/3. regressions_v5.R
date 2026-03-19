@@ -4370,7 +4370,7 @@ for (i in var_list){
     ef <- dummy_cols(temp$seg) 
     ef <- ef %>% select(-1,-2)
     
-    ylist[[as.character(paste0("lvl_",i,"|",j))]] <-
+    ylist[[as.character(paste0(i,"|",j))]] <-
       rdrobust(
         y = temp$var_y,
         x = temp$dist_hv_border,
@@ -4386,9 +4386,8 @@ for (i in var_list){
       )
     
     message("Year ", j," -- Finished for: ", i)
-    rm(j, temp)
   }
-  rm(i)
+  rm(i, j, temp)
 }
 
 
@@ -4406,8 +4405,12 @@ covs_np <- map_dfr(names(ylist), function(name) {
   )
 })
 
+
+var_map <- setNames(vnames, var_list)
+
 covs_np <- covs_np %>%
-  arrange(var)
+  arrange(var) %>% 
+  mutate(var = recode(var, !!!var_map))
 
 plot_covs <- ggplot(data = covs_np) +
   
@@ -4453,10 +4456,16 @@ plot_covs <- ggplot(data = covs_np) +
     axis.text.y  = element_text(size = 18),
     
     legend.position = "bottom",
-    legend.title = element_text(size = 14),
-    legend.text  = element_text(size = 12)
+    legend.title = element_text(size = 17),
+    legend.text  = element_text(size = 17)
   )
 
+plot_covs
+
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/covs_test_dif_lvl.png"), device = "png", height = 13, width = 7)
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/covs_test_dif_lvl.eps"), device = "eps", height = 13, width = 7)
+
+rm(base_inpe_t, covs_np, ylist, plot_covs, var_list, var_map, vnames)
 # ---------------------------------------------------------------------------- #
 # 13. SAEB ----
 # ---------------------------------------------------------------------------- #
