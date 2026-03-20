@@ -710,22 +710,3 @@ rm(both_days18, both_days19, conc_18, conc_19,
    in_em_18, in_em_19, latex_table, n_both_days18, n_both_days19,
    names, nconc_18, nconc_19, nin_em_18, nin_em_19, npub_em_18, npub_em_19,
    ntrei_18, ntrei_19, pub_em_18, pub_em_19, total18, total19, trei_18, trei_19)
-
-# ---------------------------------------------------------------------------- #
-# 4. Inscriptions ----
-# ---------------------------------------------------------------------------- #
-
-
-censo_educ <- c("Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/ts_censo_basico_situacao_2018.dta",
-                "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/ts_censo_basico_situacao_2019.dta")
-
-
-for (i in c(1:2)) {
-  
-  path <- censo_educ[[i]]
-  
-  df <- read_dta(path)
-  
-}
-
-

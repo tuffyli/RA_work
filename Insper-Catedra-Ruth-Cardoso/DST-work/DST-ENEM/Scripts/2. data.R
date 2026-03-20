@@ -205,6 +205,11 @@ rm(
 # --------------------------------------------------------------------------- #
 
 #' The functions here listed will be utilized in further data treatment.
+#' Total running time for main databases
+#' 
+#' Time estimated to run this section [4 hours, 16mins, and 9s]
+
+ini_total <- Sys.time()
 
 # ---------------------------------------------------------------------------- #
 ##2.1 Functions ---------
@@ -2266,7 +2271,19 @@ for(ano in 2013:2019){
 
 rm(mun_hv,pib)
 
+fim_total <- Sys.time()
 
+delta <- as.numeric(difftime(fim_total, ini_total, units = "secs"))
+
+hours <- floor(delta / 3600)
+mins  <- floor((delta %% 3600) / 60)
+secs  <- round(delta %% 60)
+
+message("---------------------------------------------")
+message("Elapsed time: ",hours, " hours, ",mins," mins, and ", secs, " s")
+message("---------------------------------------------")
+
+rm(ini_total, fim_total, hours, mins, secs)
 # ---------------------------------------------------------------------------- #
 # 3. SAEB ----
 # ---------------------------------------------------------------------------- #
@@ -4354,3 +4371,57 @@ for(ano in 2018:2019){
 }
 
 rm(mun_hv,pib)
+
+# ---------------------------------------------------------------------------- #
+# 6. Census Data ----
+# ---------------------------------------------------------------------------- #
+
+# ---------------------------------------------------------------------------- #
+# 4. Inscriptions ----
+# ---------------------------------------------------------------------------- #
+
+
+censo_educ <- c("Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/ts_censo_basico_situacao_2018.dta",
+                "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/ts_censo_basico_situacao_2019.dta")
+# ---------------------------------------------------------------------------- #
+## 4.1 Loop ----
+# ---------------------------------------------------------------------------- #
+
+for (i in c(1:2)) {
+  
+  path <- censo_educ[[i]]
+  
+  df <- read_dta(path)
+  message("Opened INEP data for ", 2017+i)
+  
+  df <- df %>% 
+    { names(.) <- tolower(names(.)); . } %>% 
+    filter(co_uf %in% c(11, 13, 15, 17, 29,
+                        32, 31, 51, 52, 53)) %>% 
+    filter(tp_dependencia %in% c(1:3)) %>% 
+    filter(tp_etapa_ensino %in% c(27,28,32,33,37,38))
+  
+  df <- df %>% 
+    group_by(co_municipio) %>% 
+    summarise(alunos = n(),
+              .groups = "drop") %>% 
+    mutate(ano = 2017 + i) %>% 
+    select(ano, co_municipio, alunos)
+  
+  if ( i == 1) {
+    df_final <- df
+  } else {
+    df_final <- bind_rows(df_final, df)
+    
+    df_final <- df_final %>%
+      arrange(co_municipio,ano)
+  }
+  
+  message("Finished the Data creation for ", i + 2017)
+  rm(i, df, path) 
+}
+
+saveRDS(df_final, "Z:/Tuffy/Paper - HV/Bases/census_students.RDS")
+
+rm(df_final, censo_educ)
+gc()
