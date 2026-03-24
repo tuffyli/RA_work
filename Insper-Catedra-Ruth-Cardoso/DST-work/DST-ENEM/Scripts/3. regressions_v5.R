@@ -1003,7 +1003,7 @@ base_res <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
     v2rend = max(v1rend, na.rm = T),
     drenda = renda - v2rend,
     
-    v1escm = ifelse(ano == 2018, escm, NA),
+    v1escm = ifelse(ano == 2018 & !is.na(escm), escm, NA),
     v2escm = max(v1escm, na.rm = T),
     descm  = escm - v2escm,
     
@@ -1035,8 +1035,13 @@ base_res <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
             v1pc, v2pc,
             #v1idade, v2idade,
             v1temp, v2temp, v1rend, v2rend, v1escm, v2escm)) 
+summary(base_res)
 
-base_res <- na.omit(base_res)
+base_res <- base_res %>%
+  group_by(mun_res) %>% 
+  filter(is.finite(descm) & !is.na(descm)) %>% 
+  filter(n_distinct(ano) == 2) %>% 
+  ungroup()
 
 # --------- #
 # School 
@@ -1080,7 +1085,7 @@ base_esc <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
     v2rend = max(v1rend, na.rm = T),
     drenda = renda - v2rend,
     
-    v1escm = ifelse(ano == 2018, escm, NA),
+    v1escm = ifelse(ano == 2018 & !is.na(escm), escm, NA),
     v2escm = max(v1escm, na.rm = T),
     descm  = escm - v2escm,
     
@@ -1113,7 +1118,11 @@ base_esc <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
             #v1idade, v2idade,
             v1temp, v2temp, v1rend, v2rend, v1escm, v2escm)) 
 
-base_esc <- na.omit(base_esc)
+base_esc <- base_esc %>% 
+  group_by(mun_escola) %>% 
+  filter(is.finite(descm) & !is.na(descm)) %>% 
+  filter(n_distinct(ano) == 2) %>% 
+  ungroup()
 
 # ---------------------------------------------------------------------------- #
 #### 1.2.4.2 Residency ----
@@ -1122,7 +1131,6 @@ base_esc <- na.omit(base_esc)
 # ---------------------------------------------------------------------------- #
 ### Controles
 
-na.omit(base_res)
 
 ef <- dummy_cols(base_res$seg_res[base_res$ano == 2018])
 ef <- ef %>% select(-1,-2)
