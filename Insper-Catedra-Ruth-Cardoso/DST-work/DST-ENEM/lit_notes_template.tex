@@ -1,0 +1,72 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true, linkcolor=black, urlcolor=blue, citecolor=black]{hyperref}
+
+\setlist[itemize]{noitemsep, topsep=2pt}
+
+% ---------- SAFE COMMAND ----------
+\newcommand{\paperentry}[6]{
+	\section*{#1 (#2)}
+	
+	\textbf{Title:} #3 \\
+	\textbf{Source:} #4 \\
+	\textbf{Link:} \href{#5}{#5}
+	
+	\vspace{0.5em}
+	
+	\textbf{Main Question:}
+	#6
+	
+	\vspace{0.5em}
+	\textbf{Notes:}
+	\begin{itemize}
+	}
+	
+	\newcommand{\finishpaper}{
+	\end{itemize}
+	\vspace{1em}
+	\hrule
+	\vspace{1em}
+}
+
+\begin{document}
+	
+	\title{Literature Notes}
+	\date{\today}
+	\maketitle
+	
+	% ---------- ENTRY ----------
+	\paperentry
+	{Melo \& Suzuki}
+	{2025}
+	{Resisiting the heat: temperature, achievement, and the mediating role of exam stakes}
+	{NA}
+	{}
+	{Temperature effect in high stakes exams}
+	
+	\item "\textit{The theoretical mediating role of exam stakes is expected to be negative: the higher the exam stakes, the lowe the effects of temperature (Park, 2020).}"
+	\item  Findings that one-standard-deviation increase in temperature ($\approx 4$ degree celsius) reduces exam scores by 0.026 sd.
+	\item Extreme conditions (above 32 degress) reduces performance by 0.05 sd.
+	\item Effect concentrated in poorer municipalities (worst school infrastructure, higher poverty, and lower human development).
+	\item As the stakes increased the temperature effect decreased. (-38\% per sd of new university adopting ENEM).
+	\item As the stakes increase, students adopt more effectively coping strategies to manage stress and disconfort associated with the heat.
+	\\
+	
+	\textbf{Theoretical Framework}
+	\item Decompose utility at the exam time, where a exists a positive relationship between exam score and future wages.
+	\item Effort increases scores, effort effects diminishes, and effort is less effective in improving the test scores when temperature is higher.
+	\item Trade-off between the benefit and the cost of increasing effort.\\
+	\\
+	\textbf{Temperature decreases performance}
+	\item \textit{"... students may exert different levels of effort at a mock exam and a college entrance exam given that the latter is strongly related to the future income."}.
+	\item Temperature effects on the effort level. More effort is made to compensate the temperature effects when the exam is more important.
+	
+	%\textcolor{blue}{\item Important paper}
+	
+	\finishpaper
+	
+\end{document}
