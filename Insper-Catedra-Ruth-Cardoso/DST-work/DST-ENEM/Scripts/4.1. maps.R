@@ -349,6 +349,8 @@ rm(uf_layer, uf_boundaries)
 # ---------------------------------------------------------------------------- #
 #4. Mapa da banda ----
 # ---------------------------------------------------------------------------- #
+## 4.1 Exam Mun ----
+# ---------------------------------------------------------------------------- #
 
 #Bandas ótimas
 load("Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_NF.RData")
@@ -486,6 +488,89 @@ ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/
 ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_v3.png"),plot = map_aer,device = "png", dpi = 300)
 
 rm(map_aer)
+
+# ---------------------------------------------------------------------------- #
+## 4.2 Res Mun ----
+# ---------------------------------------------------------------------------- #
+#Bandas ótimas
+load("Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_Res.RData")
+
+
+
+
+
+mun_hv <- mun_hv %>%
+  mutate(
+    in_band = ifelse(abs(dist_hv_border) <= bw_main_r, 1, 0),
+
+    final = case_when(
+      in_band == 1 ~ 1,
+      TRUE ~ 0
+    ),
+    final = as.factor(final)
+  ) 
+
+
+mun_hv <- mun_hv %>%
+  mutate(
+    final = factor(final,
+                   levels = c("0", "1"),
+                   labels = c("Out", "Residency Optimal Bandwidth")
+    )
+  )
+
+
+map_aer <- ggplot(mun_hv) +
+  
+  geom_sf(aes(fill = final),
+          color = "grey92",
+          linewidth = 0.05) +
+  
+  geom_sf(data = line,
+          color = "black",
+          linewidth = 1.1) +
+  
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "Out" = "grey85",
+      "Residency Optimal Bandwidth" = "#4C9F70"
+    ),
+    drop = FALSE
+  ) +
+  
+  coord_sf(
+    xlim = c(bbox_line$xmin - pad_x, bbox_line$xmax + pad_x),
+    ylim = c(bbox_line$ymin - pad_y, bbox_line$ymax + pad_y),
+    expand = FALSE
+  ) +
+  
+  theme_minimal(base_size = 11) +
+  
+  theme(
+    panel.grid.major = element_line(color = "grey92", linewidth = 0.3),
+    panel.grid.minor = element_blank(),
+    
+    axis.text = element_text(size = 10, color = "grey30", margin = margin(t = 5, r = 5)),
+    axis.title = element_text(size = 11),
+    
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.text = element_text(size = 10),
+    
+    legend.key.width = unit(1.2, "cm"),
+    legend.key.height = unit(0.4, "cm"),
+    
+    plot.margin = margin(8, 8, 8, 8)
+  )
+
+map_aer
+
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_res.png"),plot = map,device = "png", dpi = 300)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/mapas/map_band_res.png"),plot = map_aer,device = "png", dpi = 300)
+
+rm(map_aer)
+
 # --------------------------------------------------------------------------- #
 # 5. Horário de Início ----
 # --------------------------------------------------------------------------- #
@@ -552,9 +637,7 @@ map <- ggplot(mun_hv %>% arrange(horario_18)) +
           fill = NA,
           linewidth = 2.0) +
   
-  # Existing line
-  geom_sf(data = line, color = "black", linewidth = 1.0) +
-  
+
   scale_fill_manual(
     name = "Groups",
     values = c(
@@ -716,9 +799,6 @@ map <- ggplot(mun_hv %>% arrange(horario_19)) +
           color = "red",
           fill = NA,
           linewidth = 2.0) +
-  
-  # Existing line
-  geom_sf(data = line, color = "black", linewidth = 1.0) +
   
   scale_fill_manual(
     name = "Groups",

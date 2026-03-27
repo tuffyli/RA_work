@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 23/03/2026
+# Date: 27/03/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -434,35 +434,126 @@ list[[as.character(paste0(2019,"-",2018,"|fuso"))]] <- rdrobust(
 
 
 # ---------------------------------------------------------------------------- #
-### 1.1.3 Fuso + C ----
+### 1.1.3 Residency ----
+# ---------------------------------------------------------------------------- #
+#### 1.1.3.1 Data ----
 # ---------------------------------------------------------------------------- #
 
-list[[as.character(paste0(2019,"-",2018,"|fuso+C"))]] <- rdrobust(
-  y = base_a$d.media[base_a$ano == 2019],
-  x = base_a$dist_hv_border[base_a$ano == 2018],
+# ---------- #
+#Res
+# ---------- #
+base_res <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
+                              temp_d1  = mean(temp_d1_res, na.rm = T),
+                              renda    = mean(renda1, na.rm = T),
+                              escm     = mean(escm, na.rm = T),
+                              fem      = mean(fem, na.rm = T),
+                              n_dom    = mean(pessoas_dom, na.rm = T),
+                              renda10  = mean(renda_10, na.rm = T),
+                              emp_dom  = mean(empr_dom, na.rm = T),
+                              pc       = mean(pc, na.rm = T),
+                              h13 = first(h13),
+                              h12 = first(h12),
+                              h11 = first(h11),
+                              h10 = first(h10),
+                              obs = .N),
+                 by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota,
+    
+    # v1idade = ifelse(ano == 2018, idade, NA),
+    # v2idade = max(v1idade, na.rm = T),
+    # didade  = idade - v2idade,
+    
+    v1temp = ifelse(ano == 2018, temp_d1, NA),
+    v2temp = max(v1temp, na.rm = T),
+    dtemp  = temp_d1 - v2temp,
+    
+    v1rend = ifelse(ano == 2018, renda, NA),
+    v2rend = max(v1rend, na.rm = T),
+    drenda = renda - v2rend,
+    
+    v1escm = ifelse(ano == 2018 & !is.na(escm), escm, NA),
+    v2escm = max(v1escm, na.rm = T),
+    descm  = escm - v2escm,
+    
+    v1fem  = ifelse(ano == 2018, fem, NA),
+    v2fem  = max(v1fem, na.rm = T),
+    dfem   = fem - v2fem,
+    
+    v1n_dom = ifelse(ano == 2018, n_dom, NA),
+    v2n_dom = max(v1n_dom, na.rm = T),
+    dn_dom  = n_dom - v2n_dom,
+    
+    v1renda10  = ifelse(ano == 2018, renda10, NA),
+    v2renda10 = max(v1renda10, na.rm = T),
+    drenda10  = renda10 - v2renda10,
+    
+    v1emp_dom = ifelse(ano == 2018, emp_dom, NA),
+    v2emp_dom = max(v1emp_dom, na.rm = T),
+    demp_dom  = emp_dom - v2emp_dom,
+    
+    v1pc = ifelse(ano == 2018, pc, NA),
+    v2pc = max(v1pc, na.rm = T),
+    dpc  = pc - v2pc
+    
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota, v1fem, v2fem,
+            v1n_dom, v2n_dom, v1renda10, v2renda10, v1emp_dom, v2emp_dom,
+            v1pc, v2pc,
+            #v1idade, v2idade,
+            v1temp, v2temp, v1rend, v2rend, v1escm, v2escm)) 
+summary(base_res)
+
+base_res <- base_res %>%
+  group_by(mun_res) %>% 
+  filter(is.finite(descm) & !is.na(descm)) %>% 
+  filter(n_distinct(ano) == 2) %>% 
+  ungroup()
+
+
+
+# ---------------------------------------------------------------------------- #
+#### 1.1.3.2 Regression ----
+# ---------------------------------------------------------------------------- #
+
+efr <- dummy_cols(base_res$seg_res[base_res$ano == 2018])
+efr <- ef %>% select(-1,-2)
+
+### Main 
+list[[as.character(paste0(2019,"-",2018,"C|Res"))]] <- rdrobust(
+  y = base_res$d.media[base_res$ano == 2019],
+  x = base_res$dist_hv_res[base_res$ano == 2018],
   c = 0,
-  cluster = base_a$seg[base_a$ano == 2018],
-  weights = base_a$obs[base_a$ano == 2018],
+  cluster = base_res$seg_res[base_res$ano == 2018],
+  weights = base_res$obs[base_res$ano == 2018],
   vce = "hc0",
   covs = cbind(
-    ef,
-    base_a$lat[base_a$ano == 2018],
-    base_a$lon[base_a$ano == 2018],
-    #Controls
-    base_a$dtemp[base_a$ano == 2019],
-    base_a$drenda10[base_a$ano == 2019],
-    base_a$dn_dom[base_a$ano == 2019],
-    base_a$emp_dom[base_a$ano == 2019],
-    base_a$dpc[base_a$ano == 2019],
-    base_a$drenda[base_a$ano == 2019],
-    base_a$descm[base_a$ano == 2019],
-    base_a$dfem[base_a$ano == 2019],
-    #Timezones
-    base_a$h13[base_a$ano == 2019],
-    base_a$h12[base_a$ano == 2019],
-    base_a$h11[base_a$ano == 2019]
+    efr,
+    base_res$lat_res[base_res$ano == 2018],
+    base_res$lon_res[base_res$ano == 2018]
   )
 )
+
+rm(efr)
+
+# ---------------------------------------------------------------------------- #
+#Extração da banda ótima
+bw_main_r  <- list[["2019-2018C|Res"]]$bws[1]
+bw_bias_r  <- list[["2019-2018C|Res"]]$bws[2]
+
+#Salvando a banda principal
+save(bw_main_r, bw_bias_r,
+     file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_Res.RData")
+# ---------------------------------------------------------------------------- #
 
 
 # ---------------------------------------------------------------------------- #
@@ -530,8 +621,9 @@ result <- data.frame(
   var = names,
   con = rep(NA, times = length(names)),
   fus = rep(NA, times = length(names)),
-  mor = rep(NA, times = length(names)),
-  pfc = rep(NA, times = length(names))
+  pfc = rep(NA, times = length(names)),
+  res = rep(NA, times = length(names))
+  
 )
 
 # #TC Segmentos
@@ -549,15 +641,15 @@ result$fus[1] <- t10$coef[[2]]
 result$fus[2] <- t10$se[[2]]
 result$fus[3] <- t10$N[[2]]
 
-#Mais Cont
-result$mor[1] <- t10$coef[[3]]
-result$mor[2] <- t10$se[[3]]
-result$mor[3] <- t10$N[[3]]
-
 #TC Pol 2° Grau + Fuso + C
 result$pfc[1] <- t10$coef[[4]]
 result$pfc[2] <- t10$se[[4]]
 result$pfc[3] <- t10$N[[4]]
+
+#Residency
+result$res[1] <- t10$coef[[3]]
+result$res[2] <- t10$se[[3]]
+result$res[3] <- t10$N[[3]]
 
 
 
@@ -1138,7 +1230,7 @@ ef <- ef %>% select(-1,-2)
 list <- list()
 
 ### Main 
-list[[as.character(paste0(2019,"-",2018,"C|NF"))]] <- rdrobust(
+list[[as.character(paste0(2019,"-",2018,"C|Res"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2019],
   x = base_res$dist_hv_res[base_res$ano == 2018],
   c = 0,
@@ -1153,6 +1245,18 @@ list[[as.character(paste0(2019,"-",2018,"C|NF"))]] <- rdrobust(
 )
 
 
+
+
+
+# ---------------------------------------------------------------------------- #
+#Extração da banda ótima
+bw_main_r  <- list[["2019-2018C|Res"]]$bws[1]
+bw_bias_r  <- list[["2019-2018C|Res"]]$bws[2]
+
+#Salvando a banda principal
+save(bw_main_r, bw_bias_r,
+     file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_Res.RData")
+# ---------------------------------------------------------------------------- #
 # ---------------------------------------------------------------------------- #
 ### Fuso 
 # ---------------------------------------------------------------------------- #
