@@ -526,7 +526,7 @@ base_res <- base_res %>%
 # ---------------------------------------------------------------------------- #
 
 efr <- dummy_cols(base_res$seg_res[base_res$ano == 2018])
-efr <- ef %>% select(-1,-2)
+efr <- efr %>% select(-1,-2)
 
 ### Main 
 list[[as.character(paste0(2019,"-",2018,"C|Res"))]] <- rdrobust(
@@ -665,7 +665,7 @@ latex_table <- knitr::kable(
 )
 
 
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/DIFF_Principal_TC_v3.tex")
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/DIFF_Principal_TC_v4.tex")
 rm(ef, list, result, t10, latex_table)
 
 # ---------------------------------------------------------------------------- #
