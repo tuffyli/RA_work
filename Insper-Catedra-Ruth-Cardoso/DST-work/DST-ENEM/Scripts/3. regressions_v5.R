@@ -290,6 +290,7 @@ base <- base %>%
       TRUE ~ mun_hv$seg[match(mun_escola, mun_hv$co_municipio)]),
     
   ) %>% 
+  filter(over_hv_border == 0) %>% 
   setDT()
 
 rm(mun_hv)
@@ -6055,7 +6056,7 @@ t10cc <- data.frame(
 
 
 p <- ggplot(t10cc, aes(x = ano, y = coef)) +
-  geom_errorbar(aes(ymin = coef - se, ymax = coef + se), width = 0.2, size = 0.8, color = "black") +
+  geom_errorbar(aes(ymin = ymin, ymax = ymax), width = 0.2, size = 0.8, color = "black") +
   geom_point(size = 3, color = "black") +
   geom_hline(yintercept = 0, color = "#D62728", linewidth = 1) +
   labs(x = "Year", y = "Average ENEM Score Coefficient") +
@@ -6077,6 +6078,10 @@ print(p)
 ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/anos_lvl.png"), device = "png", height = 7, width = 10)
 ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/anos_lvl.eps"), device = "eps", height = 7, width = 10)
 
+save(t10cc,
+     "Z:/Tuffy/Paper - HV/Resultados/result_years.RData")
+
+load("Z:/Tuffy/Paper - HV/Resultados/result_year.RData")
 
 
 rm(base_a, base_t, c_rlist, result, rlist, t10cc, t10nc, ano, ano_list,
