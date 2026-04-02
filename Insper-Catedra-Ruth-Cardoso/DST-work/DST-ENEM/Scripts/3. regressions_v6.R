@@ -291,7 +291,7 @@ base <- base %>%
       TRUE ~ mun_hv$seg[match(mun_escola, mun_hv$co_municipio)]),
     
   ) %>% 
-  filter(over_hv_border == 0) %>% 
+  #filter(over_hv_border == 0) %>% 
   setDT()
 
 rm(mun_hv)
@@ -2764,7 +2764,7 @@ latex_table <- knitr::kable(
 
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Dificuldade_v1.tex")
-
+# N = Total 5533. Por mate 5541
 rm(dif_list, dif_tab, mat_nota, result, rp_list, latex_table, d_list, row1)
 
 # ---------------------------------------------------------------------------- #
@@ -2796,6 +2796,7 @@ for (i in c(0:1)) {
   temp_ag <- temp_ag %>%
     arrange(mun_res,ano) %>%
     group_by(mun_res) %>%
+    filter(!is.na(mediabh) & !is.na(mediabl)) %>% 
     mutate(
       dup1 = 1,
       dup2 = sum(dup1)) %>%
@@ -2818,7 +2819,7 @@ for (i in c(0:1)) {
     filter(dup2 == 2) %>%
     select(-c(dup1,dup2,
               v1_pbh, v1_pbl, v2_pbl, v2_pbh)) %>% 
-    group_by(mun_prova, ano) %>%
+    group_by(mun_res, ano) %>%
     mutate(
       dif_avg = d.mediabl - d.mediabh
     ) %>% ungroup()
@@ -2870,7 +2871,8 @@ mat_nota <- data.frame(
   coef = do.call(rbind,lapply(result, FUN = function(x){x$coef[3]})),
   se = do.call(rbind,lapply(result, FUN = function(x){x$se[3]})),
   pv = do.call(rbind,lapply(result, FUN = function(x){x$pv[3]})),
-  n = do.call(rbind,lapply(result, FUN = function(x){x$N_h}))
+  n = do.call(rbind,lapply(result, FUN = function(x){x$N_h})),
+  tot = do.call(rbind, lapply(result, FUN = function(x){x$N}))
 )
 
 
@@ -2888,7 +2890,8 @@ mat_nota <- mat_nota %>%
     pv = formatC(x = pv, digits = 3, format = "f"),
     N = paste0("[N = ", n.1 + n.2, "]"),
     #esp = 1:20,
-    id = 1
+    id = 1,
+    tot = tot.1 + tot.2
   ) %>%
   select(-c(pv))
 
@@ -2953,7 +2956,2319 @@ latex_table <- knitr::kable(
 
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Dificuldade_mae.tex")
+#0 = 5457, 1 = 5426
+rm( mat_nota, result, final, latex_table, row3)
 
-rm( mat_nota, result, final, latex_table, d_list, row3)
+
+# ---------------------------------------------------------------------------- #
+# 6. DIAS (comparabilidade) ----
+# ---------------------------------------------------------------------------- #
+
+base_res <- base %>% 
+  filter(priv0 == 1,
+         ano %in% c(2018:2019)) %>%
+  group_by(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res) %>%
+  summarise(media_dia1 = mean(dia_1, na.rm = T),
+            media_dia2 = mean(dia_2, na.rm = T),
+            obs = n(),
+            .groups = "drop")
 
 
+base_res <- base_res %>%
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    
+    
+    #dia1_ 2019 REF
+    v1_d1 = ifelse(ano == 2018, media_dia1, NA), 
+    v2_d1 = max(v1_d1, na.rm = T),
+    d.media_d1 = media_dia1 - v2_d1,
+    
+    v1_d2 = ifelse(ano == 2018, media_dia2, NA), #Note que inverte
+    v2_d2 = max(v1_d2, na.rm = T),
+    d.media_d2 = media_dia2 - v2_d2
+    
+    
+  ) %>%
+  ungroup() %>%
+  filter(dup2 == 2) %>% 
+  select(-c(v1_d1, v2_d1, v2_d2, v1_d2, dup1, dup2))
+
+
+
+p_list <- list()
+
+d_list <- c("d.media_d1", "d.media_d2")
+
+# ---------------------------------------------------------------------------- #
+## 6.1 Regression ----
+# ---------------------------------------------------------------------------- #
+
+for (i in d_list){
+  
+  #Com Controles
+  
+  ef <- dummy_cols(base_res$seg_res[base_res$ano == 2018])
+  ef <- ef %>% select(-1,-2)
+  
+  
+  p_list[[as.character(paste0("nc_",i,"|TC"))]] <-
+    rdrobust(
+      y = base_res[[i]][base_res$ano == 2019],
+      x = base_res$dist_hv_res[base_res$ano == 2018],
+      c = 0,
+      h = bw_main_r,
+      b = bw_bias_r,
+      p = 1,
+      cluster = base_res$seg_res[base_res$ano == 2018],
+      weights = base_res$obs[base_res$ano == 2018],
+      vce = "hc0",
+      covs = cbind(
+        ef, 
+        base_res$lat_res[base_res$ano == 2018], 
+        base_res$lon_res[base_res$ano == 2018]
+      )
+    )
+  
+  message("Finished for day: ", i)
+  
+}
+rm(ef, i)
+
+# ---------------------------------------------------------------------------- #
+## 6.2 Result Table ----
+# ---------------------------------------------------------------------------- #
+
+
+
+dias <- data.frame(
+  coef = do.call(rbind,lapply(p_list, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(p_list, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(p_list, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(p_list, FUN = function(x){x$N_h})),
+  tot = do.call(rbind, lapply(p_list, FUN = function(x){x$N}))
+) %>% 
+  mutate(
+    N = n.1 + n.2
+  )
+
+
+dias <- dias %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0(" (",formatC(x = se, digits = 2, format = "f"),")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ", n.1 + n.2, "]"),
+    #esp = 1:4,
+    id = 1,
+    tot = tot.1 + tot.2
+  ) %>%
+  select(-c(pv))
+
+
+names <- c("2019 - 2018",
+           " "," ")
+
+result <- data.frame(
+  var = names,
+  
+  d1 = rep(NA, times = length(names)),
+  d2 = rep(NA, times = length(names))
+)
+
+
+#AVG
+result$d1[1] <- dias$coef[[1]]
+result$d1[2] <- dias$se[[1]]
+result$d1[3] <- dias$N[[1]]
+result$d2[1] <- dias$coef[[2]]
+result$d2[2] <- dias$se[[2]]
+result$d2[3] <- dias$N[[2]]
+
+
+
+
+colnames(result) <- c(" ","(1)", "(2)")
+
+
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Dias_v1.tex")
+#5541
+
+rm(dias, p_list, result, d_list, latex_table, names)
+
+
+# ---------------------------------------------------------------------------- #
+# 7. Abstenções ----
+# ---------------------------------------------------------------------------- #
+gc()
+
+base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_2019.RDS")) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_2018.RDS"))) %>%
+  #Mig filter - over the DST border
+  mutate(aux_res = mun_res %/% 100000,
+         aux_pro = mun_prova %/% 100000,
+         
+         over_hv_border = case_when(
+           aux_res < 30 & aux_pro >= 30 ~ 1, #From Non-DST to DST
+           aux_res >= 30 & aux_pro < 30 ~ 1, #From DST to Non-DST
+           .default = 0
+         )) %>% 
+  select(-c(aux_res, aux_pro)) %>% 
+  #filter(over_hv_border == 0) %>%  #No migration over the border
+  setDT()
+
+
+# ---------------------------------------------------------------------------- #
+## 7.1 Reg per day ----
+# ---------------------------------------------------------------------------- #
+
+base_abs <- base_abs %>% 
+  mutate(abs_1d = ifelse(
+    abs_rd == 1 & abs_ch == 1 & abs_lc == 1 , 1, 0),
+    
+    abs_2d = ifelse(
+      abs_cn == 1 & abs_mt == 1, 1, 0)
+  ) %>% 
+  setDT()
+
+
+
+
+base_a <- base_abs[priv0 == 1,.(media_dia1 = mean(abs_1d, na.rm = T),
+                                media_dia2 = mean(abs_2d, na.rm = T),
+                                media_abs = mean(abs, na.rm = T),
+                                obs = .N),
+                   by = .(mun_res,ano)] 
+
+# Base de distâncias
+mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/mun_hv.RDS")
+
+# Coordenadas
+coordenadas <- mun_hv$centroid %>%
+  st_coordinates() %>%
+  as_tibble() %>%
+  rename(
+    lon = X,
+    lat = Y
+  )
+
+mun_hv <- mun_hv %>%
+  bind_cols(coordenadas) %>%
+  st_drop_geometry() %>%
+  select(co_municipio, lon, lat, dist_hv_border, seg, hv)
+rm(coordenadas)
+
+
+mun_hv <- mun_hv %>%
+  mutate(dist_hv_border = ifelse(hv == 1, dist_hv_border, -dist_hv_border)) %>% 
+  select(co_municipio, dist_hv_border, lat, lon, seg) 
+
+#Res. Dist.
+base_a <- base_a %>% 
+  left_join(mun_hv %>% rename(dist_hv_res = dist_hv_border) %>% #Coordinates of Residency 
+              rename(lat_res = lat, 
+                     lon_res = lon,
+                     seg_res = seg), 
+            by = c("mun_res" = "co_municipio")) 
+
+rm(mun_hv)
+base_a <- base_a %>%
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  filter(!is.na(media_dia1) & !is.na(media_dia2)) %>% 
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    
+    
+    #dia1_ 2019 REF
+    v1_d1 = ifelse(ano == 2018, media_dia1, NA), 
+    v2_d1 = max(v1_d1, na.rm = T),
+    d.media_d1 = media_dia1 - v2_d1,
+    
+    v1_d2 = ifelse(ano == 2018, media_dia2, NA), #Note que inverte
+    v2_d2 = max(v1_d2, na.rm = T),
+    d.media_d2 = media_dia2 - v2_d2,
+    
+    #ABS
+    v1 = ifelse(ano == 2018, media_abs, NA),
+    v2 = max(v1, na.rm = T),
+    d.media_abs = media_abs - v2
+    
+    
+  ) %>%
+  ungroup() %>%
+  filter(dup2 == 2) %>% 
+  select(-c(v1_d1, v2_d1, v2_d2, v1_d2, v1, v2))
+
+
+
+p_list <- list()
+
+d_list <- c("d.media_abs","d.media_d1", "d.media_d2")
+
+
+for (i in d_list){
+  
+  #Com Controles
+  ef <- dummy_cols(base_a$seg_res[base_a$ano == 2018])
+  ef <- ef %>% select(-1,-2)
+  
+  
+  p_list[[as.character(paste0("nc_",i,"|TC"))]] <-
+    rdrobust(
+      y = base_a[[i]][base_a$ano == 2019],
+      x = base_a$dist_hv_res[base_a$ano == 2018],
+      c = 0,
+      p = 1,
+      h = bw_main_r,
+      b = bw_bias_r,
+      cluster = base_a$seg_res[base_a$ano == 2018],
+      weights = base_a$obs[base_a$ano == 2018],
+      vce = "hc0",
+      covs = cbind(
+        ef, 
+        base_a$lat_res[base_a$ano == 2018], 
+        base_a$lon_res[base_a$ano == 2018]
+      )
+    )
+  
+  
+}
+rm(ef, i)
+
+
+# ---------------------------------------------------------------------------- #
+## 7.2 Result Table ----
+# ---------------------------------------------------------------------------- #
+
+
+dias <- data.frame(
+  coef = do.call(rbind,lapply(p_list, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(p_list, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(p_list, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(p_list, FUN = function(x){x$N_h})),
+  tot = do.call(rbind, lapply(p_list, FUN = function(x){x$N}))
+) %>% 
+  mutate(
+    N = n.1 + n.2
+  )
+
+
+dias <- dias %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 4, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0(" (",formatC(x = se, digits = 4, format = "f"),")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ", n.1 + n.2, "]"),
+    #esp = 1:4,
+    id = 1,
+    tot = tot.1 + tot.2
+  ) %>%
+  select(-c(pv))
+
+
+names <- c("2019 - 2018",
+           " "," ")
+
+
+result <- data.frame(
+  var = names,
+  both = rep(NA, times = length(names)),
+  d1 = rep(NA, times = length(names)),
+  d2 = rep(NA, times = length(names))
+)
+
+
+#AVG
+
+result$both[1] <- dias$coef[[1]]
+result$both[2] <- dias$se[[1]]
+result$both[3] <- dias$N[[1]]
+
+
+result$d1[1] <- dias$coef[[2]]
+result$d1[2] <- dias$se[[2]]
+result$d1[3] <- dias$N[[2]]
+result$d2[1] <- dias$coef[[3]]
+result$d2[2] <- dias$se[[3]]
+result$d2[3] <- dias$N[[3]]
+
+
+
+
+colnames(result) <- c(" ","(1)", "(2)", "(3)")
+
+
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lccc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Abs_Dias_v1.tex")
+#N = 5559
+rm(latex_table, result, dias, d_list, p_list, names)
+
+# ---------------------------------------------------------------------------- #
+## 7.3 Census vs. Inscription ----
+# ---------------------------------------------------------------------------- #
+### 7.3.1 Data ----
+# ---------------------------------------------------------------------------- #
+educ <- readRDS("Z:/Tuffy/Paper - HV/Bases/census_students.RDS")
+
+
+
+
+base_a <- base_abs[priv0 == 1,.(media_abs = mean(abs, na.rm = T),
+                                obs = .N),
+                   by = .(mun_res,ano)] %>% 
+  arrange(mun_res, ano) %>% 
+  left_join(educ, by = c("mun_res" = "co_municipio", "ano")) #
+
+
+base_mun <- base %>% 
+  group_by(mun_res, ano) %>% 
+  summarise(
+    lat  = first(lat_res),
+    lon  = first(lon_res),
+    seg  = first(seg_res),
+    dist_hv_border = first(dist_hv_res),
+    .groups = "drop"
+  )
+
+
+base_a <- base_a %>% 
+  left_join(base_mun, by = c("mun_res", "ano")) %>% 
+  
+  group_by(mun_res) %>% 
+  filter(all(c(2018, 2019) %in% ano)) %>%
+  mutate(
+    
+    
+    #dia1_ 2019 REF
+    v1_d1 = ifelse(ano == 2018, obs, NA), 
+    v2_d1 = max(v1_d1, na.rm = T),
+    dobs = obs - v2_d1,
+    
+    v1_d2 = ifelse(ano == 2018, alunos, NA), #Note que inverte
+    v2_d2 = max(v1_d2, na.rm = T),
+    dalunos = alunos - v2_d2,
+    
+    #ABS
+    v1 = ifelse(ano == 2018, alunos-obs, NA),
+    v2 = max(v1, na.rm = T),
+    daluobs = alunos-obs - v2
+  ) %>%
+  ungroup() %>% 
+  select(-c(v1_d1, v1_d2, v1, v2_d1, v2_d2, v2))
+
+# ---------------------------------------------------------------------------- #
+### 7.3.2 Regression Diff-in-diff ----
+# ---------------------------------------------------------------------------- #
+
+p_list <- list()
+
+d_list <- c("dobs","dalunos", "daluobs")
+
+
+for (i in d_list){
+  
+  
+  temp <- base_a %>%
+    group_by(mun_res) %>% 
+    filter(n_distinct(ano) == 2) %>%
+    ungroup() %>% 
+    filter(
+      !is.na(seg) &
+        !is.na(lat) &
+        !is.na(lon) &
+        !is.na(dist_hv_border) &
+        !is.na(obs) &
+        !is.na(alunos)
+    ) %>% 
+    filter(#dist_hv_border <= bw_main_r,
+           ano == 2019)
+  
+  #Com Controles
+  
+  ef <- dummy_cols(temp$seg)
+  ef <- ef %>% select(-1,-2)
+  
+  
+  p_list[[as.character(paste0("nc_",i,"|TC"))]] <-
+    rdrobust(
+      y = temp[[i]][temp$ano == 2019],
+      x = temp$dist_hv_border,
+      c = 0,
+      p = 1,
+      h = bw_main_r,
+      b = bw_bias_r,
+      cluster = temp$seg,
+      vce = "hc0",
+      covs = cbind(
+        ef, 
+        temp$lat, 
+        temp$lon
+      )
+    )
+  
+  
+}
+rm(ef, i)
+
+# ---------------------------------------------------------------------------- #
+### 7.3.3 Result Table ----
+# ---------------------------------------------------------------------------- #
+
+dias <- data.frame(
+  coef = do.call(rbind,lapply(p_list, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(p_list, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(p_list, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(p_list, FUN = function(x){x$N_h})),
+  tot = do.call(rbind, lapply(p_list, FUN = function(x){x$N}))
+) %>% 
+  mutate(
+    N = n.1 + n.2
+  )
+
+
+dias <- dias %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0(" (",formatC(x = se, digits = 2, format = "f"),")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ", n.1 + n.2, "]"),
+    #esp = 1:4,
+    id = 1,
+    tot = tot.1 + tot.2
+  ) %>%
+  select(-c(pv))
+
+
+names <- c("2019 - 2018",
+           " "," ")
+
+
+result <- data.frame(
+  var = names,
+  both = rep(NA, times = length(names)),
+  d1 = rep(NA, times = length(names)),
+  d2 = rep(NA, times = length(names))
+)
+
+
+#AVG
+
+result$both[1] <- dias$coef[[1]]
+result$both[2] <- dias$se[[1]]
+result$both[3] <- dias$N[[1]]
+
+
+result$d1[1] <- dias$coef[[2]]
+result$d1[2] <- dias$se[[2]]
+result$d1[3] <- dias$N[[2]]
+result$d2[1] <- dias$coef[[3]]
+result$d2[2] <- dias$se[[3]]
+result$d2[3] <- dias$N[[3]]
+
+
+
+
+colnames(result) <- c(" ","(1)", "(2)", "(3)")
+
+
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lccc",
+  linesep = ""
+)
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/obs_presence.tex")
+#N = 2112
+
+rm(latex_table, result, dias, d_list, p_list, names, base_a, educ, base_abs)
+
+# ---------------------------------------------------------------------------- #
+# 8. Heterogeneity ---- 
+# ---------------------------------------------------------------------------- #
+## 8.1 Race ----
+# ---------------------------------------------------------------------------- #
+### 8.1.1 White and Yellow -----
+# ---------------------------------------------------------------------------- #
+base_ab <- base %>% 
+  filter(
+    raca %in% c("B", "E")
+  ) %>% setDT()
+
+base_ab <- base_ab[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+                   by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+# ---------------------------------------------------------------------------- #
+### 8.1.2 PPI ----
+# ---------------------------------------------------------------------------- #
+base_ppi <- base %>% 
+  filter(
+    raca %in% c("C", "D", "F")
+  ) %>% setDT()
+
+
+base_ppi <- base_ppi[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+                     by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+
+# ---------------------------------------------------------------------------- #
+### 8.1.3 Regression by race ----
+# ---------------------------------------------------------------------------- #
+
+rlist <- list()
+
+
+ano_list <- c(2018)
+
+for(ano_ref in ano_list) {
+  
+  ano_comp <- ano_ref + 1
+  
+  
+  for(df in c("base_ab", "base_ppi")) {
+    
+    base_a <- get(df)
+    
+    #Com controles
+    ef <- dummy_cols(base_a$seg_res[base_a$ano == ano_ref])
+    ef <- ef %>% select(-1,-2)
+    
+    rlist[[as.character(paste0(df,"_",ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
+      y = base_a$d.media[base_a$ano == ano_comp],
+      x = base_a$dist_hv_res[base_a$ano == ano_ref],
+      c = 0,
+      p =1,
+      cluster = base_a$seg_res[base_a$ano == ano_ref],
+      weights = base_a$obs[base_a$ano == ano_ref],
+      vce = "hc0",
+      covs = cbind(
+        ef,
+        base_a$lat_res[base_a$ano == ano_ref],
+        base_a$lon_res[base_a$ano == ano_ref]
+      )
+    )
+    
+    #Banda Fixa
+    rlist[[as.character(paste0(df,"_",ano_comp,"-",ano_ref,"BW|TC"))]] <- rdrobust(
+      y = base_a$d.media[base_a$ano == ano_comp],
+      x = base_a$dist_hv_res[base_a$ano == ano_ref],
+      c = 0,
+      p = 1,
+      h = bw_main_r,
+      b = bw_bias_r,
+      cluster = base_a$seg_res[base_a$ano == ano_ref],
+      weights = base_a$obs[base_a$ano == ano_ref],
+      vce = "hc0",
+      covs = cbind(
+        ef,
+        base_a$lat_res[base_a$ano == ano_ref],
+        base_a$lon_res[base_a$ano == ano_ref]
+      )
+    )
+    
+    message("Finished for race group: ",df)
+  }
+  rm(df)
+}
+rm(ef, ano_ref, ano_comp)
+
+
+# ---------------------------------------------------------------------------- #
+###8.1.4 Result Table ----
+# ---------------------------------------------------------------------------- #
+t10cc <- data.frame(
+  coef = do.call(rbind,lapply(rlist, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(rlist, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(rlist, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(rlist, FUN = function(x){x$N_h})),
+  tot = do.call(rbind, lapply(rlist, FUN = function(x){x$N}))
+) %>% 
+  mutate(
+    N = n.1 + n.2
+  ) %>% 
+  select(-c(n.1, n.2))
+
+
+
+t10cc <- t10cc %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
+    
+    esp = 1,
+    id = 1,
+    tot = tot.1 + tot.2
+  ) 
+# %>%
+#   select(-c(pv,se)) %>%
+#   setDT() %>%
+#   dcast(id ~ esp, value.var = c("coef"),fill = "") %>%
+#   select(-id)
+
+
+
+names2 <- c(
+  "White and Yellow", #N 5409
+  " "," ",
+  "Afro-Brazilians and Indigenous", #5329
+  " ", " ")
+
+result <- data.frame(
+  var = names2,
+  cc = rep(NA, times = length(names2)),
+  bw = rep(NA, times = length(names2))
+)
+
+#BA - TC
+result$cc[1] <- t10cc$coef[[1]]
+result$cc[2] <- t10cc$se[[1]]
+result$cc[3] <- t10cc$N[[1]]
+result$bw[1] <- t10cc$coef[[2]]
+result$bw[2] <- t10cc$se[[2]]
+result$bw[3] <- t10cc$N[[2]]
+
+#PPI - TC
+result$cc[4] <- t10cc$coef[[3]]
+result$cc[5] <- t10cc$se[[3]]
+result$cc[6] <- t10cc$N[[3]]
+result$bw[4] <- t10cc$coef[[4]]
+result$bw[5] <- t10cc$se[[4]]
+result$bw[6] <- t10cc$N[[4]]
+
+
+
+colnames(result) <- c("", "(1)", "(2)")
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Raca_v1.tex")
+
+rm(base_ab, base_ppi, result, rlist, t10cc, latex_table, names2)
+
+# ---------------------------------------------------------------------------- #
+## 8.2 Sex ----
+# ---------------------------------------------------------------------------- #
+### 8.2.1 FEM ----
+# ---------------------------------------------------------------------------- #
+base_fem <- base %>% 
+  filter(fem == 1) %>% 
+  setDT()
+
+
+base_fem <- base_fem[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+                     by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+# ---------------------------------------------------------------------------- #
+### 8.2.2 MASC ----
+# ---------------------------------------------------------------------------- #
+
+base_masc <- base %>% 
+  filter(fem == 0) %>% setDT()
+
+base_masc <- base_masc[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+                       by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+# ---------------------------------------------------------------------------- #
+### 8.2.3 Regression by sex ----
+# ---------------------------------------------------------------------------- #
+
+rlist <- list()
+ano_list <- c(2018)
+
+for(ano_ref in ano_list) {
+  
+  
+  ano_comp <- ano_ref + 1
+  for(df in c("base_fem", "base_masc")) {
+    
+    base_a <- get(df)
+    
+    
+    #Com controles
+    ef <- dummy_cols(base_a$seg_res[base_a$ano == ano_ref])
+    ef <- ef %>% select(-1,-2)
+    
+    rlist[[as.character(paste0(df,"_",ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
+      y = base_a$d.media[base_a$ano == ano_comp],
+      x = base_a$dist_hv_res[base_a$ano == ano_ref],
+      c = 0,
+      p = 1,
+      cluster = base_a$seg_res[base_a$ano == ano_ref],
+      weights = base_a$obs[base_a$ano == ano_ref],
+      vce = "hc0",
+      covs = cbind(
+        ef,
+        base_a$lat_res[base_a$ano == ano_ref],
+        base_a$lon_res[base_a$ano == ano_ref]
+      )
+    )
+    
+    #Banda Fixa
+    rlist[[as.character(paste0(df,"_",ano_comp,"-",ano_ref,"BW|TC"))]] <- rdrobust(
+      y = base_a$d.media[base_a$ano == ano_comp],
+      x = base_a$dist_hv_res[base_a$ano == ano_ref],
+      c = 0,
+      p = 1,
+      h = bw_main_r,
+      b = bw_bias_r,
+      cluster = base_a$seg_res[base_a$ano == ano_ref],
+      weights = base_a$obs[base_a$ano == ano_ref],
+      vce = "hc0",
+      covs = cbind(
+        ef,
+        base_a$lat_res[base_a$ano == ano_ref],
+        base_a$lon_res[base_a$ano == ano_ref]
+      )
+    )
+    
+    message("Finished for sex group: ",df)
+    
+  }
+  
+}
+rm(ef, ano_ref, ano_comp)
+
+
+
+# ---------------------------------------------------------------------------- #
+### 8.2.4 TAB ----
+# ---------------------------------------------------------------------------- #
+t10cc <- data.frame(
+  coef = do.call(rbind,lapply(rlist, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(rlist, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(rlist, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(rlist, FUN = function(x){x$N_h})),
+  tot = do.call(rbind, lapply(rlist, FUN = function(x){x$N}))
+) %>% 
+  mutate(
+    N = n.1 + n.2
+  ) %>% 
+  select(-c(n.1, n.2))
+
+
+t10cc <- t10cc %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
+    
+    esp = 1,
+    id = 1,
+    tot = tot.1 + tot.2
+  ) 
+
+
+
+names2 <- c(
+  "Female", #5470
+  " "," ",  #5513
+  "Male",
+  " ", " ")
+
+result <- data.frame(
+  var = names2,
+  cc = rep(NA, times = length(names2)),
+  bw = rep(NA, times = length(names2))
+)
+
+#FEM - TC
+result$cc[1] <- t10cc$coef[[1]]
+result$cc[2] <- t10cc$se[[1]]
+result$cc[3] <- t10cc$N[[1]]
+result$bw[1] <- t10cc$coef[[2]]
+result$bw[2] <- t10cc$se[[2]]
+result$bw[3] <- t10cc$N[[2]]
+
+#MASC - TC
+
+result$cc[4] <- t10cc$coef[[3]]
+result$cc[5] <- t10cc$se[[3]]
+result$cc[6] <- t10cc$N[[3]]
+result$bw[4] <- t10cc$coef[[4]]
+result$bw[5] <- t10cc$se[[4]]
+result$bw[6] <- t10cc$N[[4]]
+
+
+
+
+colnames(result) <- c("", "(1)", "(2)")
+
+
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Sexo_v1.tex")
+
+rm(base_masc, result, base_fem, rlist, t10cc, df, latex_table, names2)
+
+
+# ---------------------------------------------------------------------------- #
+## 8.3 Mae Educ ----
+# ---------------------------------------------------------------------------- #
+###8.3.1 High ----
+# ---------------------------------------------------------------------------- #
+base_high <- base %>% 
+  filter(
+    esc_mae %in% c("D","E","F")
+  ) %>% setDT()
+
+
+base_high <- base_high[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+                       by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+# ---------------------------------------------------------------------------- #
+### 8.3.2 Low ----
+# ---------------------------------------------------------------------------- #
+base_low <- base %>% 
+  filter(
+    esc_mae %in% c("A", "B", "C")
+  ) %>% setDT()
+
+base_low <- base_low[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+                     by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota 
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2) %>% 
+  select(-c(dup2, dup1, v1_nota, v2_nota))
+
+# ---------------------------------------------------------------------------- #
+###8.3.3 Regression ----
+rlist <- list()
+
+
+ano_list <- c(2018)
+
+for(ano_ref in ano_list) {
+  
+  
+  ano_comp <- ano_ref + 1
+  for(df in c("base_low", "base_high")) {
+    
+    base_a <- get(df)
+    
+    
+    #Com controles
+    ef <- dummy_cols(base_a$seg_res[base_a$ano == ano_ref])
+    ef <- ef %>% select(-1,-2)
+    
+    rlist[[as.character(paste0(df,"_",ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
+      y = base_a$d.media[base_a$ano == ano_comp],
+      x = base_a$dist_hv_res[base_a$ano == ano_ref],
+      c = 0,
+      p = 1,
+      cluster = base_a$seg_res[base_a$ano == ano_ref],
+      weights = base_a$obs[base_a$ano == ano_ref],
+      vce = "hc0",
+      covs = cbind(
+        ef,
+        base_a$lat_res[base_a$ano == ano_ref],
+        base_a$lon_res[base_a$ano == ano_ref]
+      )
+    )
+    
+    
+    #Banda Fixa
+    rlist[[as.character(paste0(df,"_",ano_comp,"-",ano_ref,"BW|TC"))]] <- rdrobust(
+      y = base_a$d.media[base_a$ano == ano_comp],
+      x = base_a$dist_hv_res[base_a$ano == ano_ref],
+      c = 0,
+      p = 1,
+      h = bw_main_r,
+      b = bw_bias_r,
+      cluster = base_a$seg_res[base_a$ano == ano_ref],
+      weights = base_a$obs[base_a$ano == ano_ref],
+      vce = "hc0",
+      covs = cbind(
+        ef,
+        base_a$lat_res[base_a$ano == ano_ref],
+        base_a$lon_res[base_a$ano == ano_ref]
+      )
+    )
+    
+    
+  }
+  
+}
+rm(ef, ano_ref, ano_comp, ano_list)
+
+
+# ---------------------------------------------------------------------------- #
+###8.3.4 Result Table ----
+# ---------------------------------------------------------------------------- #
+t10cc <- data.frame(
+  coef = do.call(rbind,lapply(rlist, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(rlist, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(rlist, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(rlist, FUN = function(x){x$N_h})),
+  tot = do.call(rbind, lapply(rlist, FUN = function(x){x$N}))
+  ) %>% 
+  mutate(
+    N = n.1 + n.2
+  ) %>% 
+  select(-c(n.1, n.2))
+
+
+t10cc <- t10cc %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
+    
+    esp = 1,
+    id = 1,
+    tot = tot.1 + tot.2
+  ) 
+
+
+names2 <- c(
+  "Low Education", #5502
+  " "," ",
+  "High Education", #5472
+  " ", " ")
+
+result <- data.frame(
+  var = names2,
+  cc = rep(NA, times = length(names2)),
+  bw = rep(NA, times = length(names2))
+)
+
+#Low - TC
+result$cc[1] <- t10cc$coef[[1]]
+result$cc[2] <- t10cc$se[[1]]
+result$cc[3] <- t10cc$N[[1]]
+result$bw[1] <- t10cc$coef[[2]]
+result$bw[2] <- t10cc$se[[2]]
+result$bw[3] <- t10cc$N[[2]]
+
+#High - TC
+result$cc[4] <- t10cc$coef[[3]]
+result$cc[5] <- t10cc$se[[3]]
+result$cc[6] <- t10cc$N[[3]]
+result$bw[4] <- t10cc$coef[[4]]
+result$bw[5] <- t10cc$se[[4]]
+result$bw[6] <- t10cc$N[[4]]
+
+
+
+colnames(result) <- c("", "(1)", "(2)")
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Mae_Education_v1.tex")
+
+rm(base_low, result, base_high, rlist, t10cc, df, latex_table, base_a, ano_list, names, names2)
+
+
+# ---------------------------------------------------------------------------- #
+## 8.4 Age ----
+# ---------------------------------------------------------------------------- #
+###8.4.1 Data ----
+# ---------------------------------------------------------------------------- #
+
+#Age filter dummy
+base <- base %>%
+  mutate(
+    old = ifelse(
+      idade > 18 & conclusao == 2, 1,
+      ifelse( idade %in% c(17, 18), 0, NA))
+  ) %>% setDT()
+
+# ------------------------ #
+### 8.4.2 Reression. ----
+# ------------------------ #
+rlist <- list()
+
+for (j in c(0:1)){
+  
+  base_y <- base %>%
+    filter( old == j) %>% 
+    filter(ano %in% c(2018:2019))
+  
+  base_a <- base_y[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+                   by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>%
+    filter(as.numeric(ano) %in% c(2018,2019)) %>%
+    arrange(mun_res,ano) %>%
+    group_by(mun_res) %>%
+    mutate(
+      dup1 = 1,
+      dup2 = sum(dup1),
+      v1_nota = ifelse(ano == 2018, media, NA),
+      v2_nota = max(v1_nota, na.rm = T),
+      d.media = media - v2_nota
+    ) %>%
+    ungroup() %>%
+    filter(dup2 == 2) %>%
+    select(-c(dup2, dup1, v1_nota, v2_nota))
+  
+  rm(base_y)
+  
+  
+  
+  ef <- dummy_cols(base_a$seg_res[base_a$ano == 2018])
+  ef <- ef %>% select(-1,-2)
+  
+  # 
+  #   rlist[[as.character(paste0("old =",j,"|NC"))]] <- rdrobust(
+  #     y = base_a$d.media[base_a$ano == 2019],
+  #     x = base_a$dist_hv_border[base_a$ano == 2018],
+  #     c = 0,
+  #     cluster = base_a$seg[base_a$ano == 2018],
+  #     weights = base_a$obs[base_a$ano == 2018],
+  #     vce = "hc0"
+  #     # ,
+  #     # covs = cbind(
+  #     #   ef,
+  #     #   base_a$lat[base_a$ano == 2018],
+  #     #   base_a$lon[base_a$ano == 2018]
+  #     # )
+  #   )
+  
+  
+  
+  rlist[[as.character(paste0("old =",j,"|C"))]] <- rdrobust(
+    y = base_a$d.media[base_a$ano == 2019],
+    x = base_a$dist_hv_res[base_a$ano == 2018],
+    c = 0,
+    cluster = base_a$seg_res[base_a$ano == 2018],
+    weights = base_a$obs[base_a$ano == 2018],
+    vce = "hc0",
+    covs = cbind(
+      ef,
+      base_a$lat_res[base_a$ano == 2018],
+      base_a$lon_res[base_a$ano == 2018]
+    )
+  )
+  
+  
+  rlist[[as.character(paste0("old =",j,"|BW"))]] <- rdrobust(
+    y = base_a$d.media[base_a$ano == 2019],
+    x = base_a$dist_hv_res[base_a$ano == 2018],
+    c = 0,
+    cluster = base_a$seg_res[base_a$ano == 2018],
+    weights = base_a$obs[base_a$ano == 2018],
+    vce = "hc0",
+    h = bw_main_r,
+    b = bw_bias_r,
+    covs = cbind(
+      ef,
+      base_a$lat_res[base_a$ano == 2018],
+      base_a$lon_res[base_a$ano == 2018]
+    )
+  )
+  
+  
+}
+rm(j, ef)
+
+# ---------------------------------------------------------------------------- #
+### 8.4.3 Result Table ----
+# ---------------------------------------------------------------------------- #
+
+tab <- data.frame(
+  coef = do.call(rbind,lapply(rlist, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(rlist, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(rlist, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(rlist, FUN = function(x){x$N_h})),
+  tot = do.call(rbind, lapply(rlist, FUN = function(x){x$N}))
+)
+
+
+tab <- tab %>%
+  mutate(
+    N = n.1 + n.2,
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**",
+                         ifelse(pv < 0.05, "*",
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0("(", formatC(x = se, digits = 2, format = "f"), ")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ",formatC(x = N, digits = 0, format = "f"),"]"),
+    
+    esp = 1,
+    id = 1,
+    tot = tot.1 + tot.2
+  )
+
+names <- c(
+  "Younger", #5536
+  " "," ",
+  "Older", #4439
+  " "," "
+)
+
+result <- data.frame(
+  var = names,
+  #nc = rep(NA, times = length(names)),
+  cc= rep(NA, times = length(names)),
+  bw = rep(NA, times = length(names))
+  
+)
+
+
+# result$nc[1] <- tab$coef[[1]]
+# result$nc[2] <- tab$se[[1]]
+# result$nc[3] <- tab$N[[1]]
+result$cc[1] <- tab$coef[[1]]
+result$cc[2] <- tab$se[[1]]
+result$cc[3] <- tab$N[[1]]
+result$bw[1] <- tab$coef[[2]]
+result$bw[2] <- tab$se[[2]]
+result$bw[3] <- tab$N[[2]]
+
+# result$nc[4] <- tab$coef[[4]]
+# result$nc[5] <- tab$se[[4]]
+# result$nc[6] <- tab$N[[4]]
+result$cc[4] <- tab$coef[[3]]
+result$cc[5] <- tab$se[[3]]
+result$cc[6] <- tab$N[[3]]
+result$bw[4] <- tab$coef[[4]]
+result$bw[5] <- tab$se[[4]]
+result$bw[6] <- tab$N[[4]]
+
+
+
+colnames(result) <- c("", "(1)", "(2)")
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/OLDER_vs_young_v1.tex")
+
+rm(base_a, names, result, rlist, tab, latex_table, base_mun)
+
+# ---------------------------------------------------------------------------- #
+# 9.Migration ------
+# ---------------------------------------------------------------------------- #
+## 9.1 Main specification regression ----
+# ---------------------------------------------------------------------------- #
+
+var_list <- c(
+  "nonmig1", # MUN PROVA = RESIDENCIA = ESCOLA
+  #"nonmig2", # Mun PROVA = RESIDENCIA != ESCOLA
+  "nonmig3" #, # MUN PROVA != RESIDENCIA = ESCOLA
+  #"nonmig4"  # Mun PROVA = ESCOLA != RESIDENCIA
+)
+
+rlist  <- list()
+
+for (i in var_list) {
+  
+  cat("Rodando para:", i, "\n")
+  
+  base <- base %>% setDT()
+  
+  base_y <- base[get(i) == 1]
+  
+  base_a <- base_y[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
+                   by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+    filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+    arrange(mun_res,ano) %>%
+    group_by(mun_res) %>%
+    mutate(
+      dup1 = 1,
+      dup2 = sum(dup1),
+      v1_nota = ifelse(ano == 2018, media, NA),
+      v2_nota = max(v1_nota, na.rm = T),
+      d.media = media - v2_nota 
+    ) %>%
+    ungroup() %>% 
+    filter(dup2 == 2) %>% 
+    select(-c(dup2, dup1, v1_nota, v2_nota))
+  
+  
+  
+  
+  
+  ef <- dummy_cols(base_a$seg_res[base_a$ano == 2018])
+  ef <- ef %>% select(-1,-2)
+  
+
+  
+  rlist[[as.character(paste0(i,"|C"))]] <- rdrobust(
+    y = base_a$d.media[base_a$ano == 2019],
+    x = base_a$dist_hv_res[base_a$ano == 2018],
+    c = 0,
+    p = 1,
+    cluster = base_a$seg_res[base_a$ano == 2018],
+    weights = base_a$obs[base_a$ano == 2018],
+    vce = "hc0",
+    covs = cbind(
+      ef,
+      base_a$lat_res[base_a$ano == 2018],
+      base_a$lon_res[base_a$ano == 2018]
+    )
+  )
+  
+  
+  rlist[[as.character(paste0(i,"|BW"))]] <- rdrobust(
+    y = base_a$d.media[base_a$ano == 2019],
+    x = base_a$dist_hv_res[base_a$ano == 2018],
+    c = 0,
+    p =1,
+    cluster = base_a$seg_res[base_a$ano == 2018],
+    weights = base_a$obs[base_a$ano == 2018],
+    vce = "hc0",
+    h = bw_main_r,
+    b = bw_bias_r,
+    covs = cbind(
+      ef,
+      base_a$lat_res[base_a$ano == 2018],
+      base_a$lon_res[base_a$ano == 2018]
+    )
+  )
+  
+  
+  
+}
+rm(ef,i, base_y)
+
+# ---------------------------------------------------------------------------- #
+## 9.2 Table ----
+# ---------------------------------------------------------------------------- #
+
+
+tab <- data.frame(
+  coef = do.call(rbind,lapply(rlist, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(rlist, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(rlist, FUN = function(x){x$pv[3]})),
+  n.1 = do.call(rbind,lapply(rlist, FUN = function(x){x$N_h[1]})),
+  n.2 = do.call(rbind,lapply(rlist, FUN = function(x){x$N_h[2]})),
+  tot = do.call(rbind, lapply(rlist, FUN = function(x){x$N}))
+)
+
+
+tab <- tab %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0(" (",formatC(x = se, digits = 2, format = "f"),")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ", n.1 + n.2, "]"),
+    tot = tot.1 + tot.2
+  ) %>%
+  select(-c(pv))
+
+row <- c(
+  "No Migration", #1725
+  " "," ",
+  # "Group 2 (School)",
+  # " "," ",
+  "Migration to ENEM", #4529
+  " ", " " #,
+  # "Group 4 (Residency)",
+  # " ", " "
+)
+
+result <- data.frame(
+  var = row,
+  cc = rep(NA, times = length(names))
+  #,
+  #bw = rep(NA, times = length(names))
+)
+
+
+#NonMig1
+
+
+result$cc[1] <- tab$coef[[1]]
+result$cc[2] <- tab$se[[1]]
+result$cc[3] <- tab$N[[1]]
+
+# result$bw[1] <- tab$coef[[2]]
+# result$bw[2] <- tab$se[[2]]
+# result$bw[3] <- tab$N[[2]]
+
+#NonMig2
+
+
+result$cc[4] <- tab$coef[[3]]
+result$cc[5] <- tab$se[[3]]
+result$cc[6] <- tab$N[[3]]
+
+# result$bw[4] <- tab$coef[[4]]
+# result$bw[5] <- tab$se[[4]]
+# result$bw[6] <- tab$N[[4]]
+
+# #NonMig3
+# 
+# 
+# result$cc[7] <- tab$coef[[5]]
+# result$cc[8] <- tab$se[[5]]
+# result$cc[9] <- tab$N[[5]]
+# 
+# result$bw[7] <- tab$coef[[6]]
+# result$bw[8] <- tab$se[[6]]
+# result$bw[9] <- tab$N[[6]]
+# 
+# #NonMig4
+# 
+# 
+# result$cc[10] <- tab$coef[[7]]
+# result$cc[11] <- tab$se[[7]]
+# result$cc[12] <- tab$N[[7]]
+# 
+# result$bw[10] <- tab$coef[[8]]
+# result$bw[11] <- tab$se[[8]]
+# result$bw[12] <- tab$N[[8]]
+
+
+colnames(result) <- c("", "(1)", "(2)")
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/grupos_mig_v2.tex")
+
+rm(latex_table, result, row,  tab, rlist, var_list)
+
+# ---------------------------------------------------------------------------- #
+# 10. Time Zone ----
+# ---------------------------------------------------------------------------- #
+## 10.1 Data -----
+# ---------------------------------------------------------------------------- #
+base <- base %>% 
+  mutate(
+    h13 = case_when( #Prova iniciando as 13h
+      ano %in% c(2017:2019) &
+        uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS") ~ 1,
+      
+      ano == 2019 &
+        uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS", "BA", "SE",
+                  "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP") ~ 1,
+      
+      TRUE ~ 0
+    ),
+    
+    h12 = case_when( #Prova iniciando as 12h
+      ano %in% c(2017, 2018) &
+        uf %in% c("BA", "SE", "AL", "PE", "PB", "RN", "CE", "PI", "MA", "TO", "MT",
+                  "MS", "PA", "AP") ~ 1,
+      
+      ano == 2019 &
+        uf %in% c("MT", "MS", "RO", "RR") | uf == "AM" & !mun_prova %in%
+        c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+          1302306, 1302405, 1303502, 1303908, 1304062) ~ 1,
+      
+      TRUE ~ 0
+    ),
+    
+    h11 = case_when( #Prova iniciando as 12h
+      ano %in% c(2017, 2018) &
+        uf %in% c("RO", "RR") | uf == "AM" & !mun_prova %in% 
+        c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+          1302306, 1302405, 1303502, 1303908, 1304062) ~ 1,
+      
+      ano == 2019 &
+        uf == "AC" | mun_prova %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                      1301654, 1301803, 1301951, 1302306, 1302405,
+                                      1303502, 1303908, 1304062) ~ 1,
+      
+      TRUE ~ 0
+    ),
+    
+    h10 = case_when( #Prova iniciando as 12h
+      ano %in% c(2017, 2018) &
+        uf == "AC" | mun_prova %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                      1301654, 1301803, 1301951, 1302306, 1302405,
+                                      1303502, 1303908, 1304062) ~ 1,
+      
+      TRUE ~ 0
+    ),
+    
+    
+    new_dist = dist_hv_border/100000) %>% 
+  setDT()
+
+base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
+                            obs = .N),
+               by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res, uf)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2)
+
+
+#Filtro de mun por fuso
+
+# ---------------------------------------------------------------------------- #
+## 10.2. Reg Loop ----
+# ---------------------------------------------------------------------------- #
+
+
+
+
+result_time <- list()
+
+time_list <- c(13, 12) #11 should be aborted with missing treatmnent obs.
+
+for (i in time_list){
+  
+  if (i == 13){
+    b_temp <- base_a %>%
+      group_by(mun_res) %>% 
+      filter(uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS", "BA", "SE",
+                       "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP")) %>% 
+      arrange(mun_res, ano) %>% 
+      mutate(
+        lat = as.factor(lat_res),
+        lon = as.factor(lon_res)
+      )
+    
+  } else if(i == 12){
+    b_temp <- base_a %>%
+      group_by(mun_res) %>% 
+      filter(uf %in% c("MT", "MS", "RO", "RR") | uf == "AM" &
+               !mun_res %in%
+               c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+                 1302306, 1302405, 1303502, 1303908, 1304062)) %>%
+      arrange(mun_res, ano) %>% 
+      mutate(
+        lat = as.factor(lat_res),
+        lon = as.factor(lon_res)
+      )
+  } else {
+    b_temp <- base_a %>%
+      group_by(mun_res) %>% 
+      filter(uf == "AC" | mun_res %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                           1301654, 1301803, 1301951, 1302306, 1302405,
+                                           1303502, 1303908, 1304062)) %>%       
+      arrange(mun_res, ano) %>% 
+      mutate(
+        lat = as.factor(lat_res),
+        lon = as.factor(lon_res)
+      )
+  }
+  
+  
+  summary(b_temp$lat)
+  summary(b_temp$lon)
+  
+  print(paste0("Rows:", nrow(b_temp), " ", i))
+  
+  
+  
+  
+  result_time[[as.character(i)]] <- rdrobust(
+    y = b_temp$d.media[b_temp$ano == 2019],
+    x = b_temp$dist_hv_res[b_temp$ano == 2018],
+    c = 0,
+    p = 1,
+    cluster = b_temp$mun_res[b_temp$ano == 2018],
+    weights = b_temp$obs[b_temp$ano == 2018],
+    vce = "hc0",
+    covs = cbind(
+      b_temp$lat[b_temp$ano == 2018],
+      b_temp$lon[b_temp$ano == 2018]
+    )
+  )
+  
+  message("Terminado para: ", i)
+  
+  
+  rm(b_temp)
+}
+# ---------------------------------------------------------------------------- #
+## 10.3 Result Table ----
+# ---------------------------------------------------------------------------- #
+
+
+result_tab <- data.frame(
+  coef = do.call(rbind,lapply(result_time, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(result_time, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(result_time, FUN = function(x){x$pv[3]})),
+  n = do.call(rbind, lapply(result_time, FUN = function(x){x$N_h})),
+  tot = do.call(rbind, lapply(result_time, FUN = function(x){x$N}))
+)
+
+
+result_tab <- result_tab %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se =paste0(" (",formatC(x = se, digits = 2, format = "f"),")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ", n.1 + n.2, "]"),
+    esp = 1:2,
+    id = 1,
+    tot = tot.1 + tot.2
+  ) %>% 
+  select(-c(pv))
+# setDT() %>%
+# dcast(id ~ esp, value.var = c("coef"),fill = "") %>%
+# select(-id)
+
+
+names <- c("2019 - 2018", #4260, #261
+           " ",
+           " ")
+
+result <- data.frame(
+  var = names,
+  fuso2 = rep(NA, times = length(names)),
+  fuso1 = rep(NA, times = length(names))
+)
+
+
+
+
+result$fuso1[1] <- result_tab$coef[[1]]
+result$fuso1[2] <- result_tab$se[[1]]
+result$fuso1[3] <- result_tab$N[[1]]
+
+result$fuso2[1] <- result_tab$coef[[2]]
+result$fuso2[2] <- result_tab$se[[2]]
+result$fuso2[3] <- result_tab$N[[2]]
+
+
+
+
+colnames(result) <- c("", "(1)", "(2)")
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lcc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/fuso_resultado_v1.tex")
+
+rm(result, result_tab, latex_table,i, result_time, names, time_list)
+
+# ---------------------------------------------------------------------------- #
+# 11. Bandwith test ----
+# ---------------------------------------------------------------------------- #
+
+base_a <- base[priv0 == 1,.(media = mean(media, na.rm = T),
+                            obs = .N),
+               by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res, uf)] %>% 
+  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    v1_nota = ifelse(ano == 2018, media, NA),
+    v2_nota = max(v1_nota, na.rm = T),
+    d.media = media - v2_nota
+  ) %>%
+  ungroup() %>% 
+  filter(dup2 == 2)
+
+# Estes valores estão no item 2.
+# h <- rlist_a[[3]]$bws[1]
+# b <- rlist_a[[3]]$bws[2]
+
+h <- bw_main_r
+b <- bw_bias_r
+
+
+# Range de bandwidths
+bws <- seq(0.2*h,1.5*h,0.1*h)
+
+# Efeitos fixos
+ef <- dummy_cols(base_a$seg_res[base_a$ano == 2018])
+ef <- ef %>% select(-1,-2)
+
+rlist_bw <- list()
+
+# Loop nos cutoffs
+for (c in 1:length(bws)) {
+  
+  print(paste0("Rodada: ", c))
+  
+  rlist_bw[[c]] <- rdrobust(
+    y = base_a$d.media[base_a$ano == 2019],
+    x = base_a$dist_hv_res[base_a$ano == 2018],
+    c = 0,
+    cluster = base_a$seg_res[base_a$ano == 2018],
+    vce = "hc0",
+    weights = base_a$obs[base_a$ano == 2018],
+    covs = cbind(ef,
+                 base_a$lat_res[base_a$ano == 2018],
+                 base_a$lon_res[base_a$ano == 2018]),
+    h = bws[c],
+    b = b
+  )
+  
+} # fim do loop nos cutoffs (c)
+
+rm(ef, bws, bws_b)
+
+
+# save(rlist_bw, file = "results/v8/rdd_bw.RData")
+# rm(h,b,rlist_bw)
+# 
+# # Lista de estimativas
+# load(file = "results/v8/rdd_bw.RData")
+
+# Lista de coeficientes
+tablist_bw <- data.frame(
+  coef = do.call(rbind,lapply(rlist_bw, FUN = function(x){x$coef[3]})),
+  ll = do.call(rbind,lapply(rlist_bw, FUN = function(x){x$ci[3,1]})),
+  ul = do.call(rbind,lapply(rlist_bw, FUN = function(x){x$ci[3,2]})),
+  c = seq(0.2,1.5,0.1)
+)
+
+# Gráfico
+graph <- ggplot(data = tablist_bw) +
+  geom_hline(yintercept = 0, color = "red") +
+  geom_line(mapping = aes(x = c, y = coef, group = 1)) +
+  geom_ribbon(mapping = aes(x = c, ymin = ll, ymax = ul), alpha = 0.2) +
+  theme_bw() +
+  ylab("Coefficient") +
+  xlab("Multiple of the Optimal Bandwidth") +
+  theme(axis.title = element_text(size = 25),
+        axis.text = element_text(size = 20),
+        strip.text = element_text(size = 20)) + 
+  scale_x_continuous(breaks = seq(0.1,1.5,0.2), labels = as.character(seq(0.1,1.5,0.2)))
+
+print(graph)
+
+
+ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/bandwith_v2.png", plot = graph,device = "png", width = 15, height = 10)
+ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/bandwith_v2.pdf", plot = graph,device = "pdf", width = 8, height = 6)
+
+rm(graph, tablist_bw, rlist_bw, h, b, c, base_a)
+
+# ---------------------------------------------------------------------------- #
+# 12. Balance Figs ----
+# ---------------------------------------------------------------------------- #
+## 12.1 Lists  -----
+# ---------------------------------------------------------------------------- #
+
+
+var_list <- c("id18", "fem", "ppi", "escp", "escm", # "dom5",
+              "pessoas_dom", "empr_dom", "n_banheiro", "n_quartos", "n_carros",
+              "n_geladeira", "n_celular", "pc", "internet",
+              "renda1", "pibpc",# "pai_trab_man", "mae_trab_man",
+              "temp_d1", "temp_d2", "umid_d1", "umid_d2",
+              "renda_1_10", "renda_10")
+
+vnames <- c(
+  "Age 18",
+  "Female",
+  "African Brazilian\nor Indigenous",
+  "Father with\nhigh school",
+  "Mother with\nhigh school",
+  #"5 or more people\nin household",
+  "People in household",
+  "Domestic worker\npresence",
+  "Number of bathrooms",
+  "Number of bedrooms",
+  "Number of cars",
+  "Number of refrigerators",
+  "Number of cell phones",
+  "Computer presence",
+  "Internet access",
+  "Household income\nup to 1 MW",
+  "GDP per capita",
+  #"Father in\nmanual labor",
+  #"Mother in\nmanual labor",
+  "Temperature – Day 1",
+  "Temperature – Day 2",
+  "Humidity – Day 1",
+  "Humidity – Day 2",
+  "Household income\nbetween 1 and 10 MW",
+  "Household income\nmore than 10 MW"
+)
+
+# ---------------------------------------------------------------------------- #
+## 12.2 Data  -----
+# ---------------------------------------------------------------------------- #
+
+base_inpe_t <- base %>%
+  mutate(
+    renda_1_10 = ifelse(renda_dom == "C", 1 , 0),
+    renda_10   = ifelse(renda_dom == "D", 1, 0)
+  ) %>% 
+  filter(over_hv_border == 0) %>% 
+  setDT()
+
+# ---------------------------------------------------------------------------- #
+## 12.3 Yearly Lvl ----
+# ---------------------------------------------------------------------------- #
+
+ylist <- list()
+
+for (i in var_list){
+  
+  for(j in c(2018:2019)) {
+    
+    temp <- base_inpe_t %>% 
+      filter(priv0 == 1) %>% 
+      filter(!is.na(.data[[i]])) %>% 
+      filter(ano == j) %>% 
+      mutate(var_y = .data[[i]])
+    
+    
+    
+    #Seg dummy 
+    ef <- dummy_cols(temp$seg_res) 
+    ef <- ef %>% select(-1,-2)
+    
+    ylist[[as.character(paste0(i,"|",j))]] <-
+      rdrobust(
+        y = temp$var_y,
+        x = temp$dist_hv_res,
+        c = 0,
+        p = 1,
+        h = bw_main_r,
+        b = bw_bias_r,
+        cluster = temp$seg_res,
+        vce = "hc0",
+        covs = cbind(ef,
+                     temp$lat_res,
+                     temp$lon_res)
+      )
+    
+    message("Year ", j," -- Finished for: ", i)
+  }
+  rm(i, j, temp)
+}
+
+
+library(stringr)
+library(purrr)
+
+covs_np <- map_dfr(names(ylist), function(name) {
+  
+  model <- ylist[[name]]
+  
+  tibble(
+    var = str_extract(name, "^[^|]+"),           # variable name
+    year = str_extract(name, "\\d{4}$"),         # year (2017, 2018, 2019)
+    tstat = model$coef[1] / model$se[1]          # t-stat (main effect)
+  )
+})
+
+
+var_map <- setNames(vnames, var_list)
+
+covs_np <- covs_np %>%
+  arrange(var) %>% 
+  mutate(var = recode(var, !!!var_map))
+
+plot_covs <- ggplot(data = covs_np) +
+  
+  theme_bw() +
+  
+  labs(x = 't-statistic', y = NULL, color = "Year", shape = "Year") +
+  
+  scale_x_continuous(
+    breaks = c(-1.96, 0, 1.96),
+    labels = c("-1.96", "", "1.96"),
+    limits = c(-7, 7)
+  ) +
+  
+  geom_vline(
+    xintercept = c(-1.96, 1.96),
+    color = 'red',
+    linetype = 'dashed',
+    linewidth = 1
+  ) +
+  
+  geom_point(
+    aes(x = tstat, y = var, color = year, shape = year),
+    size = 2.5
+  ) +
+  
+  scale_color_manual(values = c(
+    "2018" = "#D95F02",
+    "2019" = "#1A2D99"
+  )) +
+  
+  scale_shape_manual(values = c(
+    "2018" = 17,   # triangle
+    "2019" = 16    # circle
+  )) +
+  
+  theme(
+    panel.grid.minor = element_blank(),
+    
+    axis.title.x = element_text(size = 25),
+    axis.text.x  = element_text(size = 20),
+    axis.text.y  = element_text(size = 18),
+    
+    legend.position = "bottom",
+    legend.title = element_text(size = 19),
+    legend.text  = element_text(size = 19)
+  )
+
+plot_covs
+
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/covs_test_dif_lvl.png"), device = "png", height = 13, width = 7)
+ggsave(plot = plot_covs, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/covs_test_dif_lvl.eps"), device = "eps", height = 13, width = 7)
+
+rm(covs_np, ylist, plot_covs, var_map, var_list, base_inpe_t)
+
+# ---------------------------------------------------------------------------- #
+# 13. SAEB ----
+# ---------------------------------------------------------------------------- #
+
+saeb_base <- readRDS("Z:/Tuffy/Paper - HV/Bases/saeb_total.RDS") %>% 
+  setDT()
+
+
+# ---------------------------------------------------------------------------- #
+##13.1 Base ----
+# ---------------------------------------------------------------------------- #
+
+mun_exp <- base_a %>%
+  filter(ano == 2019) %>% 
+  select(mun_prova)
+
+
+saeb_base <- saeb_base %>% 
+  mutate(in_base = ifelse(mun_prova %in% mun_exp$mun_prova, 1, 0))
+
+saeb_base <- saeb_base %>% 
+  filter(in_base == 1 )
+rm(mun_exp)
+
+temp <- base_a %>% 
+  filter(ano == 2018) %>% 
+  select(mun_prova, lat, lon, dist_hv_border, seg)
+
+
+saeb_base <- saeb_base %>% 
+  left_join(temp, by = c("mun_prova" = "mun_prova"))
+
+rm(temp)
+
+# ---------------------------------------------------------------------------- #
+## 13.2 Regression (BW) ----
+# ---------------------------------------------------------------------------- #
+
+# Lista para armazenar resultados
+rlist_saeb <- list()
+
+
+for (i in c("5","9","3")) {
+  
+  temp <- saeb_base %>% 
+    filter(serie == i,
+           !is.na(seg)) %>% 
+    group_by(mun_prova) %>% 
+    mutate( 
+      dup1 = 1,
+      dup2 = sum(dup1),
+      v1 = ifelse(ano == 2017, lp, NA),
+      v2 = max(v1, na.rm = T),
+      d.media_lp = lp - v2) %>%
+    
+    #Média Mat
+    mutate(
+      v1 = ifelse(ano == 2017, mt, NA),
+      v2 = max(v1, na.rm = T),
+      d.media_mt = mt - v2) %>%
+    filter(dup2 == 2) %>% 
+    ungroup() %>%
+    select(-c(v1,v2, dup1, dup2))  
+  
+  
+  
+  
+  
+  # 
+  # temp <- saeb_base %>% 
+  #   mutate(subset = case_when(
+  #     abs(dist_hv_border) < bw_main_a ~ 1,
+  #     .default = 0
+  #   )
+  #   ) %>% 
+  #   filter(
+  #     !is.na(d.media),
+  #     subset == 1
+  #   )
+  # 
+  # Dependent variable
+  yv_lp <- temp %>%
+    filter(ano == 2019) %>% 
+    select(d.media_lp) 
+  
+  yv_mt <- temp %>%
+    filter(ano == 2019) %>% 
+    select(d.media_mt) 
+  
+  #45696
+  # Running variable
+  xv <- temp %>%
+    filter(ano == 2017) %>% 
+    select(dist_hv_border)
+  
+  # Clusters
+  clu <- temp %>% 
+    filter(ano == 2017) %>% 
+    select(seg)
+  
+  # Latitude
+  latv <- temp %>%
+    filter(ano == 2017) %>% 
+    select(lat)
+  
+  # Longitude
+  lonv <- temp %>% 
+    filter(ano == 2017) %>% 
+    select(lon)
+  
+  #peso
+  
+  w_lp <- temp %>% 
+    filter(ano == 2017) %>% 
+    select(lp_peso)
+  
+  w_mt <- temp %>% 
+    filter(ano == 2017) %>% 
+    select(mt_peso)
+  
+  ef <- dummy_cols(clu$seg)
+  ef <- ef %>% select(-1,-2)
+  
+  
+  
+  
+  
+  
+  # Lista para armazenamento dos resultados
+  
+  # Regressão LP --------------------------------------------------------------#
+  rlist_saeb[[paste0("LP|",i)]] <- rdrobust(
+    y = yv_lp$d.media_lp,
+    x = xv$dist_hv_border,
+    c = 0,
+    h = bw_main_a,
+    b = bw_bias_a,
+    weights = w_lp,
+    cluster = clu,
+    vce = "hc0",
+    covs = cbind(ef,
+                 latv,
+                 lonv)
+  )
+  
+  # # Calculating average values of the dependent variable, within the optimal bandwidth
+  # bw <- rlist_saeb[[ind]][[1]]$bws[1, 1]
+  # media_l <- base %>% 
+  #   filter(dist_hv_border %between% c(-bw,0) & !is.na(lp) & !is.na(peso_aluno_lp)) %>% 
+  #   summarise(media_l = weighted.mean(lp,peso_aluno_lp))
+  # 
+  # media_h <- base %>% 
+  #   filter(dist_hv_border %between% c(0,bw) & !is.na(lp) & !is.na(peso_aluno_lp)) %>% 
+  #   summarise(media_l = weighted.mean(lp,peso_aluno_lp))
+  # 
+  # rlist_saeb[[ind]][[1]]$media_l <- media_l
+  # rlist_saeb[[ind]][[1]]$media_h <- media_h
+  # 
+  # rm(bw,media_l,media_h)
+  
+  # Regressão MT --------------------------------------------------------------#
+  
+  rlist_saeb[[paste0("MT|",i)]] <- rdrobust(
+    y = yv_mt$d.media_mt,
+    x = xv$dist_hv_border,
+    c = 0,
+    h = bw_main_a,
+    b = bw_bias_a,
+    weights = w_mt,
+    cluster = clu,
+    vce = "hc0",
+    covs = cbind(ef,
+                 latv,
+                 lonv)
+  )
+  
+  # # Calculating average values of the dependent variable, within the optimal bandwidth
+  # bw <- rlist_saeb[[ind]][[2]]$bws[1, 1]
+  # media_l <- base %>% 
+  #   filter(dist_hv_border %between% c(-bw,0) & !is.na(mt) & !is.na(peso_aluno_mt)) %>% 
+  #   summarise(media_l = weighted.mean(mt,peso_aluno_mt))
+  # 
+  # media_h <- base %>% 
+  #   filter(dist_hv_border %between% c(0,bw) & !is.na(mt) & !is.na(peso_aluno_mt)) %>% 
+  #   summarise(media_l = weighted.mean(mt,peso_aluno_mt))
+  # 
+  # rlist_saeb[[ind]][[2]]$media_l <- media_l
+  # rlist_saeb[[ind]][[2]]$media_h <- media_h
+  # 
+  # rm(bw,media_l,media_h)
+  # 
+  # -------------------------------------------------------------------------#
+  
+  message("Finished for group: ", i)
+  rm(ef)
+  
+  
+}
+rm(clu, latv, lonv, temp, w_lp, w_mt, xv, yv_lp, yv_mt, i)
+
+# ---------------------------------------------------------------------------- #
+## 13.3 Tabelas ----
+# ---------------------------------------------------------------------------- #
+
+tab <- data.frame(
+  coef = do.call(rbind,lapply(rlist_saeb, FUN = function(x){x$coef[3]})),
+  se = do.call(rbind,lapply(rlist_saeb, FUN = function(x){x$se[3]})),
+  pv = do.call(rbind,lapply(rlist_saeb, FUN = function(x){x$pv[3]})),
+  n.1 = do.call(rbind, lapply(rlist_saeb, FUN = function(x){x$N_h[1]})),
+  n.2 = do.call(rbind, lapply(rlist_saeb, FUN = function(x){x$N_h[2]}))
+  
+)
+
+
+tab <- tab %>% 
+  mutate(
+    coef = paste0(formatC(x = coef, digits = 2, format = "f"),
+                  ifelse(pv < 0.01, "**", 
+                         ifelse(pv < 0.05, "*", 
+                                ifelse(pv < 0.1, "", "")
+                         ))),
+    se = paste0(" (",formatC(x = se, digits = 2, format = "f"),")"),
+    pv = formatC(x = pv, digits = 3, format = "f"),
+    N = paste0("[N = ", n.1 + n.2, "]")
+  ) %>%
+  select(-c(pv))
+
+names <- c("Language",
+           " "," ",
+           "Math",
+           " ", " ")
+
+result <- data.frame(
+  var = names,
+  ef5 = rep(NA, times = length(names)),
+  ef9 = rep(NA, times = length(names)),
+  em3 = rep(NA, times = length(names))
+)
+
+#5EF
+#Lp
+result$ef5[1] <- tab$coef[[1]]
+result$ef5[2] <- tab$se[[1]]
+result$ef5[3] <- tab$N[[1]]
+##Mt
+result$ef5[4] <- tab$coef[[2]]
+result$ef5[5] <- tab$se[[2]]
+result$ef5[6] <- tab$N[[2]]
+
+
+#9EF
+#Lp
+result$ef9[1] <- tab$coef[[3]]
+result$ef9[2] <- tab$se[[3]]
+result$ef9[3] <- tab$N[[3]]
+##Mt
+result$ef9[4] <- tab$coef[[4]]
+result$ef9[5] <- tab$se[[4]]
+result$ef9[6] <- tab$N[[4]]
+
+#3EM
+#Lp
+result$em3[1] <- tab$coef[[5]]
+result$em3[2] <- tab$se[[5]]
+result$em3[3] <- tab$N[[5]]
+##Mt
+result$em3[4] <- tab$coef[[6]]
+result$em3[5] <- tab$se[[6]]
+result$em3[6] <- tab$N[[6]]
+
+
+colnames(result) <- c("", "(1)", "(2)", "(3)")
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  align = "lccc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/Saeb.tex")
+
+rm(rlist_saeb, saeb_base, tab,result, names, latex_table, base, base_a )
+
+
+# ---------------------------------------------------------------------------- #
