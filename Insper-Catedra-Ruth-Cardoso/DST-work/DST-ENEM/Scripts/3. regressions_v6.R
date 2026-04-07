@@ -1663,8 +1663,7 @@ df_cmo <- df_cmo %>%
   mutate(dist_km = dist_hv_res / 1000) %>%
   select(-c(dist_hv_res, obs, obs_r,
             media, media_dia1, media_dia2, media_rd, media_cn, media_lc, media_ch, media_mt,
-            mediabl, mediabh, ano)) %>% 
-  rename(dist_hv_border = dist_hv_res)
+            mediabl, mediabh, ano))
 
 # Add variable labels (useful when opening .dta in Stata)
 attr(df_cmo$dmedia, "label")       <- "Score 2019-2018"
@@ -1945,19 +1944,19 @@ for(j in bins) {
   # Clusters
   clu <- temp %>%
     filter(ano == 2017) %>%
-    select(seg)
+    select(seg_res)
   
   # Latitude
   latv <- temp %>%
     filter(ano == 2017) %>%
-    select(lat)
+    select(lat_res)
   
   # Longitude
   lonv <- temp %>%
     filter(ano == 2017) %>%
-    select(lon)
+    select(lon_res)
   
-  ef <- dummy_cols(clu$seg)
+  ef <- dummy_cols(clu$seg_res)
   ef <- ef %>% select(-1,-2)
   
   # Estimando parâmetros do gráfico
