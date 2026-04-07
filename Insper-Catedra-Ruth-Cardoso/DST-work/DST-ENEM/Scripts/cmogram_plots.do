@@ -54,7 +54,261 @@ foreach var in dmedia dmedia_rd dmedia_cn dmedia_ch dmedia_lc ///
 }
 	
 	
-	
+* dmedia
+cmogram dmedia dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-40 20)) ///
+        ylabel(-40(10)20) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_cmogram.png", replace width(1600)
+
+
+* dmedia_rd
+cmogram dmedia_rd dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(45 105)) ///
+        ylabel(45(15)105) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_rd_cmogram.png", replace width(1600)
+
+* dmedia_cn
+cmogram dmedia_cn dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-45 -8)) ///
+        ylabel(-45(10)-5) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_cn_cmogram.png", replace width(1600)
+
+
+* dmedia_ch
+cmogram dmedia_ch dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-105 -45)) ///
+        ylabel(-105(10)-45) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_ch_cmogram.png", replace width(1600)
+
+
+* dmedia_lc
+cmogram dmedia_lc dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-50 20)) ///
+        ylabel(-50(10)20) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_lc_cmogram.png", replace width(1600)
+
+
+* dmedia_mt
+cmogram dmedia_mt dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-80 20)) ///
+        ylabel(-80(10)20) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_mt_cmogram.png", replace width(1600)
+
+
+* dmedia_d1
+cmogram dmedia_d1 dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-30 30)) ///
+        ylabel(-30(10)30) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_d1_cmogram.png", replace width(1600)
+
+
+
+* dmedia_d2
+cmogram dmedia_d2 dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-60 10)) ///
+        ylabel(-60(10)10) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_d2_cmogram.png", replace width(1600)
+
+
+
+* dmedia_easy
+cmogram dmedia_easy dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(0 10)) ///
+        ylabel(0(5)10) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_easy_cmogram.png", replace width(1600)
+
+
+
+* dmedia_hard
+cmogram dmedia_hard dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-5 5)) ///
+        ylabel(-5(5)5) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_hard_cmogram.png", replace width(1600)
+
+
+
+* dmedia_escm0
+cmogram dmedia_escm0 dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-18 20)) ///
+        ylabel(-30(10)20) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_escm0_cmogram.png", replace width(1600)
+
+
+* dmedia_escm1
+cmogram dmedia_escm1 dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-20 20)) ///
+        ylabel(-20(10)20) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_escm1_cmogram.png", replace width(1600)
+
+
+* dmedia_bra1
+cmogram dmedia_bra1 dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-20 20)) ///
+        ylabel(-20(10)20) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_bra1_cmogram.png", replace width(1600)
+
+
+* dmedia_bra0
+cmogram dmedia_bra0 dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(-20 10)) ///
+        ylabel(-20(10)10) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_bra0_cmogram.png", replace width(1600)
+
+* dmedia_2018
+cmogram dmedia_2018 dist_km, cut(0) scatter low lineat(0) ///
+    graphopts1(mcolor("230 97 97")) ///
+    graphopts2(mcolor("0 150 160")) ///
+    lowopts1(lcolor("200 40 40") lwidth(medthick)) ///
+    lowopts2(lcolor("0 90 130") lwidth(medthick)) ///
+    graphopts( ///
+        yscale(range(0 20)) ///
+        ylabel(-30(10)20) ///
+        xtitle("Distance to Border (km)") ///
+        ytitle("Average ENEM Score") ///
+        graphregion(fcolor(white)) ///
+    )
+
+graph export "graphs_cmogram/dmedia_2018_cmogram.png", replace width(1600)	
 	
 	
 	
