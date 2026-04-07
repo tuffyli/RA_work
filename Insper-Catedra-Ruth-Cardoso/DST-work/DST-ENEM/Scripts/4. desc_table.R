@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Data description
 # Last edited by: Tuffy Licciardi Issa
-# Date: 16/03/2026
+# Date: 06/04/2026
 # ---------------------------------------------------------------------------- #
 # Library -----
 # ---------------------------------------------------------------------------- #
@@ -30,54 +30,8 @@ library(scales)
 # ---------------------------------------------------------------------------- #
 # 1. Main Data and Description ------
 # ---------------------------------------------------------------------------- #
-base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
-  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
-  setDT() %>% 
-  filter(conclusao == 2)
-
-
-#Temperature data
-inpe_18 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2018.rds") %>% 
-  rename(vento_d1 = vento_4,
-         vento_d2 = vento_11,
-         temp_d1 = temp_4,
-         temp_d2 = temp_11,
-         prec_d1 = prec_4,
-         prec_d2 = prec_11,
-         umid_d1 = umid_4,
-         umid_d2 = umid_11,
-         pm25_d1 = pm25_4,
-         pm25_d2 = pm25_11,
-         o3_d1 = o3_4,
-         o3_d2 = o3_11
-  ) %>% 
-  mutate(ano = 2018)
-
-inpe_19 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2019.rds") %>% 
-  rename(vento_d1 = vento_3,
-         vento_d2 = vento_10,
-         temp_d1 = temp_3,
-         temp_d2 = temp_10,
-         prec_d1 = prec_3,
-         prec_d2 = prec_10,
-         umid_d1 = umid_3,
-         umid_d2 = umid_10,
-         pm25_d1 = pm25_3,
-         pm25_d2 = pm25_10,
-         o3_d1 = o3_3,
-         o3_d2 = o3_10
-  ) %>% 
-  mutate(ano = 2019)
-
-
-inpe <- inpe_18 %>% bind_rows(inpe_19)
-
-base <- base %>% 
-  left_join(inpe %>% mutate(codmun = as.integer(codmun)), by = c("mun_prova" = "codmun", "ano"))
-
-
-rm(inpe_18, inpe_19, inpe)
-
+base <- readRDS("Z:/Tuffy/Paper - HV/Bases/base_final.RDS") %>% 
+  filter(ano %in% c(2019,2018))
 
 # Creating the variables
 base <- base %>% 
@@ -115,18 +69,31 @@ base <- base %>%
     mig_dummy = ifelse(
       !is.na(mun_prova) & !is.na(mun_res) & mun_prova != mun_res, 1,
       ifelse(!is.na(mun_prova) & !is.na(mun_res), 0 , NA)
-    )
+    ),
+    
+    aux_res = mun_res %/% 100000
   ) %>% 
-  filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
-                  "MT", "GO", "MG", "ES", "DF")) %>%  #In-DST
+  filter(aux_res %in% c(11, 13, 15, 17, 29, #NON-DST
+                        #RO, AM, PA, TO, PA
+                        
+                        51, 52, 31, 32, 53 #In-DST
+                        #MT, GO, MG, ES, DF
+  )) %>%
+  select(-aux_res, -mun_res) %>% 
   setDT()
 
 #Absence database
 base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",2018,".RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",2019,".RDS"))) %>%
-  select(id_enem,priv, hv, ano, abs, uf) %>% 
-  filter(uf %in% c("RO", "AM", "PA", "TO", "BA", #NON-DST
-                   "MT", "GO", "MG", "ES", "DF")) %>%  #In-DST
+  select(id_enem,priv, hv, ano, abs, uf, mun_res) %>% 
+  mutate(aux_res = mun_res %/% 100000) %>% 
+  filter(aux_res %in% c(11, 13, 15, 17, 29, #NON-DST
+                        #RO, AM, PA, TO, BA
+                        
+                        51, 52, 31, 32, 53 #In-DST
+                        #MT, GO, MG, ES, DF
+  )) %>%
+  select(-aux_res) %>% 
   setDT()
 
 # Lista de variáveis
@@ -153,7 +120,7 @@ vlist <- c(
   "renda1",
   "pibpc",
   "id18",
-  "temp_d1",
+  "temp_d1", #We will use the temperature during test! (Not in residency municipality)
   "temp_d2",
   "umid_d1",
   "umid_d2"
@@ -161,7 +128,7 @@ vlist <- c(
 
 base_nota <- base %>%
   mutate(
-    dist_hv_pos = abs(dist_hv_border)/1000,
+    dist_hv_pos = abs(dist_hv_res)/1000,
     merge = 1
   ) %>% 
   merge(y = base_abs, by = c("id_enem", "ano"), all.y = T) %>%
@@ -176,19 +143,19 @@ base_nota <- base %>%
 
 
 mun_presente_ambos_anos <- base_nota %>%
-  distinct(mun_prova, ano) %>%
-  count(mun_prova) %>%
+  distinct(mun_res, ano) %>%
+  count(mun_res) %>%
   filter(n == 2) %>%
-  pull(mun_prova)
+  pull(mun_res)
 
 
 base_nota <- base_nota %>%
-  filter(mun_prova %in% mun_presente_ambos_anos) %>% 
+  filter(mun_res %in% mun_presente_ambos_anos) %>% 
   setDT()
 
 rm(mun_presente_ambos_anos)
 
-summary(base_nota$abs)
+summary(base_nota)
 
 
 
@@ -203,7 +170,7 @@ summary(base_nota$abs)
 
 base_munt <- base_nota %>%
   filter(priv == 0) %>% 
-  group_by(mun_prova, hv) %>% 
+  group_by(mun_res, hv) %>% 
   summarise(
     across(all_of(vlist), ~ mean(.x, na.rm = TRUE)),
     obs = n(),
@@ -310,14 +277,23 @@ rm(medias0,medias1,dps0,dps1,obs0,obs1,base_abs,base_ag, base)
 
 row.names(medias) <- c(
   "ENEM Avg. Score", 
-  "Natural Sciences", "Human Sciences", "Language", "Mathematics", "Composition",
-  "Day 1", "Day 2", 
+  "Natural Sciences",
+  "Human Sciences",
+  "Language",
+  "Mathematics",
+  "Composition",
+  "Day 1",
+  "Day 2", 
   "Pr. Right Answers",
   "Absence",
   "Distance to DST border (km)",
-  "Age", "Female", "African Brazilian or native",
-  "Father with high school", "Mother with high school",
-  "Father in manual labor", "Mother in manual labor",
+  "Age",
+  "Female",
+  "African Brazilian or native",
+  "Father with high school",
+  "Mother with high school",
+  "Father in manual labor",
+  "Mother in manual labor",
   "Household with 5 or more people",
   "Household income up to 1 MW", 
   "Municipal per capita GDP",

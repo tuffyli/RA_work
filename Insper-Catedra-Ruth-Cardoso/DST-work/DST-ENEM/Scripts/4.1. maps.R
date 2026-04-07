@@ -5,7 +5,7 @@
 # Data de criação: 14/11/2023
 # Criado por: Bruno Komatsu
 
-# Última modificação: 17/03/2025
+# Última modificação: 06/04/2025
 # Modificado por: Tuffy Issa
 
 # Descrição: 
@@ -54,7 +54,8 @@ base <- readRDS(file = paste0("Z:/Arquivos IFB/Paper - Horário de Verão e Educ
 mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/mun_hv.RDS") %>%
   left_join(base, by = c("co_municipio" = "mun_prova")) %>%
   mutate(
-    dist_hv = ifelse(amostra == 1, dist_hv_border / 1000, NA)
+    dist_hv = ifelse(amostra == 1, dist_hv_border / 1000, NA),
+    res_dist_hv = dist_hv_border/1000
   )
 # ---------------------------------------------------------------------------- #
 #2. Mapa de distâncias ---- 
@@ -71,7 +72,7 @@ map <- ggplot(mun_hv) +
   # 2) Cor de cada município
   geom_sf(
     data = mun_hv,
-    aes(fill = dist_hv),
+    aes(fill = res_dist_hv),
     color = NA
   ) +
   
@@ -116,7 +117,7 @@ map_aer <- ggplot() +
   #  Heatmap on top
   geom_sf(
     data = mun_hv,
-    aes(fill = dist_hv),
+    aes(fill = res_dist_hv),
     color = NA
   ) +
   

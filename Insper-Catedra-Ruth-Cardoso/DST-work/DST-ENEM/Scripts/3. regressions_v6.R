@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 27/03/2026
+# Date: 06/04/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -50,24 +50,33 @@ base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2
 #Exam start time dummies
 base <- base %>% 
   mutate(
+    
+    aux_res = mun_res %/% 100000,
+    
     h13 = case_when( #Prova iniciando as 13h
       ano %in% c(2017:2019) &
-        uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS") ~ 1,
+        aux_res %in% c(52, 53, 31, 32, 33, 35, 42, 41, 43) ~ 1,
+          #"GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS"
       
       ano == 2019 &
-        uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS", "BA", "SE",
-                  "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP") ~ 1,
+        aux_res %in% c(52, 53, 31, 32, 33, 35, 42, 41, 43,
+          #"GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS",
+          29, 28, 27, 26, 25, 24, 23, 22, 21, 17, 15, 16 ) ~ 1, 
+          #"BA", "SE", "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP"
       
       TRUE ~ 0
     ),
     
     h12 = case_when( #Prova iniciando as 12h
       ano %in% c(2017, 2018) &
-        uf %in% c("BA", "SE", "AL", "PE", "PB", "RN", "CE", "PI", "MA", "TO", "MT",
-                  "MS", "PA", "AP") ~ 1,
+        aux_res %in% c(29, 28, 27, 26, 25, 24, 23, 22, 21, 17, 15, 16,
+                      #"BA", "SE", "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP" "MT",
+                      51, 50) ~ 1,
+                      #"MT", "MS",
       
       ano == 2019 &
-        uf %in% c("MT", "MS", "RO", "RR") | uf == "AM" & !mun_prova %in%
+        aux_res %in% c(51, 50, 11, 14) | aux_res == 13 &
+        !mun_res %in%
         c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
           1302306, 1302405, 1303502, 1303908, 1304062) ~ 1,
       
@@ -76,23 +85,23 @@ base <- base %>%
     
     h11 = case_when( #Prova iniciando as 12h
       ano %in% c(2017, 2018) &
-        uf %in% c("RO", "RR") | uf == "AM" & !mun_prova %in% 
+        aux_res %in% c(11, 14) | aux_res == 13 & !mun_res %in% 
         c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
           1302306, 1302405, 1303502, 1303908, 1304062) ~ 1,
       
       ano == 2019 &
-        uf == "AC" | mun_prova %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
-                                      1301654, 1301803, 1301951, 1302306, 1302405,
-                                      1303502, 1303908, 1304062) ~ 1,
+        aux_res == 12 | mun_res %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                       1301654, 1301803, 1301951, 1302306, 1302405,
+                                       1303502, 1303908, 1304062) ~ 1,
       
       TRUE ~ 0
     ),
     
     h10 = case_when( #Prova iniciando as 12h
       ano %in% c(2017, 2018) &
-        uf == "AC" | mun_prova %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
-                                      1301654, 1301803, 1301951, 1302306, 1302405,
-                                      1303502, 1303908, 1304062) ~ 1,
+        aux_res == 12 | mun_res %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                       1301654, 1301803, 1301951, 1302306, 1302405,
+                                       1303502, 1303908, 1304062) ~ 1,
       
       TRUE ~ 0
     ),
@@ -146,13 +155,12 @@ base <- base %>%
             
             acerto_al_ch:acerto_ah_mt,
             acerto_cl_ch:dupla_mt, #acertos
-            acerto:acerto_pah,
+            acerto_pal:acerto_pah,
             acerto_pcl:d_acerto_5mt, #padronizadas
             media_p:rd5_p
   )) %>% 
   #Mig filter - over the DST border
-  mutate(aux_res = mun_res %/% 100000,
-         aux_pro = mun_prova %/% 100000,
+  mutate(aux_pro = mun_prova %/% 100000,
          
          over_hv_border = case_when(
            aux_res < 30 & aux_pro >= 30 ~ 1, #From Non-DST to DST
@@ -296,6 +304,9 @@ base <- base %>%
 
 rm(mun_hv)
 
+#saveRDS(base, "Z:/Tuffy/Paper - HV/Bases/base_final.RDS")
+base <- readRDS("Z:/Tuffy/Paper - HV/Bases/base_final.RDS")
+  
 # ---------------------------------------------------------------------------- #
 ## 1.1 Base agregada ----
 # ---------------------------------------------------------------------------- #
@@ -858,6 +869,9 @@ result$b09[6] <- t10$N[[2]]
 #### 1.2.3.1 Saving to latex ----
 # ----------------- #
 
+#Exam 18-17 1,720, 19-18 1,725
+#School 5,529, 5,528
+
 colnames(result) <- c("", "(1)", "(2)")
 
 # Cria a tabela LaTeX
@@ -1379,22 +1393,24 @@ rm(base_esc, base_a, bw_main_a, bw_bias_a)
 base <- base %>%
   group_by(mun_prova) %>%
   mutate(
+    
+    aux_res = mun_res %/% 100000,
+    
     time13 = case_when(
       # States that follow UTC-3 (Brasília time)
-      uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS", "BA", "SE",
-                "AL", "PE", "PB", "RN", "CE", "PI", "MA", "TO", "PA", "AP") ~ 1,
+      aux_res %in% c(20:49, 17, 15, 16, 52, 53) ~ 1,
       
       # States that are mostly UTC-4 (with AM exceptions listed below)
-      uf %in% c("MT", "MS", "RO", "RR") | (uf == "AM" &
-                                             !mun_prova %in% c(
-                                               1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
-                                               1302306, 1302405, 1303502, 1303908, 1304062
-                                             )) ~ 0,
+      aux_res %in% c(51, 50, 11, 14) | aux_res == 13 &
+        !mun_res %in%
+        c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+          1302306, 1302405, 1303502, 1303908, 1304062) ~ 0,
       
       # Otherwise: set NA (investigate if many NAs appear)
       TRUE ~ NA_real_
     )
   ) %>%
+  select(-aux_res) %>% 
   ungroup()
 
 # ---------------------------------------------------------------------------- #
@@ -1635,12 +1651,20 @@ df_cmo <- df_cmo %>%
 # - Create dist_km for plotting in kilometers
 # - Drop intermediate columns not needed in final .dta
 df_cmo <- df_cmo %>%
+  group_by(mun_res) %>% 
+  mutate(d.mediabl = ifelse(!is.finite(d.mediabl), NA, d.mediabl)) %>% 
+  ungroup() %>% 
   rename(dmedia_easy = d.mediabl,
-         dmedia_hard = d.mediabh) %>%
+         dmedia_hard = d.mediabh) #
+
+summary(df_cmo)
+
+df_cmo <- df_cmo %>%
   mutate(dist_km = dist_hv_res / 1000) %>%
   select(-c(dist_hv_res, obs, obs_r,
             media, media_dia1, media_dia2, media_rd, media_cn, media_lc, media_ch, media_mt,
-            mediabl, mediabh, ano))
+            mediabl, mediabh, ano)) %>% 
+  rename(dist_hv_border = dist_hv_res)
 
 # Add variable labels (useful when opening .dta in Stata)
 attr(df_cmo$dmedia, "label")       <- "Score 2019-2018"
@@ -3487,7 +3511,6 @@ result <- data.frame(
   var = names,
   both = rep(NA, times = length(names)),
   d1 = rep(NA, times = length(names)),
-  d2 = rep(NA, times = length(names))
 )
 
 
@@ -3501,14 +3524,11 @@ result$both[3] <- dias$N[[1]]
 result$d1[1] <- dias$coef[[2]]
 result$d1[2] <- dias$se[[2]]
 result$d1[3] <- dias$N[[2]]
-result$d2[1] <- dias$coef[[3]]
-result$d2[2] <- dias$se[[3]]
-result$d2[3] <- dias$N[[3]]
 
 
 
 
-colnames(result) <- c(" ","(1)", "(2)", "(3)")
+colnames(result) <- c(" ","(1)", "(2)")
 
 
 latex_table <- knitr::kable(
@@ -4306,7 +4326,7 @@ rm(base_a, names, result, rlist, tab, latex_table, base_mun)
 # ---------------------------------------------------------------------------- #
 
 var_list <- c(
-  "over_hv_border",
+  "over_hv_border", #without those migrating over the border
   "nonmig1", # MUN PROVA = RESIDENCIA = ESCOLA
   #"nonmig2", # Mun PROVA = RESIDENCIA != ESCOLA
   "nonmig3" #, # MUN PROVA != RESIDENCIA = ESCOLA
@@ -4456,9 +4476,9 @@ result$cc[6] <- tab$N[[3]]
 
 # #NonMig3
 
-result$cc[4] <- tab$coef[[5]]
-result$cc[5] <- tab$se[[5]]
-result$cc[6] <- tab$N[[5]]
+result$cc[7] <- tab$coef[[5]]
+result$cc[8] <- tab$se[[5]]
+result$cc[9] <- tab$N[[5]]
 
 # #NonMig4
 # 
@@ -4626,7 +4646,7 @@ result_tab <- result_tab %>%
 # select(-id)
 
 
-names <- c("2019 - 2018", #55178, #335
+names <- c("2019 - 2018", #5178, #335
            " ",
            " ")
 
@@ -4958,20 +4978,18 @@ saeb_base <- readRDS("Z:/Tuffy/Paper - HV/Bases/saeb_total.RDS") %>%
 # rm(mun_exp)
 
 base_a <- base %>% 
-  group_by(mun_res, ano, lon_res, lat_res, seg_res, dist_hv_res) %>% 
-  mutate(n = n(),
+  filter(ano == 2018) %>% 
+  group_by(mun_res, lon_res, lat_res, seg_res, dist_hv_res) %>% 
+  summarise(n = n(),
          .groups = "drop")
   
 
 temp <- base_a %>% 
-  filter(ano == 2018) %>% 
   select(mun_res, lat_res, lon_res, dist_hv_res, seg_res)
 
 
 saeb_base <- saeb_base %>% 
-  left_join(temp, by = c("mun_prova" = "mun_res")) %>% 
-  select(-ano.y) %>% 
-  rename(ano = ano.x)
+  left_join(temp, by = c("mun_prova" = "mun_res")) 
 
 rm(temp)
 colnames(saeb_base)
