@@ -327,8 +327,79 @@ print.xtable(
 )
 
 
+# ---------------------------------------------------------------------------- #
+## 1.2 Histograms -----
+# ---------------------------------------------------------------------------- #
+load("Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_Res.RData")
 
+base <- base %>% 
+  filter(abs(dist_hv_res) <= bw_main_r)
 
+plots_hist <- list()
+
+for (i in 2018:2019) {
+  
+  df_temp <- base %>% 
+    filter(ano == i)
+  
+  means_df <- df_temp %>% 
+    group_by(hv) %>% 
+    summarise(mean_media = mean(media, na.rm = TRUE), .groups = "drop")
+  
+  p <- ggplot(df_temp, aes(x = media)) +
+    
+    geom_histogram(
+      aes(y = after_stat(density), fill = factor(hv)),
+      position = "identity",
+      bins = 40,
+      alpha = 0.35,
+      color = "black",
+      linewidth = 0.2
+    ) +
+    # 
+    # geom_density(
+    #   aes(color = factor(hv)),
+    #   linewidth = 1
+    # ) +
+    
+    scale_fill_manual(
+      values = c("0" = "#cfe8f3", "1" = "#1f5aa6"),
+      labels = c("0" = "No DST", "1" = "DST"),
+      name = NULL
+    ) +
+    
+    scale_color_manual(
+      values = c("0" = "#6baed6", "1" = "#08306b"),
+      guide = "none"
+    ) +
+    
+    labs(
+      x = "Average score",
+      y = "Density"
+    ) +
+    
+    theme_classic(base_size = 12) +
+    theme(
+      legend.position = "top",
+      axis.line = element_line(color = "black")
+    )
+  
+  plots_hist[[as.character(i)]] <- p
+}
+
+ggsave(
+  filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/hist_2018.pdf",
+  plot = plots_hist[["2018"]],
+  width = 6,
+  height = 4
+)
+
+ggsave(
+  filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/notas/img/pdf/hist_2019.pdf",
+  plot = plots_hist[["2019"]],
+  width = 6,
+  height = 4
+)
 rm(list = ls())
 gc()
 
