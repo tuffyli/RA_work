@@ -2760,6 +2760,7 @@ gc()
 # ---------------------------------------------------------------------------- #
 ## 4.2 (2017) ----
 # ---------------------------------------------------------------------------- #
+
 dtb <- read_xls("Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/inpe/DTB_BRASIL_MUNICIPIO.xls") %>%
   mutate(
     nomemun = stri_trans_general(Nome_Município, "Latin-ASCII"),
@@ -4448,14 +4449,14 @@ rm(mun_hv,pib)
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
-# 4. Inscriptions ----
+## 6.1. Inscriptions ----
 # ---------------------------------------------------------------------------- #
 
 
 censo_educ <- c("Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/ts_censo_basico_situacao_2018.dta",
                 "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/ts_censo_basico_situacao_2019.dta")
 # ---------------------------------------------------------------------------- #
-## 4.1 Loop ----
+## 6.2 Loop ----
 # ---------------------------------------------------------------------------- #
 
 for (i in c(1:2)) {
@@ -4496,3 +4497,285 @@ saveRDS(df_final, "Z:/Tuffy/Paper - HV/Bases/census_students.RDS")
 
 rm(df_final, censo_educ)
 gc()
+
+# ---------------------------------------------------------------------------- #
+#7. Final Database ----
+# ---------------------------------------------------------------------------- #
+
+
+
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2017.RDS"))) %>%
+  setDT() %>% 
+  filter(conclusao == 2)
+
+# PIB
+pib <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/pib.RDS") %>%
+  mutate(codmun = as.integer(codmun)) %>%
+  rename(mun_prova = codmun)
+
+#Exam start time dummies
+base <- base %>% 
+  mutate(
+    
+    aux_res = mun_res %/% 100000,
+    
+    h13 = case_when( #Prova iniciando as 13h
+      ano %in% c(2017:2019) &
+        aux_res %in% c(52, 53, 31, 32, 33, 35, 42, 41, 43) ~ 1,
+      #"GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS"
+      
+      ano == 2019 &
+        aux_res %in% c(52, 53, 31, 32, 33, 35, 42, 41, 43,
+                       #"GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS",
+                       29, 28, 27, 26, 25, 24, 23, 22, 21, 17, 15, 16 ) ~ 1, 
+      #"BA", "SE", "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP"
+      
+      TRUE ~ 0
+    ),
+    
+    h12 = case_when( #Prova iniciando as 12h
+      ano %in% c(2017, 2018) &
+        aux_res %in% c(29, 28, 27, 26, 25, 24, 23, 22, 21, 17, 15, 16,
+                       #"BA", "SE", "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP" "MT",
+                       51, 50) ~ 1,
+      #"MT", "MS",
+      
+      ano == 2019 &
+        aux_res %in% c(51, 50, 11, 14) | aux_res == 13 &
+        !mun_res %in%
+        c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+          1302306, 1302405, 1303502, 1303908, 1304062) ~ 1,
+      
+      TRUE ~ 0
+    ),
+    
+    h11 = case_when( #Prova iniciando as 12h
+      ano %in% c(2017, 2018) &
+        aux_res %in% c(11, 14) | aux_res == 13 & !mun_res %in% 
+        c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+          1302306, 1302405, 1303502, 1303908, 1304062) ~ 1,
+      
+      ano == 2019 &
+        aux_res == 12 | mun_res %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                       1301654, 1301803, 1301951, 1302306, 1302405,
+                                       1303502, 1303908, 1304062) ~ 1,
+      
+      TRUE ~ 0
+    ),
+    
+    h10 = case_when( #Prova iniciando as 12h
+      ano %in% c(2017, 2018) &
+        aux_res == 12 | mun_res %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
+                                       1301654, 1301803, 1301951, 1302306, 1302405,
+                                       1303502, 1303908, 1304062) ~ 1,
+      
+      TRUE ~ 0
+    ),
+    
+    
+    new_dist = dist_hv_border/100000) %>% 
+  select(-pibpc) %>% 
+  merge(pib, by = c("mun_res" = "mun_prova", "ano"))
+
+
+
+
+summary(base %>% select(idade, conclusao, esc_mae))
+
+test <- base %>% 
+  filter(priv0 == 1)
+
+length(unique(test$id_enem))
+rm(test)
+
+
+base <- base %>% 
+  mutate(
+    
+    escm = case_when(
+      esc_mae %in% c("D","E","F") ~ 1, #With high school
+      esc_mae %in% c("A","B","C") ~ 0,
+      .default = NA),
+    
+    escp = case_when(
+      esc_pai %in% c("D","E","F") ~ 1, #With High school
+      esc_pai %in% c("A","B","C") ~ 0,
+      .default = NA
+    ),
+    
+    mae_trab_man = case_when(
+      emp_mae %in% c("A","B","C") ~ 1,
+      emp_mae %in% c("D","E") ~ 0,
+      .default = NA
+    ),
+    
+    pai_trab_man = case_when(
+      emp_pai %in% c("A","B","C") ~ 1,
+      emp_pai %in% c("D","E") ~ 0,
+      .default = NA
+    )
+  ) %>% 
+  mutate(renda_1_10 = ifelse(renda_dom == "C", 1 , 0),
+         renda_10   = ifelse(renda_dom == "D", 1, 0)) %>% 
+  select(-c(co_cn:co_mt,
+            mas,
+            
+            #Only param. B captures difficulty
+            
+            acerto_al_ch:acerto_ah_mt,
+            acerto_cl_ch:dupla_mt, #acertos
+            acerto_pal:acerto_pah,
+            acerto_pcl:d_acerto_5mt, #padronizadas
+            media_p:rd5_p
+  )) %>% 
+  #Mig filter - over the DST border
+  mutate(aux_pro = mun_prova %/% 100000,
+         
+         over_hv_border = case_when(
+           aux_res < 30 & aux_pro >= 30 ~ 1, #From Non-DST to DST
+           aux_res >= 30 & aux_pro < 30 ~ 1, #From DST to Non-DST
+           .default = 0
+         )) %>% 
+  select(-c(aux_res, aux_pro))
+# ---------------------------------------------------------------------------- #
+## 7.1 INPE ----
+# ---------------------------------------------------------------------------- #
+
+inpe17 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2017.rds")
+inpe18 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2018.rds")
+inpe19 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2019.rds")
+
+base <- base %>% 
+  mutate(
+    temp_d1 = case_when(
+      ano == 2019 ~ inpe19$temp_3[match(mun_prova, inpe19$codmun)],
+      ano == 2018 ~ inpe18$temp_4[match(mun_prova, inpe18$codmun)],
+      ano == 2017 ~ inpe17$temp_5[match(mun_prova, inpe17$codmun)],
+      TRUE ~ NA
+    ),
+    
+    temp_d2 = case_when(
+      ano == 2019 ~ inpe19$temp_10[match(mun_prova, inpe19$codmun)],
+      ano == 2018 ~ inpe18$temp_11[match(mun_prova, inpe18$codmun)],
+      ano == 2017 ~ inpe17$temp_12[match(mun_prova, inpe17$codmun)],
+      TRUE ~ NA
+    ),
+    
+    umid_d1 = case_when(
+      ano == 2019 ~ inpe19$umid_3[match(mun_prova, inpe19$codmun)],
+      ano == 2018 ~ inpe18$umid_4[match(mun_prova, inpe18$codmun)],
+      ano == 2017 ~ inpe17$umid_5[match(mun_prova, inpe17$codmun)],
+      TRUE ~ NA
+    ),
+    
+    umid_d2 = case_when(
+      ano == 2019 ~ inpe19$umid_10[match(mun_prova, inpe19$codmun)],
+      ano == 2018 ~ inpe18$umid_11[match(mun_prova, inpe18$codmun)],
+      ano == 2017 ~ inpe17$umid_12[match(mun_prova, inpe17$codmun)],
+      TRUE ~ NA
+    ),
+    
+    #Residency
+    temp_d1_res = case_when(
+      ano == 2019 ~ inpe19$temp_3[match(mun_res, inpe19$codmun)],
+      ano == 2018 ~ inpe18$temp_4[match(mun_res, inpe18$codmun)],
+      ano == 2017 ~ inpe17$temp_5[match(mun_res, inpe17$codmun)],
+      TRUE ~ NA
+    ),
+    
+    temp_d2_res = case_when(
+      ano == 2019 ~ inpe19$temp_10[match(mun_res, inpe19$codmun)],
+      ano == 2018 ~ inpe18$temp_11[match(mun_res, inpe18$codmun)],
+      ano == 2017 ~ inpe17$temp_12[match(mun_res, inpe17$codmun)],
+      TRUE ~ NA
+    ),
+    
+    umid_d1_res = case_when(
+      ano == 2019 ~ inpe19$umid_3[match(mun_res, inpe19$codmun)],
+      ano == 2018 ~ inpe18$umid_4[match(mun_res, inpe18$codmun)],
+      ano == 2017 ~ inpe17$umid_5[match(mun_res, inpe17$codmun)],
+      TRUE ~ NA
+    ),
+    
+    umid_d2_res = case_when(
+      ano == 2019 ~ inpe19$umid_10[match(mun_res, inpe19$codmun)],
+      ano == 2018 ~ inpe18$umid_11[match(mun_res, inpe18$codmun)],
+      ano == 2017 ~ inpe17$umid_12[match(mun_res, inpe17$codmun)],
+      TRUE ~ NA
+    )
+  )
+
+rm(inpe18, inpe19, inpe17)
+# ---------------------------------------------------------------------------- #
+## 7.2 Dist ----
+# ---------------------------------------------------------------------------- #
+
+# Base de distâncias
+mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/mun_hv.RDS")
+
+# Coordenadas
+coordenadas <- mun_hv$centroid %>%
+  st_coordinates() %>%
+  as_tibble() %>%
+  rename(
+    lon = X,
+    lat = Y
+  )
+
+mun_hv <- mun_hv %>%
+  bind_cols(coordenadas) %>%
+  st_drop_geometry() %>%
+  select(co_municipio, lon, lat, dist_hv_border, seg, hv)
+rm(coordenadas)
+
+
+mun_hv <- mun_hv %>%
+  mutate(dist_hv_border = ifelse(hv == 1, dist_hv_border, -dist_hv_border)) %>% 
+  select(co_municipio, dist_hv_border, lat, lon, seg) 
+
+#Res. Dist.
+base <- base %>% 
+  left_join(mun_hv %>% rename(dist_hv_res = dist_hv_border) %>% #Coordinates of Residency 
+              rename(lat_res = lat, 
+                     lon_res = lon,
+                     seg_res = seg)
+            , by = c("mun_res" = "co_municipio")) #%>% 
+
+#School Dist.
+base <- base %>% 
+  mutate(dist_hv_esc = case_when(
+    nonmig1 == 1 ~ dist_hv_border,
+    nonmig3 == 1 ~ dist_hv_res,
+    nonmig4 == 1 ~ dist_hv_border,
+    TRUE ~ mun_hv$dist_hv_border[match(mun_escola, mun_hv$co_municipio)]),
+    
+    lat_esc = case_when(
+      nonmig1 == 1 ~ lat,
+      nonmig3 == 1 ~ lat_res,
+      nonmig4 == 1 ~ lat,
+      TRUE ~ mun_hv$lat[match(mun_escola, mun_hv$co_municipio)]),
+    
+    lon_esc = case_when(
+      nonmig1 == 1 ~ lon,
+      nonmig3 == 1 ~ lon_res,
+      nonmig4 == 1 ~ lon,
+      TRUE ~ mun_hv$lon[match(mun_escola, mun_hv$co_municipio)]),
+    
+    seg_esc = case_when(
+      nonmig1 == 1 ~ seg,
+      nonmig3 == 1 ~ seg_res,
+      nonmig4 == 1 ~ seg,
+      TRUE ~ mun_hv$seg[match(mun_escola, mun_hv$co_municipio)]),
+    
+  ) %>% 
+  #filter(over_hv_border == 0) %>% 
+  setDT()
+
+rm(mun_hv)
+
+saveRDS(base, "Z:/Tuffy/Paper - HV/Bases/base_final.RDS")
+
+gc()
+rm(ls = list())
