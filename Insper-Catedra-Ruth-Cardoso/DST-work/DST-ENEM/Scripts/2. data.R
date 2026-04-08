@@ -4778,4 +4778,4 @@ rm(mun_hv)
 saveRDS(base, "Z:/Tuffy/Paper - HV/Bases/base_final.RDS")
 
 gc()
-rm(ls = list())
+rm(list = ls())
