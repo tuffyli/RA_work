@@ -4510,11 +4510,6 @@ base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2
   setDT() %>% 
   filter(conclusao == 2)
 
-# PIB
-pib <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/pib.RDS") %>%
-  mutate(codmun = as.integer(codmun)) %>%
-  rename(mun_prova = codmun)
-
 #Exam start time dummies
 base <- base %>% 
   mutate(
@@ -4575,11 +4570,7 @@ base <- base %>%
     ),
     
     
-    new_dist = dist_hv_border/100000) %>% 
-  select(-pibpc) %>% 
-  merge(pib, by = c("mun_res" = "mun_prova", "ano"))
-
-
+    new_dist = dist_hv_border/100000) 
 
 
 summary(base %>% select(idade, conclusao, esc_mae))
@@ -4743,6 +4734,14 @@ base <- base %>%
                      seg_res = seg)
             , by = c("mun_res" = "co_municipio")) #%>% 
 
+
+
+# PIB
+pib <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/pib.RDS") %>%
+  mutate(codmun = as.integer(codmun)) %>%
+  rename(mun_prova = codmun)
+
+
 #School Dist.
 base <- base %>% 
   mutate(dist_hv_esc = case_when(
@@ -4770,12 +4769,16 @@ base <- base %>%
       TRUE ~ mun_hv$seg[match(mun_escola, mun_hv$co_municipio)]),
     
   ) %>% 
+  select(-pibpc) %>% 
+  left_join(pib, by = c("mun_res" = "mun_prova", "ano")) %>% 
+  
   #filter(over_hv_border == 0) %>% 
   setDT()
 
-rm(mun_hv)
+rm(mun_hv, pib)
 
 saveRDS(base, "Z:/Tuffy/Paper - HV/Bases/base_final.RDS")
 
 gc()
 rm(list = ls())
+
