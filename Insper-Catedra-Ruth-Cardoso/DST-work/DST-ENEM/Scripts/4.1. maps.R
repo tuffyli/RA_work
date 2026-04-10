@@ -5,7 +5,7 @@
 # Data de criação: 14/11/2023
 # Criado por: Bruno Komatsu
 
-# Última modificação: 06/04/2025
+# Última modificação: 10/04/2025
 # Modificado por: Tuffy Issa
 
 # Descrição: 
@@ -581,7 +581,7 @@ rm(map_aer)
 
 mun_hv <- mun_hv %>% 
   mutate(horario_18 = case_when(
-    uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS") ~ "13h",
+    uf %in% c("GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS") ~ "13h (DST)",
     
     uf %in% c("BA", "SE", "AL", "PE", "PB", "RN", "CE", "PI", "MA", "TO", "MT",
               "MS", "PA", "AP") ~ "12h",
@@ -608,7 +608,16 @@ mun_hv <- mun_hv %>%
                                      1303502, 1303908, 1304062) ~ "11h",
       TRUE ~ NA),
     
-    horario_18 = factor(horario_18, levels = c("10h", "11h", "12h", "13h")),
+    horario_18 = case_when(
+      horario_18 == "12h" & hv == 1 ~ "12h (DST)",
+      TRUE ~ horario_18
+    ),
+    
+    horario_18 = factor(
+      horario_18,
+      levels = c("10h", "11h", "12h", "12h (DST)", "13h (DST)")
+    ),
+    
     horario_19 = factor(horario_19, levels = c("11h", "12h", "13h")))
 
 #------------------------------------------------------------------------------#
@@ -623,29 +632,17 @@ dst_contour <- mun_hv %>%
 
 
 map <- ggplot(mun_hv %>% arrange(horario_18)) +
-  
-  geom_sf(
-    fill = NA,
-    color = "transparent"
-  ) +
-  
-  geom_sf(aes(fill = factor(horario_18)),
-          color = NA) +
-  
-  # 🔴 DST boundary (NEW)
-  geom_sf(data = dst_contour,
-          color = "red",
-          fill = NA,
-          linewidth = 2.0) +
-  
-
+  geom_sf(fill = NA, color = "transparent") +
+  geom_sf(aes(fill = horario_18), color = NA) +
+  geom_sf(data = dst_contour, color = "red", fill = NA, linewidth = 2.0) +
   scale_fill_manual(
     name = "Groups",
     values = c(
-      "10h" = "#6A3D9A", 
+      "10h" = "#6A3D9A",
       "11h" = "#0072B2",
-      "12h" = "#E69F00",     
-      "13h" = "#009E73"
+      "12h" = "#E69F00",
+      "12h (DST)" = "#F1B44C",
+      "13h (DST)" = "#4DBF9F"
     )
   ) +
   coord_sf(
