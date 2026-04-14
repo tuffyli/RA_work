@@ -1559,6 +1559,7 @@ list[[as.character(paste0(2018,"-",2017,"|pol+fuso+all"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2018],
   x = base_res$dist_hv_res[base_res$ano == 2017],
   c = 0,
+  p = 2,
   cluster = base_res$seg_res[base_res$ano == 2017],
   weights = base_res$obs[base_res$ano == 2017],
   vce = "hc0",
