@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 06/04/2026
+# Date: 14/04/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -50,35 +50,35 @@ base <- readRDS("Z:/Tuffy/Paper - HV/Bases/base_final.RDS")
 # ---------- #
 #Res
 # ---------- #
-base_res <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
-                              escm     = mean(escm, na.rm = T),
-                              fem      = mean(fem, na.rm = T),
-                              idade    = mean(id18, na.rm = T),
-                              tempd1   = mean(temp_d1, na.rm = T),
-                              umidd2   = mean(umid_d2, na.rm = T),
-                              umidd1   = mean(umid_d1, na.rm = T),
-                              h13 = first(h13),
-                              h12 = first(h12),
-                              h11 = first(h11),
-                              h10 = first(h10),
-                              obs = .N),
-                 by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
-  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
-  ungroup() %>% 
-  arrange(mun_res,ano) %>%
-  group_by(mun_res) %>%
-  #filter(!is.na(escm)) %>% 
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    v1_nota = ifelse(ano == 2018, media, NA),
-    v2_nota = max(v1_nota, na.rm = T),
-    d.media = media - v2_nota
-    
-  ) %>%
-  ungroup() %>% 
-  filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota)) 
+# base_res <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
+#                               escm     = mean(escm, na.rm = T),
+#                               fem      = mean(fem, na.rm = T),
+#                               idade    = mean(id18, na.rm = T),
+#                               tempd1   = mean(temp_d1, na.rm = T),
+#                               umidd2   = mean(umid_d2, na.rm = T),
+#                               umidd1   = mean(umid_d1, na.rm = T),
+#                               h13 = first(h13),
+#                               h12 = first(h12),
+#                               h11 = first(h11),
+#                               h10 = first(h10),
+#                               obs = .N),
+#                  by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+#   filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+#   ungroup() %>% 
+#   arrange(mun_res,ano) %>%
+#   group_by(mun_res) %>%
+#   #filter(!is.na(escm)) %>% 
+#   mutate(
+#     dup1 = 1,
+#     dup2 = sum(dup1),
+#     v1_nota = ifelse(ano == 2018, media, NA),
+#     v2_nota = max(v1_nota, na.rm = T),
+#     d.media = media - v2_nota
+#     
+#   ) %>%
+#   ungroup() %>% 
+#   filter(dup2 == 2) %>% 
+#   select(-c(dup2, dup1, v1_nota, v2_nota)) 
 
 # 
 # base_res <- base_res %>%
@@ -88,6 +88,84 @@ base_res <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
 #   ungroup()
 
 
+vars_diff <- c(
+  "media",
+  "escm", "escp", "pessoa", "empr_dom",
+  "n_ban", "n_qua", "n_car", "n_gel", "n_cel",
+  "pc", "internet", "renda1", "renda110", "renda10",
+  "pibpc",
+  "fem", "idade", "ppi",
+  "tempd1", "tempd2", "umidd2", "umidd1"
+)
+
+base_res <- base[priv0 == 1, .(
+  media    = mean(media, na.rm = TRUE),
+  escm     = mean(escm, na.rm = TRUE),
+  escp     = mean(escp, na.rm = TRUE),
+  pessoa   = mean(pessoas_dom, na.rm = TRUE),
+  empr_dom = mean(empr_dom, na.rm = TRUE),
+  n_ban    = mean(n_banheiro, na.rm = TRUE),
+  n_qua    = mean(n_quartos, na.rm = TRUE),
+  n_car    = mean(n_carros, na.rm = TRUE),
+  n_gel    = mean(n_geladeira, na.rm = TRUE),
+  n_cel    = mean(n_celular, na.rm = TRUE),
+  pc       = mean(pc, na.rm = TRUE),
+  internet = mean(internet, na.rm = TRUE),
+  renda1   = mean(renda1, na.rm = TRUE),
+  renda110 = mean(renda_1_10, na.rm = TRUE),
+  renda10  = mean(renda_10, na.rm = TRUE),
+  pibpc    = mean(pibpc, na.rm = TRUE),
+  fem      = mean(fem, na.rm = TRUE),
+  idade    = mean(id18, na.rm = TRUE),
+  ppi      = mean(ppi, na.rm = TRUE),
+  tempd1   = mean(temp_d1, na.rm = TRUE),
+  tempd2   = mean(temp_d2, na.rm = TRUE),
+  umidd2   = mean(umid_d2, na.rm = TRUE),
+  umidd1   = mean(umid_d1, na.rm = TRUE),
+  h13 = first(h13),
+  h12 = first(h12),
+  h11 = first(h11),
+  h10 = first(h10),
+  obs = .N
+), by = .(mun_res, ano, dist_hv_res, seg_res, lat_res, lon_res)] %>%
+  filter(as.numeric(ano) %in% c(2018, 2019)) %>%
+  arrange(mun_res, ano) %>%
+  group_by(mun_res) %>%
+  filter(n_distinct(ano) == 2) %>%
+  ungroup()
+
+
+for (v in vars_diff) {
+  
+  if (!v %in% names(base_res)) {
+    warning(paste("Variável não encontrada:", v))
+    next
+  }
+  
+  v1 <- paste0("v1_", v)
+  v2 <- paste0("v2_", v)
+  dv <- paste0("d", v)
+  
+  base_res[[v1]] <- ifelse(base_res$ano == 2018, base_res[[v]], NA_real_)
+  
+  base_res[[v2]] <- ave(
+    base_res[[v1]], 
+    base_res$mun_res, 
+    FUN = function(x) {
+      if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
+    }
+  )
+  
+  base_res[[dv]] <- base_res[[v]] - base_res[[v2]]
+  
+  base_res[[dv]][!is.finite(base_res[[dv]])] <- NA
+}
+
+temp_cols <- grep("^(v1_|v2_)", names(base_res), value = TRUE)
+base_res <- base_res %>% select(-all_of(temp_cols)) %>% 
+  mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) %>%  #Turning INF to NA
+  rename(d.media = dmedia)
+
 
 # ---------------------------------------------------------------------------- #
 ### 1.1.2 Main Regression ----
@@ -95,7 +173,7 @@ base_res <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
 
 list <- list()
 
-efr <- dummy_cols(base_res$seg_res[base_res$ano == 2018])
+efr <- dummy_cols(base_res2$seg_res[base_res2$ano == 2018])
 efr <- efr %>% select(-1,-2)
 
 ### Main 
@@ -145,42 +223,62 @@ list[[as.character(paste0(2019,"-",2018,"|fuso"))]] <- rdrobust(
   )
 )
 
-# # ---------------------------------------------------------------------------- #
-### 1.1.3 Fuso + Cont ----
-# # ---------------------------------------------------------------------------- #
-# 
-# list[[as.character(paste0(2019,"-",2018,"|fuso+C"))]] <- rdrobust(
-#   y = base_res$d.media[base_res$ano == 2019],
-#   x = base_res$dist_hv_res[base_res$ano == 2018],
-#   c = 0,
-#   p = 1, 
-#   cluster = base_res$seg_res[base_res$ano == 2018],
-#   weights = base_res$obs[base_res$ano == 2018],
-#   vce = "hc0",
-#   covs = cbind(
-#     efr,
-#     base_res$lat_res[base_res$ano == 2018],
-#     base_res$lon_res[base_res$ano == 2018],
-#     #Controls
-#     base_res$didade[base_res$ano == 2019],
-#     base_res$descm[base_res$ano == 2019],
-#     #base_res$dmaet[base_res$ano == 2019],
-#     base_res$dfem[base_res$ano == 2019],
-#     #base_res$ddom5[base_res$ano == 2019],
-#     #Timezones
-#     base_res$h13[base_res$ano == 2019],
-#     base_res$h12[base_res$ano == 2019],
-#     base_res$h11[base_res$ano == 2019]
-#   )
-# )
+# ---------------------------------------------------------------------------- #
+### 1.1.3 Fuso +  ALL Cont ----
+# ---------------------------------------------------------------------------- #
+
+list[[as.character(paste0(2019,"-",2018,"|fuso+C"))]] <- rdrobust(
+  y = base_res$d.media[base_res$ano == 2019],
+  x = base_res$dist_hv_res[base_res$ano == 2018],
+  c = 0,
+  p = 1,
+  cluster = base_res$seg_res[base_res$ano == 2018],
+  weights = base_res$obs[base_res$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    efr,
+    base_res$lat_res[base_res$ano == 2018],
+    base_res$lon_res[base_res$ano == 2018],
+    #Dists
+    base_res$dtempd1[base_res$ano == 2019], #Temperature
+    base_res$descm[base_res$ano == 2019], #mother educ
+    base_res$dn_ban[base_res$ano == 2019], #bathrooms
+    base_res$dumidd1[base_res$ano == 2019], #Humidity d1
+    base_res$dumidd2[base_res$ano == 2019], #Humidty d2
+    base_res$dfem[base_res$ano == 2019], #Female
+    base_res$dppi[base_res$ano == 2019], #PPI
+    base_res$didade[base_res$ano == 2019], #Age
+    base_res$descp[base_res$ano == 2019], #father educ
+    
+    base_res$dpessoa[base_res$ano == 2019], #people in household
+    base_res$dn_qua[base_res$ano == 2019], #houses
+    base_res$dn_car[base_res$ano == 2019], #cars
+    base_res$dn_gel[base_res$ano == 2019], #geladeira
+    base_res$dn_cel[base_res$ano == 2019], #cel
+    base_res$dpc[base_res$ano == 2019],    #pc
+    base_res$dinternet[base_res$ano == 2019], #internet
+    
+    base_res$drenda1[base_res$ano == 2019], #wage < 1MW
+    base_res$drenda110[base_res$ano == 2019], #wage 1MW - 10MW
+    base_res$drenda10[base_res$ano == 2019], #wage > 10MW
+    base_res$dpibpc[base_res$ano == 2019], #pibpc
+    
+    base_res$dtempd2[base_res$ano == 2019], #temp2
+    
+    #Fuso
+    base_res$h13[base_res$ano == 2019],
+    base_res$h12[base_res$ano == 2019],
+    base_res$h11[base_res$ano == 2019]
+  )
+)
 
 
 
 # ---------------------------------------------------------------------------- #
-### 1.1.4 Pol + Fuso + Cont ----
+### 1.1.4 Pol + Fuso  ----
 # ---------------------------------------------------------------------------- #
 
-list[[as.character(paste0(2019,"-",2018,"|pol+fuso+C"))]] <- rdrobust(
+list[[as.character(paste0(2019,"-",2018,"|pol+fuso"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2019],
   x = base_res$dist_hv_res[base_res$ano == 2018],
   c = 0,
@@ -200,7 +298,56 @@ list[[as.character(paste0(2019,"-",2018,"|pol+fuso+C"))]] <- rdrobust(
 )
 
 # ---------------------------------------------------------------------------- #
-### 1.1.5 Tabela  ----
+### 1.1.5 Pol + Fuso + All ----
+# ---------------------------------------------------------------------------- #
+
+list[[as.character(paste0(2019,"-",2018,"|pol+fuso+all"))]] <- rdrobust(
+  y = base_res$d.media[base_res$ano == 2019],
+  x = base_res$dist_hv_res[base_res$ano == 2018],
+  c = 0,
+  p = 2, 
+  cluster = base_res$seg_res[base_res$ano == 2018],
+  weights = base_res$obs[base_res$ano == 2018],
+  vce = "hc0",
+  covs = cbind(
+    efr,
+    base_res$lat_res[base_res$ano == 2018],
+    base_res$lon_res[base_res$ano == 2018],
+    #Dists
+    base_res$dtempd1[base_res$ano == 2019], #Temperature
+    base_res$descm[base_res$ano == 2019], #mother educ
+    base_res$dn_ban[base_res$ano == 2019], #bathrooms
+    base_res$dumidd1[base_res$ano == 2019], #Humidity d1
+    base_res$dumidd2[base_res$ano == 2019], #Humidty d2
+    base_res$dfem[base_res$ano == 2019], #Female
+    base_res$dppi[base_res$ano == 2019], #PPI
+    base_res$didade[base_res$ano == 2019], #Age
+    base_res$descp[base_res$ano == 2019], #father educ
+    
+    base_res$dpessoa[base_res$ano == 2019], #people in household
+    base_res$dn_qua[base_res$ano == 2019], #houses
+    base_res$dn_car[base_res$ano == 2019], #cars
+    base_res$dn_gel[base_res$ano == 2019], #geladeira
+    base_res$dn_cel[base_res$ano == 2019], #cel
+    base_res$dpc[base_res$ano == 2019],    #pc
+    base_res$dinternet[base_res$ano == 2019], #internet
+    
+    base_res$drenda1[base_res$ano == 2019], #wage < 1MW
+    base_res$drenda110[base_res$ano == 2019], #wage 1MW - 10MW
+    base_res$drenda10[base_res$ano == 2019], #wage > 10MW
+    base_res$dpibpc[base_res$ano == 2019], #pibpc
+    
+    base_res$dtempd2[base_res$ano == 2019], #temp2
+    
+    #Fuso
+    base_res$h13[base_res$ano == 2019],
+    base_res$h12[base_res$ano == 2019],
+    base_res$h11[base_res$ano == 2019]
+  )
+)
+
+# ---------------------------------------------------------------------------- #
+### 1.1.6 Tabela  ----
 # ---------------------------------------------------------------------------- #
 
 t10 <- data.frame(
@@ -243,7 +390,7 @@ fmt_npair <- function(nl, nr) {
 
 fmt_bw <- function(bw) {
   paste0(
-    formatC(abs(bw) / 1000, digits = 2, format = "f"),
+    formatC(abs(bw) / 1000, digits = 0, format = "f"),
     " km"
   )
 }
@@ -259,19 +406,17 @@ result <- data.frame(
     "2019 - 2018",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Main Controls",
+    "BW",
     "Time Zones",
-    "Municipalities"
+    "All Controls"
   ),
   `(1)` = c(
     fmt_est(t10$coef[1], t10$pv[1]),
     fmt_se(t10$se[1]),
     fmt_npair(t10$n_left[1], t10$n_rght[1]),
     fmt_bw(t10$bw[1]),
-    "Yes",
     "No",
-    formatC(t10$totr[1] + t10$totl[1], format = "d", big.mark = ",")
+    "No"
   ),
   `(2)` = c(
     fmt_est(t10$coef[2], t10$pv[2]),
@@ -279,8 +424,7 @@ result <- data.frame(
     fmt_npair(t10$n_left[2], t10$n_rght[2]),
     fmt_bw(t10$bw[2]),
     "Yes",
-    "No",
-    ""
+    "No"
   ),
   `(3)` = c(
     fmt_est(t10$coef[3], t10$pv[3]),
@@ -288,8 +432,23 @@ result <- data.frame(
     fmt_npair(t10$n_left[3], t10$n_rght[3]),
     fmt_bw(t10$bw[3]),
     "Yes",
+    "Yes"
+  ),
+  `(4)` = c(
+    fmt_est(t10$coef[4], t10$pv[4]),
+    fmt_se(t10$se[4]),
+    fmt_npair(t10$n_left[4], t10$n_rght[4]),
+    fmt_bw(t10$bw[4]),
     "Yes",
-    ""
+    "No"
+  ),
+  `(5)` = c(
+    fmt_est(t10$coef[5], t10$pv[5]),
+    fmt_se(t10$se[5]),
+    fmt_npair(t10$n_left[5], t10$n_rght[5]),
+    fmt_bw(t10$bw[5]),
+    "Yes",
+    "Yes"
   ),
   check.names = FALSE,
   stringsAsFactors = FALSE
@@ -304,7 +463,7 @@ latex_table <- knitr::kable(
   format = "latex",
   booktabs = TRUE,
   escape = F,
-  align = "lccc",
+  align = "lccccc",
   linesep = "",
 )
 
@@ -317,124 +476,11 @@ rm(latex_table, t10, result, list)
 # ---------------------------------------------------------------------------- #
 
 # Storing results
-rlist <- list()
-
-
+list <- list()
 
 # ---------------------------------------------------------------------------- #
-### 1.2.1 2019-2018 ----
+### 1.2.1 2018-2017 ----
 #### 1.2.1.1 Data ----
-# ---------------------------------------------------------------------------- #
-
-# ---------- #
-#Prova
-# ---------- #
-
-base_a <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
-                            obs = .N),
-               by = .(mun_prova,ano,dist_hv_border,new_dist,seg,lat,lon)] %>% 
-  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
-  arrange(mun_prova,ano) %>%
-  group_by(mun_prova) %>%
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    v1_nota = ifelse(ano == 2018, media, NA),
-    v2_nota = max(v1_nota, na.rm = T),
-    d.media = media - v2_nota,
-  ) %>%
-  ungroup() %>% 
-  filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota))
-
-# --------- #
-# School 
-# --------- #
-
-#Res
-base_esc <- base[priv0 == 1,.(media = mean(media, na.rm = T),
-                              obs = .N),
-                 by = .(mun_escola,ano,dist_hv_esc,seg_esc,lat_esc,lon_esc)] %>% 
-  filter(as.numeric(ano) %in% c(2018,2019)) %>% 
-  arrange(mun_escola,ano) %>%
-  group_by(mun_escola) %>%
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    v1_nota = ifelse(ano == 2018, media, NA),
-    v2_nota = max(v1_nota, na.rm = T),
-    d.media = media - v2_nota
-  ) %>%
-  ungroup() %>% 
-  filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota))
-
-
-# ---------------------------------------------------------------------------- #
-#### 1.2.1.2 Regression ----
-# ---------------------------------------------------------------------------- #
-
-# ----------- #
-# --- Pro ---
-# ----------- #
-
-#Controls
-ef <- dummy_cols(base_a$seg[base_a$ano == 2018])
-ef <- ef %>% select(-1,-2)
-
-#without
-rlist[[as.character(paste0(2019,"-",2018,"prova|0"))]] <- rdrobust(
-  y = base_a$d.media[base_a$ano == 2019],
-  x = base_a$dist_hv_border[base_a$ano == 2018],
-  c = 0,
-  cluster = base_a$seg[base_a$ano == 2018],
-  weights = base_a$obs[base_a$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_a$lat[base_a$ano == 2018],
-    base_a$lon[base_a$ano == 2018]
-  )
-)
-
-# ---------------------------------------------------------------------------- #
-#Extração da banda ótima
-bw_main_a  <- rlist[["2019-2018prova|0"]]$bws[1]
-bw_bias_a  <- rlist[["2019-2018prova|0"]]$bws[2]
-
-#Salvando a banda principal
-save(bw_main_a, bw_bias_a,
-     file = "Z:/Tuffy/Paper - HV/Resultados/bandwidths_2019_2018_prova.RData")
-# ---------------------------------------------------------------------------- #
-
-# ----------- #
-# --- Esc ---
-# ----------- #
-
-#Controls
-ef <- dummy_cols(base_esc$seg_esc[base_esc$ano == 2018])
-ef <- ef %>% select(-1,-2)
-
-
-#without
-rlist[[as.character(paste0(2019,"-",2018,"esc|0"))]] <- rdrobust(
-  y = base_esc$d.media[base_esc$ano == 2019],
-  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
-  c = 0,
-  cluster = base_esc$seg_esc[base_esc$ano == 2018],
-  weights = base_esc$obs[base_esc$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_esc$lat_esc[base_esc$ano == 2018],
-    base_esc$lon_esc[base_esc$ano == 2018]
-  )
-)
-
-
-# ---------------------------------------------------------------------------- #
-### 1.2.2 2018-2017 ----
-#### 1.2.2.1 Data ----
 # ---------------------------------------------------------------------------- #
 
 # ---------- #
@@ -491,7 +537,7 @@ ef <- dummy_cols(base_a$seg[base_a$ano == 2017])
 ef <- ef %>% select(-1,-2)
 
 #without
-rlist[[as.character(paste0(2018,"-",2017,"prova|0"))]] <- rdrobust(
+list[[as.character(paste0(2018,"-",2017,"prova|0"))]] <- rdrobust(
   y = base_a$d.media[base_a$ano == 2018],
   x = base_a$dist_hv_border[base_a$ano == 2017],
   c = 0,
@@ -516,7 +562,7 @@ ef <- ef %>% select(-1,-2)
 
 
 #without
-rlist[[as.character(paste0(2018,"-",2017,"esc|0"))]] <- rdrobust(
+list[[as.character(paste0(2018,"-",2017,"esc|0"))]] <- rdrobust(
   y = base_esc$d.media[base_esc$ano == 2018],
   x = base_esc$dist_hv_esc[base_esc$ano == 2017],
   c = 0,
@@ -530,50 +576,7 @@ rlist[[as.character(paste0(2018,"-",2017,"esc|0"))]] <- rdrobust(
   )
 )
 
-# ---------------------------------------------------------------------------- #
-### 1.2.3 Table ----
-# ---------------------------------------------------------------------------- #
 
-t10 <- data.frame(
-  coef   = sapply(rlist, function(x) x$coef[3]),
-  se     = sapply(rlist, function(x) x$se[3]),
-  pv     = sapply(rlist, function(x) x$pv[3]),
-  n_left = sapply(rlist, function(x) x$N_h[1]),
-  n_rght = sapply(rlist, function(x) x$N_h[2]),
-  bw     = sapply(rlist, function(x) x$bws[1, 1])
-)
-print(t10)
-
-
-
-# ---------------------------------------------------------------------------- #
-# Helper: one stacked LaTeX cell
-# ---------------------------------------------------------------------------- #
-
-cell_rd <- function(i) {
-  paste0(
-    "\\shortstack[t]{",
-    fmt_est(t10$coef[i], t10$pv[i]), "\\\\",
-    fmt_se(t10$se[i]), "\\\\",
-    "N$_L$ = ", fmt_n(t10$n_left[i]),
-    ", N$_R$ = ", fmt_n(t10$n_rght[i]), "\\\\",
-    "Bandwidth = ", fmt_bw(t10$bw[i]),
-    "}"
-  )
-}
-
-latex_lines <- c(
-  sprintf("\raisebox{3.5em}{ENEM} & %s & %s\\\\", cell_rd(3), cell_rd(1)),
-  sprintf("\raisebox{3.5em}{School} & %s & %s\\\\", cell_rd(4), cell_rd(2))
-)
-writeLines(
-  latex_lines,
-  "Z:/Tuffy/Paper - HV/Resultados/definitive/final/DIFF_dists_pro_esc.tex"
-)
-
-
-rm(ef, rlist, result, t10, latex_table, base_a, base_esc, latex_lines, cell_rd)
-# ---------------------------------------------------------------------------- #
 
 
 # ---------------------------------------------------------------------------- #
@@ -676,11 +679,6 @@ base_esc <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
 #   ungroup()
 
 
-
-#store results
-
-list <- list()
-
 # ---------------------------------------------------------------------------- #
 #### 1.2.4.2 EXAM ----
 # ---------------------------------------------------------------------------- #
@@ -782,7 +780,7 @@ result <- data.frame(
     "2019 - 2018",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
+    "BW",
     "Municipalities"
   ),
   `(1)` = c(
@@ -929,8 +927,8 @@ result <- data.frame(
   ` ` = c(
     "2019 - 2018",
     " ",
-    "N = [N$_L$, N$_R$]",
-    "Bandwidth",
+    "N = N$_L$, N$_R$",
+    "BW",
     "Municipalities"
   ),
   `(1)` = c(
@@ -1262,7 +1260,7 @@ result <- data.frame(
     "2019 - 2018",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
+    "BW",
     "Municipalities"
   ),
   `(1)` = c(
@@ -1319,45 +1317,125 @@ rm(efr, list, result, t10, latex_table)
 # ---------------------------------------------------------------------------- #
 
 
+vars_diff <- c(
+  "media",
+  "escm", "escp", "pessoa", "empr_dom",
+  "n_ban", "n_qua", "n_car", "n_gel", "n_cel",
+  "pc", "internet", "renda1", "renda110", "renda10",
+  "pibpc",
+  "fem", "idade", "ppi",
+  "tempd1", "tempd2", "umidd2", "umidd1"
+)
 
-# ---------- #
-#Res
-# ---------- #
-base_res <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
-                              escm     = mean(escm, na.rm = T),
-                              fem      = mean(fem, na.rm = T),
-                              idade    = mean(id18, na.rm = T),
-                              tempd1   = mean(temp_d1, na.rm = T),
-                              umidd2   = mean(umid_d2, na.rm = T),
-                              umidd1   = mean(umid_d1, na.rm = T),
-                              h13 = first(h13),
-                              h12 = first(h12),
-                              h11 = first(h11),
-                              h10 = first(h10),
-                              obs = .N),
-                 by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
-  filter(as.numeric(ano) %in% c(2018,2017)) %>% 
-  ungroup() %>% 
-  arrange(mun_res,ano) %>%
+base_res <- base[priv0 == 1, .(
+  media    = mean(media, na.rm = TRUE),
+  escm     = mean(escm, na.rm = TRUE),
+  escp     = mean(escp, na.rm = TRUE),
+  pessoa   = mean(pessoas_dom, na.rm = TRUE),
+  empr_dom = mean(empr_dom, na.rm = TRUE),
+  n_ban    = mean(n_banheiro, na.rm = TRUE),
+  n_qua    = mean(n_quartos, na.rm = TRUE),
+  n_car    = mean(n_carros, na.rm = TRUE),
+  n_gel    = mean(n_geladeira, na.rm = TRUE),
+  n_cel    = mean(n_celular, na.rm = TRUE),
+  pc       = mean(pc, na.rm = TRUE),
+  internet = mean(internet, na.rm = TRUE),
+  renda1   = mean(renda1, na.rm = TRUE),
+  renda110 = mean(renda_1_10, na.rm = TRUE),
+  renda10  = mean(renda_10, na.rm = TRUE),
+  pibpc    = mean(pibpc, na.rm = TRUE),
+  fem      = mean(fem, na.rm = TRUE),
+  idade    = mean(id18, na.rm = TRUE),
+  ppi      = mean(ppi, na.rm = TRUE),
+  tempd1   = mean(temp_d1, na.rm = TRUE),
+  tempd2   = mean(temp_d2, na.rm = TRUE),
+  umidd2   = mean(umid_d2, na.rm = TRUE),
+  umidd1   = mean(umid_d1, na.rm = TRUE),
+  h13 = first(h13),
+  h12 = first(h12),
+  h11 = first(h11),
+  h10 = first(h10),
+  obs = .N
+), by = .(mun_res, ano, dist_hv_res, seg_res, lat_res, lon_res)] %>%
+  filter(as.numeric(ano) %in% c(2017, 2018)) %>%
+  arrange(mun_res, ano) %>%
   group_by(mun_res) %>%
-  #filter(!is.na(escm)) %>% 
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    v1_nota = ifelse(ano == 2017, media, NA),
-    v2_nota = max(v1_nota, na.rm = T),
-    d.media = media - v2_nota
-    
-  ) %>%
-  ungroup() %>% 
-  filter(dup2 == 2) %>% 
-  select(-c(dup2, dup1, v1_nota, v2_nota)) 
+  filter(n_distinct(ano) == 2) %>%
+  ungroup()
+
+
+for (v in vars_diff) {
+  
+  if (!v %in% names(base_res)) {
+    warning(paste("Variável não encontrada:", v))
+    next
+  }
+  
+  v1 <- paste0("v1_", v)
+  v2 <- paste0("v2_", v)
+  dv <- paste0("d", v)
+  
+  base_res[[v1]] <- ifelse(base_res$ano == 2017, base_res[[v]], NA_real_)
+  
+  base_res[[v2]] <- ave(
+    base_res[[v1]], 
+    base_res$mun_res, 
+    FUN = function(x) {
+      if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
+    }
+  )
+  
+  base_res[[dv]] <- base_res[[v]] - base_res[[v2]]
+  
+  base_res[[dv]][!is.finite(base_res[[dv]])] <- NA
+}
+
+temp_cols <- grep("^(v1_|v2_)", names(base_res), value = TRUE)
+base_res <- base_res %>% select(-all_of(temp_cols)) %>% 
+  mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) %>%  #Turning INF to NA
+  rename(d.media = dmedia)
+
+
+
+# 
+# # ---------- #
+# #Res
+# # ---------- #
+# base_res <- base[priv0 == 1,.(media    = mean(media, na.rm = T),
+#                               escm     = mean(escm, na.rm = T),
+#                               fem      = mean(fem, na.rm = T),
+#                               idade    = mean(id18, na.rm = T),
+#                               tempd1   = mean(temp_d1, na.rm = T),
+#                               umidd2   = mean(umid_d2, na.rm = T),
+#                               umidd1   = mean(umid_d1, na.rm = T),
+#                               h13 = first(h13),
+#                               h12 = first(h12),
+#                               h11 = first(h11),
+#                               h10 = first(h10),
+#                               obs = .N),
+#                  by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>% 
+#   filter(as.numeric(ano) %in% c(2018,2017)) %>% 
+#   ungroup() %>% 
+#   arrange(mun_res,ano) %>%
+#   group_by(mun_res) %>%
+#   #filter(!is.na(escm)) %>% 
+#   mutate(
+#     dup1 = 1,
+#     dup2 = sum(dup1),
+#     v1_nota = ifelse(ano == 2017, media, NA),
+#     v2_nota = max(v1_nota, na.rm = T),
+#     d.media = media - v2_nota
+#     
+#   ) %>%
+#   ungroup() %>% 
+#   filter(dup2 == 2) %>% 
+#   select(-c(dup2, dup1, v1_nota, v2_nota)) 
 
 
 
 
 # ---------------------------------------------------------------------------- #
-### 1.1.2 Main Regression ----
+### 1.4.1 Main Regression ----
 # ---------------------------------------------------------------------------- #
 
 list <- list()
@@ -1382,7 +1460,7 @@ list[[as.character(paste0(2018,"-",2017,"C|Res"))]] <- rdrobust(
 
 
 # ---------------------------------------------------------------------------- #
-### 1.1.2 Fuso ----
+### 1.4.2 Fuso ----
 # ---------------------------------------------------------------------------- #
 
 list[[as.character(paste0(2018,"-",2017,"|fuso"))]] <- rdrobust(
@@ -1402,12 +1480,59 @@ list[[as.character(paste0(2018,"-",2017,"|fuso"))]] <- rdrobust(
   )
 )
 
+# ---------------------------------------------------------------------------- #
+### 1.4.3 Fuso + All ----
+# ---------------------------------------------------------------------------- #
+
+list[[as.character(paste0(2018,"-",2017,"|fuso+all"))]] <- rdrobust(
+  y = base_res$d.media[base_res$ano == 2018],
+  x = base_res$dist_hv_res[base_res$ano == 2017],
+  c = 0,
+  cluster = base_res$seg_res[base_res$ano == 2017],
+  weights = base_res$obs[base_res$ano == 2017],
+  vce = "hc0",
+  covs = cbind(
+    efr,
+    base_res$lat_res[base_res$ano == 2017],
+    base_res$lon_res[base_res$ano == 2017],
+    #All
+    base_res$dtempd1[base_res$ano == 2018], #Temperature
+    base_res$descm[base_res$ano == 2018], #mother educ
+    base_res$dn_ban[base_res$ano == 2018], #bathrooms
+    base_res$dumidd1[base_res$ano == 2018], #Humidity d1
+    base_res$dumidd2[base_res$ano == 2018], #Humidty d2
+    base_res$dfem[base_res$ano == 2018], #Female
+    base_res$dppi[base_res$ano == 2018], #PPI
+    base_res$didade[base_res$ano == 2018], #Age
+    base_res$descp[base_res$ano == 2018], #father educ
+    
+    base_res$dpessoa[base_res$ano == 2018], #people in household
+    base_res$dn_qua[base_res$ano == 2018], #houses
+    base_res$dn_car[base_res$ano == 2018], #cars
+    base_res$dn_gel[base_res$ano == 2018], #geladeira
+    base_res$dn_cel[base_res$ano == 2018], #cel
+    base_res$dpc[base_res$ano == 2018],    #pc
+    base_res$dinternet[base_res$ano == 2018], #internet
+    
+    base_res$drenda1[base_res$ano == 2018], #wage < 1MW
+    base_res$drenda110[base_res$ano == 2018], #wage 1MW - 10MW
+    base_res$drenda10[base_res$ano == 2018], #wage > 10MW
+    base_res$dpibpc[base_res$ano == 2018], #pibpc
+    
+    base_res$dtempd2[base_res$ano == 2018], #temp2
+    
+    #Fuso
+    base_res$h13[base_res$ano == 2018],
+    base_res$h12[base_res$ano == 2018],
+    base_res$h11[base_res$ano == 2018]
+  )
+)
 
 # ---------------------------------------------------------------------------- #
 ### 1.1.4 Pol + Fuso + Cont ----
 # ---------------------------------------------------------------------------- #
 
-list[[as.character(paste0(2018,"-",2017,"|pol+fuso+C"))]] <- rdrobust(
+list[[as.character(paste0(2018,"-",2017,"|pol+fuso"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2018],
   x = base_res$dist_hv_res[base_res$ano == 2017],
   c = 0,
@@ -1427,7 +1552,55 @@ list[[as.character(paste0(2018,"-",2017,"|pol+fuso+C"))]] <- rdrobust(
 )
 
 # ---------------------------------------------------------------------------- #
-### 1.1.5 Tabela  ----
+### 1.4.5 Pol + Fuso + All ----
+# ---------------------------------------------------------------------------- #
+
+list[[as.character(paste0(2018,"-",2017,"|pol+fuso+all"))]] <- rdrobust(
+  y = base_res$d.media[base_res$ano == 2018],
+  x = base_res$dist_hv_res[base_res$ano == 2017],
+  c = 0,
+  cluster = base_res$seg_res[base_res$ano == 2017],
+  weights = base_res$obs[base_res$ano == 2017],
+  vce = "hc0",
+  covs = cbind(
+    efr,
+    base_res$lat_res[base_res$ano == 2017],
+    base_res$lon_res[base_res$ano == 2017],
+    #All
+    base_res$dtempd1[base_res$ano == 2018], #Temperature
+    base_res$descm[base_res$ano == 2018], #mother educ
+    base_res$dn_ban[base_res$ano == 2018], #bathrooms
+    base_res$dumidd1[base_res$ano == 2018], #Humidity d1
+    base_res$dumidd2[base_res$ano == 2018], #Humidty d2
+    base_res$dfem[base_res$ano == 2018], #Female
+    base_res$dppi[base_res$ano == 2018], #PPI
+    base_res$didade[base_res$ano == 2018], #Age
+    base_res$descp[base_res$ano == 2018], #father educ
+    
+    base_res$dpessoa[base_res$ano == 2018], #people in household
+    base_res$dn_qua[base_res$ano == 2018], #houses
+    base_res$dn_car[base_res$ano == 2018], #cars
+    base_res$dn_gel[base_res$ano == 2018], #geladeira
+    base_res$dn_cel[base_res$ano == 2018], #cel
+    base_res$dpc[base_res$ano == 2018],    #pc
+    base_res$dinternet[base_res$ano == 2018], #internet
+    
+    base_res$drenda1[base_res$ano == 2018], #wage < 1MW
+    base_res$drenda110[base_res$ano == 2018], #wage 1MW - 10MW
+    base_res$drenda10[base_res$ano == 2018], #wage > 10MW
+    base_res$dpibpc[base_res$ano == 2018], #pibpc
+    
+    base_res$dtempd2[base_res$ano == 2018], #temp2
+    
+    #Fuso
+    base_res$h13[base_res$ano == 2018],
+    base_res$h12[base_res$ano == 2018],
+    base_res$h11[base_res$ano == 2018]
+  )
+)
+
+# ---------------------------------------------------------------------------- #
+### 1.4.6 Tabela  ----
 # ---------------------------------------------------------------------------- #
 
 t10 <- data.frame(
@@ -1452,28 +1625,25 @@ result <- data.frame(
     "2018 - 2017",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Main Controls",
+    "BW",
     "Time Zones",
-    "Municipalities"
+    "All Controls"
   ),
   `(1)` = c(
     fmt_est(t10$coef[1], t10$pv[1]),
     fmt_se(t10$se[1]),
     fmt_npair(t10$n_left[1], t10$n_rght[1]),
     fmt_bw(t10$bw[1]),
-    "Yes",
     "No",
-    formatC(t10$totr[1] + t10$totl[1], format = "d", big.mark = ",")
-  ),
+    "No"
+    ),
   `(2)` = c(
     fmt_est(t10$coef[2], t10$pv[2]),
     fmt_se(t10$se[2]),
     fmt_npair(t10$n_left[2], t10$n_rght[2]),
     fmt_bw(t10$bw[2]),
     "Yes",
-    "No",
-    ""
+    "No"
   ),
   `(3)` = c(
     fmt_est(t10$coef[3], t10$pv[3]),
@@ -1481,8 +1651,23 @@ result <- data.frame(
     fmt_npair(t10$n_left[3], t10$n_rght[3]),
     fmt_bw(t10$bw[3]),
     "Yes",
+    "Yes"
+  ),
+  `(4)` = c(
+    fmt_est(t10$coef[4], t10$pv[4]),
+    fmt_se(t10$se[4]),
+    fmt_npair(t10$n_left[4], t10$n_rght[4]),
+    fmt_bw(t10$bw[4]),
     "Yes",
-    ""
+    "No"
+  ),
+  `(5)` = c(
+    fmt_est(t10$coef[5], t10$pv[5]),
+    fmt_se(t10$se[5]),
+    fmt_npair(t10$n_left[5], t10$n_rght[5]),
+    fmt_bw(t10$bw[5]),
+    "Yes",
+    "Yes"
   ),
   check.names = FALSE,
   stringsAsFactors = FALSE
@@ -1497,14 +1682,14 @@ latex_table <- knitr::kable(
   format = "latex",
   booktabs = TRUE,
   escape = F,
-  align = "lccc",
+  align = "lccccc",
   linesep = "",
 )
 
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/final/DIFF_Principal_1817.tex")
 
-rm(latex_table, t10, result, list)
+rm(latex_table, t10, result, list, vars_diff, dv, v, temp_cols, v1, v2)
 
 # ---------------------------------------------------------------------------- #
 # 2. GRAPHS / DATA EXPORT (Section 2) ----
@@ -1835,9 +2020,11 @@ rm(df_cmo)
 # ---------------------------------------------------------------------------- #
 ## 2.2 Within Bandwodth Graph ----
 # ---------------------------------------------------------------------------- #
-### A. 1918 ----
+### 2.2.1 1918 ----
 # ---------------------------------------------------------------------------- #
 
+base <- base %>% 
+  setDT()
 
 base_res <- base[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
                by = .(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res)] %>%
@@ -1857,8 +2044,9 @@ base_res <- base[priv0 == 1,.(media = mean(media, na.rm = T), obs = .N),
 
 
 
-
-#### 2.3.2 POL 2 ------
+# ---------------------------------------------------------------------------- #
+#### 2.2.1.1 POL 2 ------
+# ---------------------------------------------------------------------------- #
 plist <- list()
 
 bins <- c(25)
@@ -1997,12 +2185,11 @@ for (i in fig_loop) {
 rm(bins, j, plist, fig_loop)
 # ---------------------------------------------------------------------------- #
 
-
-### C. 1817 ----
-
-
-
-##### 2.1.3.1 opt bw -----
+# ---------------------------------------------------------------------------- #
+### 2.2.2 1817 ----
+# ---------------------------------------------------------------------------- #
+##### 2.2.2.1 opt bw -----
+# ---------------------------------------------------------------------------- #
 base_c <- base %>% 
   filter(priv0 == 1) %>%
   group_by(mun_res,ano,dist_hv_res,seg_res,lat_res,lon_res) %>%
@@ -2050,7 +2237,9 @@ bw_bias_c  <- list[["2018-2017C|NF"]]$bws[2]
 # ---------------------------------------------------------------------------- #
 
 rm(list, ef)
-#### 2.3.2 POL 2 ------
+# ---------------------------------------------------------------------------- #
+#### 2.2.2.2 POL 2 ------
+# ---------------------------------------------------------------------------- #
 plist <- list()
 
 bins <- c(25)
@@ -2321,7 +2510,7 @@ result <- data.frame(
     "2019 - 2018",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
+    "BW",
     "Municipalities"
   ),
   `(1)` = c(
@@ -2949,12 +3138,12 @@ result <- data.frame(
     "Mother without High School",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
+    "BW",
     "Municipalities",
     "Mother with High School",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
+    "BW",
     "Municipalities"
   ),
   `(1)` = c(#Low
@@ -3133,7 +3322,7 @@ result <- data.frame(
     "2019 - 2018",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
+    "BW",
     "Municipalities"
   ),
   `(1)` = c(#Low
@@ -3468,23 +3657,23 @@ result <- data.frame(
     "2019 - 2018",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
+    "BW",
     "Municipalities"
   ),
-  `(1)` = c(#Low
-    fmt_est(dias$coef[1], dias$pv[1]),
-    fmt_se(dias$se[1]),
-    fmt_npair(dias$n_left[1], dias$n_rght[1]),
-    fmt_bw(dias$bw[1]),
-    formatC(dias$totr[1] + dias$totl[1], format = "d", big.mark = ",")
-  ),
-  `(2)` = c(#Low
+  `(1)` = c(#Test Takers
     fmt_est(dias$coef[2], dias$pv[2]),
     fmt_se(dias$se[2]),
     fmt_npair(dias$n_left[2], dias$n_rght[2]),
     fmt_bw(dias$bw[2]),
     formatC(dias$totr[2] + dias$totl[2], format = "d", big.mark = ",")
     
+  ),
+  `(2)` = c(#Abst.
+    fmt_est(dias$coef[1], dias$pv[1]),
+    fmt_se(dias$se[1]),
+    fmt_npair(dias$n_left[1], dias$n_rght[1]),
+    fmt_bw(dias$bw[1]),
+    formatC(dias$totr[1] + dias$totl[1], format = "d", big.mark = ",")
   ),
   
   check.names = FALSE,
@@ -3521,7 +3710,9 @@ rm(latex_table, result, dias, d_list, p_list, names, base_abs, educ, temp, base_
 # ---------------------------------------------------------------------------- #
 ### 8.1.1 White and Yellow -----
 # ---------------------------------------------------------------------------- #
-base_ab <- base %>% 
+base <- base %>% ungroup()
+
+base_ab <- base %>%  
   filter(
     raca %in% c("B", "E"),
     ano %in% c(2018:2019)
@@ -3659,46 +3850,35 @@ t10cc <- data.frame(
 
 
 
-
 result <- data.frame(
   ` ` = c(
     "White and Yellow",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
     "Afro-Brazilians and Indigenous",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities"
+    " ", " ", " "
   ),
   `(1)` = c(#Low
     fmt_est(t10cc$coef[1], t10cc$pv[1]),
     fmt_se(t10cc$se[1]),
-    fmt_npair(t10cc$n_left[1], t10cc$n_rght[1]),
-    fmt_bw(t10cc$bw[1]),
-    formatC(t10cc$totr[1] + t10cc$totl[1], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[1]),", N$_R$ = ", fmt_n(t10cc$n_rght[1])),
+    paste0("BW = ", fmt_bw(t10cc$bw[1])),
     #High
     fmt_est(t10cc$coef[3], t10cc$pv[3]),
     fmt_se(t10cc$se[3]),
-    fmt_npair(t10cc$n_left[3], t10cc$n_rght[3]),
-    fmt_bw(t10cc$bw[3]),
-    formatC(t10cc$totr[3] + t10cc$totl[3], format = "d", big.mark = ",")
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[3]),", N$_R$ = ", fmt_n(t10cc$n_rght[3])),
+    paste0("BW = ", fmt_bw(t10cc$bw[3]))
   ),
   `(2)` = c(#Low
     fmt_est(t10cc$coef[2], t10cc$pv[2]),
     fmt_se(t10cc$se[2]),
-    fmt_npair(t10cc$n_left[2], t10cc$n_rght[2]),
-    fmt_bw(t10cc$bw[2]),
-    formatC(t10cc$totr[2] + t10cc$totl[2], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[2]),", N$_R$ = ", fmt_n(t10cc$n_rght[2])),
+    paste0("BW = ", fmt_bw(t10cc$bw[2])),
     #High
     fmt_est(t10cc$coef[4], t10cc$pv[4]),
     fmt_se(t10cc$se[4]),
-    fmt_npair(t10cc$n_left[4], t10cc$n_rght[4]),
-    fmt_bw(t10cc$bw[4]),
-    formatC(t10cc$totr[4] + t10cc$totl[4], format = "d", big.mark = ",")
-    
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[4]),", N$_R$ = ", fmt_n(t10cc$n_rght[4])),
+    paste0("BW = ", fmt_bw(t10cc$bw[4]))
+
   ),
   check.names = FALSE,
   stringsAsFactors = FALSE
@@ -3869,41 +4049,31 @@ t10cc <- data.frame(
 result <- data.frame(
   ` ` = c(
     "Female",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
     "Male",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities"
+    " ", " ", " "
   ),
   `(1)` = c(#Low
     fmt_est(t10cc$coef[1], t10cc$pv[1]),
     fmt_se(t10cc$se[1]),
-    fmt_npair(t10cc$n_left[1], t10cc$n_rght[1]),
-    fmt_bw(t10cc$bw[1]),
-    formatC(t10cc$totr[1] + t10cc$totl[1], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[1]),", N$_R$ = ", fmt_n(t10cc$n_rght[1])),
+    paste0("BW = ", fmt_bw(t10cc$bw[1])),
     #High
     fmt_est(t10cc$coef[3], t10cc$pv[3]),
     fmt_se(t10cc$se[3]),
-    fmt_npair(t10cc$n_left[3], t10cc$n_rght[3]),
-    fmt_bw(t10cc$bw[3]),
-    formatC(t10cc$totr[3] + t10cc$totl[3], format = "d", big.mark = ",")
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[3]),", N$_R$ = ", fmt_n(t10cc$n_rght[3])),
+    paste0("BW = ", fmt_bw(t10cc$bw[3]))
   ),
   `(2)` = c(#Low
     fmt_est(t10cc$coef[2], t10cc$pv[2]),
     fmt_se(t10cc$se[2]),
-    fmt_npair(t10cc$n_left[2], t10cc$n_rght[2]),
-    fmt_bw(t10cc$bw[2]),
-    formatC(t10cc$totr[2] + t10cc$totl[2], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[2]),", N$_R$ = ", fmt_n(t10cc$n_rght[2])),
+    paste0("BW = ", fmt_bw(t10cc$bw[2])),
     #High
     fmt_est(t10cc$coef[4], t10cc$pv[4]),
     fmt_se(t10cc$se[4]),
-    fmt_npair(t10cc$n_left[4], t10cc$n_rght[4]),
-    fmt_bw(t10cc$bw[4]),
-    formatC(t10cc$totr[4] + t10cc$totl[4], format = "d", big.mark = ",")
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[4]),", N$_R$ = ", fmt_n(t10cc$n_rght[4])),
+    paste0("BW = ", fmt_bw(t10cc$bw[4]))
     
   ),
   check.names = FALSE,
@@ -4077,41 +4247,31 @@ t10cc <- data.frame(
 result <- data.frame(
   ` ` = c(
     "Low Education",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
     "High Education",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities"
+    " ", " ", " "
   ),
   `(1)` = c(#Low
     fmt_est(t10cc$coef[1], t10cc$pv[1]),
     fmt_se(t10cc$se[1]),
-    fmt_npair(t10cc$n_left[1], t10cc$n_rght[1]),
-    fmt_bw(t10cc$bw[1]),
-    formatC(t10cc$totr[1] + t10cc$totl[1], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[1]),", N$_R$ = ", fmt_n(t10cc$n_rght[1])),
+    paste0("BW = ", fmt_bw(t10cc$bw[1])),
     #High
     fmt_est(t10cc$coef[3], t10cc$pv[3]),
     fmt_se(t10cc$se[3]),
-    fmt_npair(t10cc$n_left[3], t10cc$n_rght[3]),
-    fmt_bw(t10cc$bw[3]),
-    formatC(t10cc$totr[3] + t10cc$totl[3], format = "d", big.mark = ",")
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[3]),", N$_R$ = ", fmt_n(t10cc$n_rght[3])),
+    paste0("BW = ", fmt_bw(t10cc$bw[3]))
   ),
   `(2)` = c(#Low
     fmt_est(t10cc$coef[2], t10cc$pv[2]),
     fmt_se(t10cc$se[2]),
-    fmt_npair(t10cc$n_left[2], t10cc$n_rght[2]),
-    fmt_bw(t10cc$bw[2]),
-    formatC(t10cc$totr[2] + t10cc$totl[2], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[2]),", N$_R$ = ", fmt_n(t10cc$n_rght[2])),
+    paste0("BW = ", fmt_bw(t10cc$bw[2])),
     #High
     fmt_est(t10cc$coef[4], t10cc$pv[4]),
     fmt_se(t10cc$se[4]),
-    fmt_npair(t10cc$n_left[4], t10cc$n_rght[4]),
-    fmt_bw(t10cc$bw[4]),
-    formatC(t10cc$totr[4] + t10cc$totl[4], format = "d", big.mark = ",")
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[4]),", N$_R$ = ", fmt_n(t10cc$n_rght[4])),
+    paste0("BW = ", fmt_bw(t10cc$bw[4]))
     
   ),
   check.names = FALSE,
@@ -4261,41 +4421,31 @@ t10cc <- data.frame(
 result <- data.frame(
   ` ` = c(
     "Younger",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
     "Older",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities"
+    " ", " ", " "
   ),
   `(1)` = c(#Low
     fmt_est(t10cc$coef[1], t10cc$pv[1]),
     fmt_se(t10cc$se[1]),
-    fmt_npair(t10cc$n_left[1], t10cc$n_rght[1]),
-    fmt_bw(t10cc$bw[1]),
-    formatC(t10cc$totr[1] + t10cc$totl[1], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[1]),", N$_R$ = ", fmt_n(t10cc$n_rght[1])),
+    paste0("BW = ", fmt_bw(t10cc$bw[1])),
     #High
     fmt_est(t10cc$coef[3], t10cc$pv[3]),
     fmt_se(t10cc$se[3]),
-    fmt_npair(t10cc$n_left[3], t10cc$n_rght[3]),
-    fmt_bw(t10cc$bw[3]),
-    formatC(t10cc$totr[3] + t10cc$totl[3], format = "d", big.mark = ",")
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[3]),", N$_R$ = ", fmt_n(t10cc$n_rght[3])),
+    paste0("BW = ", fmt_bw(t10cc$bw[3]))
   ),
   `(2)` = c(#Low
     fmt_est(t10cc$coef[2], t10cc$pv[2]),
     fmt_se(t10cc$se[2]),
-    fmt_npair(t10cc$n_left[2], t10cc$n_rght[2]),
-    fmt_bw(t10cc$bw[2]),
-    formatC(t10cc$totr[2] + t10cc$totl[2], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[2]),", N$_R$ = ", fmt_n(t10cc$n_rght[2])),
+    paste0("BW = ", fmt_bw(t10cc$bw[2])),
     #High
     fmt_est(t10cc$coef[4], t10cc$pv[4]),
     fmt_se(t10cc$se[4]),
-    fmt_npair(t10cc$n_left[4], t10cc$n_rght[4]),
-    fmt_bw(t10cc$bw[4]),
-    formatC(t10cc$totr[4] + t10cc$totl[4], format = "d", big.mark = ",")
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[4]),", N$_R$ = ", fmt_n(t10cc$n_rght[4])),
+    paste0("BW = ", fmt_bw(t10cc$bw[4]))
     
   ),
   check.names = FALSE,
@@ -4437,43 +4587,32 @@ t10cc <- data.frame(
 result <- data.frame(
   ` ` = c(
     "No Migration Over the DST Border",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
     "No Migration",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
     "Migration to ENEM",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities"
-  ),
-  `(1)` = c(#Low
+    " ", " ", " " 
+    ),
+  `(1)` = c(#Over border
     fmt_est(t10cc$coef[1], t10cc$pv[1]),
     fmt_se(t10cc$se[1]),
-    fmt_npair(t10cc$n_left[1], t10cc$n_rght[1]),
-    fmt_bw(t10cc$bw[1]),
-    formatC(t10cc$totr[1] + t10cc$totl[1], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[1]),", N$_R$ = ", fmt_n(t10cc$n_rght[1])),
+    paste0("BW = ", fmt_bw(t10cc$bw[1])),
     #No mig
     fmt_est(t10cc$coef[3], t10cc$pv[3]),
     fmt_se(t10cc$se[3]),
-    fmt_npair(t10cc$n_left[3], t10cc$n_rght[3]),
-    fmt_bw(t10cc$bw[3]),
-    formatC(t10cc$totr[3] + t10cc$totl[3], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[3]),", N$_R$ = ", fmt_n(t10cc$n_rght[3])),
+    paste0("BW = ", fmt_bw(t10cc$bw[3])),
     #mig
     fmt_est(t10cc$coef[5], t10cc$pv[5]),
     fmt_se(t10cc$se[5]),
-    fmt_npair(t10cc$n_left[5], t10cc$n_rght[5]),
-    fmt_bw(t10cc$bw[5]),
-    formatC(t10cc$totr[5] + t10cc$totl[5], format = "d", big.mark = ",")
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[5]),", N$_R$ = ", fmt_n(t10cc$n_rght[5])),
+    paste0("BW = ", fmt_bw(t10cc$bw[5]))
   ),
   check.names = FALSE,
   stringsAsFactors = FALSE
 )
+
 
 # ---------------------------------------------------------------------------- #
 # Latex 
@@ -4621,23 +4760,17 @@ result <- data.frame(
     "2019 - 2018",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities"
-  ),
+    "BW"  ),
   `(1)` = c(#UTC -4
     fmt_est(result_tab$coef[2], result_tab$pv[2]),
     fmt_se(result_tab$se[2]),
     fmt_npair(result_tab$n_left[2], result_tab$n_rght[2]),
-    fmt_bw(result_tab$bw[2]),
-    formatC(result_tab$totr[2] + result_tab$totl[2], format = "d", big.mark = ",")
-  ),
+    fmt_bw(result_tab$bw[2])  ),
   `(2)` = c(#UTC -3
     fmt_est(result_tab$coef[1], result_tab$pv[1]),
     fmt_se(result_tab$se[1]),
     fmt_npair(result_tab$n_left[1], result_tab$n_rght[1]),
-    fmt_bw(result_tab$bw[1]),
-    formatC(result_tab$totr[1] + result_tab$totl[1], format = "d", big.mark = ",")
-    
+    fmt_bw(result_tab$bw[1])
   ),
   
   check.names = FALSE,
@@ -5279,12 +5412,12 @@ result <- data.frame(
     "Language",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
+    "BW",
     "Municipalities",
     "Math",
     " ",
     "N = N$_L$, N$_R$",
-    "Bandwidth",
+    "BW",
     "Municipalities"
     
   ),
@@ -5936,95 +6069,64 @@ print(tab)
 
 result <- data.frame(
   ` ` = c(
-    "Mock Examinees",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
-    "All Administrative School Types",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
     "Main Result",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
+    "Mock Examinees",
+    " ", " ", " ",
+    "All Administrative School Types",
+    " ", " ", " ",
     "Private School",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
     "Municipal + State School",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
     "State School",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
     "Federal School",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities",
+    " ", " ", " ",
     "Municipal School",
-    " ",
-    "N = N$_L$, N$_R$",
-    "Bandwidth",
-    "Municipalities"
-  ),
-  `(1)` = c(#mock
-    fmt_est(tab$coef[1], tab$pv[1]),
-    fmt_se(tab$se[1]),
-    fmt_npair(tab$n_left[1], tab$n_rght[1]),
-    fmt_bw(tab$bw[1]),
-    formatC(tab$totr[1] + tab$totl[1], format = "d", big.mark = ","),
-    #All
-    fmt_est(tab$coef[2], tab$pv[2]),
-    fmt_se(tab$se[2]),
-    fmt_npair(tab$n_left[2], tab$n_rght[2]),
-    fmt_bw(tab$bw[2]),
-    formatC(tab$totr[2] + tab$totl[2], format = "d", big.mark = ","),
+    " ", " ", " "
+    ),
+  `(1)` = c(
     #Main
     fmt_est(tab$coef[3], tab$pv[3]),
     fmt_se(tab$se[3]),
-    fmt_npair(tab$n_left[3], tab$n_rght[3]),
-    fmt_bw(tab$bw[3]),
-    formatC(tab$totr[3] + tab$totl[3], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(tab$n_left[3]),", N$_R$ = ", fmt_n(tab$n_rght[3])),
+    paste0("BW = ", fmt_bw(tab$bw[3])),
+    #mock
+    fmt_est(tab$coef[1], tab$pv[1]),
+    fmt_se(tab$se[1]),
+    paste0("N$_L$ = ", fmt_n(tab$n_left[1]),", N$_R$ = ", fmt_n(tab$n_rght[1])),
+    paste0("BW = ", fmt_bw(tab$bw[1])),
+    #All
+    fmt_est(tab$coef[2], tab$pv[2]),
+    fmt_se(tab$se[2]),
+    paste0("N$_L$ = ", fmt_n(tab$n_left[2]),", N$_R$ = ", fmt_n(tab$n_rght[2])),
+    paste0("BW = ", fmt_bw(tab$bw[2])),
     #Priv
     fmt_est(tab$coef[4], tab$pv[4]),
     fmt_se(tab$se[4]),
-    fmt_npair(tab$n_left[4], tab$n_rght[4]),
-    fmt_bw(tab$bw[4]),
-    formatC(tab$totr[4] + tab$totl[4], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(tab$n_left[4]),", N$_R$ = ", fmt_n(tab$n_rght[4])),
+    paste0("BW = ", fmt_bw(tab$bw[4])),
     #Mun State
     fmt_est(tab$coef[5], tab$pv[5]),
     fmt_se(tab$se[5]),
-    fmt_npair(tab$n_left[5], tab$n_rght[5]),
-    fmt_bw(tab$bw[5]),
-    formatC(tab$totr[5] + tab$totl[5], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(tab$n_left[5]),", N$_R$ = ", fmt_n(tab$n_rght[5])),
+    paste0("BW = ", fmt_bw(tab$bw[5])),
     #State
     fmt_est(tab$coef[6], tab$pv[6]),
     fmt_se(tab$se[6]),
-    fmt_npair(tab$n_left[6], tab$n_rght[6]),
-    fmt_bw(tab$bw[6]),
-    formatC(tab$totr[6] + tab$totl[6], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(tab$n_left[6]),", N$_R$ = ", fmt_n(tab$n_rght[6])),
+    paste0("BW = ", fmt_bw(tab$bw[6])),
     #Federal
     fmt_est(tab$coef[7], tab$pv[7]),
     fmt_se(tab$se[7]),
-    fmt_npair(tab$n_left[7], tab$n_rght[7]),
-    fmt_bw(tab$bw[7]),
-    formatC(tab$totr[7] + tab$totl[7], format = "d", big.mark = ","),
+    paste0("N$_L$ = ", fmt_n(tab$n_left[7]),", N$_R$ = ", fmt_n(tab$n_rght[7])),
+    paste0("BW = ", fmt_bw(tab$bw[7])),
     #Mun
     fmt_est(tab$coef[8], tab$pv[8]),
     fmt_se(tab$se[8]),
-    fmt_npair(tab$n_left[8], tab$n_rght[8]),
-    fmt_bw(tab$bw[8]),
-    formatC(tab$totr[8] + tab$totl[8], format = "d", big.mark = ",")
+    paste0("N$_L$ = ", fmt_n(tab$n_left[8]),", N$_R$ = ", fmt_n(tab$n_rght[8])),
+    paste0("BW = ", fmt_bw(tab$bw[8]))
   ),
   check.names = FALSE,
   stringsAsFactors = FALSE
