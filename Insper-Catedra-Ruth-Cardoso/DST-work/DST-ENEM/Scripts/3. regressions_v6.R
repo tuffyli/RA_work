@@ -3423,25 +3423,33 @@ d_list <- c("d.mediabl", "d.mediabh")
 for (i in d_list){
   
   #Com Controles
+  temp <- base_res %>% mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) %>%  #Turning INF to NA
+    group_by(mun_res) %>% 
+    filter(!is.na(.data),
+           !is.na(lat_res),
+           !is.na(seg_res),
+           !is.na(lon_res)) %>% 
+    ungroup
   
-  ef <- dummy_cols(base_res$seg_res[base_res$ano == 2018])
+  
+  ef <- dummy_cols(temp$seg_res[temp$ano == 2018])
   ef <- ef %>% select(-1,-2)
   
   
   rp_list[[as.character(paste0("cc_",i,"|TC"))]] <-
     rdrobust(
-      y = base_res[[i]][base_res$ano == 2019],
-      x = base_res$dist_hv_res[base_res$ano == 2018],
+      y = temp[[i]][temp$ano == 2019],
+      x = temp$dist_hv_res[temp$ano == 2019],
       c = 0,
       vce = "hc0",
       covs = cbind(
         ef,
-        base_res$lat_res[base_res$ano == 2018],
-        base_res$lon_res[base_res$ano == 2018]
+        temp$lat_res[temp$ano == 2018],
+        temp$lon_res[temp$ano == 2018]
       )
     )
   
-  
+  rm(temp)
 }
 rm(ef,i)
 
