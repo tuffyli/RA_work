@@ -2760,7 +2760,7 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/final/Materias_simple_v1.tex")
 #5548
-rm(result, latex_table, notas_tab, names, d_list, p_list)
+rm(result, latex_table, notas_tab, d_list, p_list)
 
 
 # ---------------------------------------------------------------------------- #
@@ -4715,6 +4715,122 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/final/Mae_Education_v1.tex")
 
+rm(result, rlist, t10cc, df, latex_table, base_a, ano_list, names, names2)
+
+# ---------------------------------------------------------------------------- #
+### 8.3.5 Simple ----
+####8.3.5.1 Regression ----
+# ---------------------------------------------------------------------------- #
+rlist <- list()
+
+
+ano_list <- c(2018)
+
+for(ano_ref in ano_list) {
+  
+  
+  ano_comp <- ano_ref + 1
+  for(df in c("base_low", "base_high")) {
+    
+    base_a <- get(df)
+    
+    
+    #Com controles
+    ef <- dummy_cols(base_a$seg_res[base_a$ano == ano_ref])
+    ef <- ef %>% select(-1,-2)
+    
+    rlist[[as.character(paste0(df,"_",ano_comp,"-",ano_ref,"C|TC"))]] <- rdrobust(
+      y = base_a$d.media[base_a$ano == ano_comp],
+      x = base_a$dist_hv_res[base_a$ano == ano_ref],
+      c = 0,
+      p = 1,
+      vce = "hc0",
+      covs = cbind(
+        ef,
+        base_a$lat_res[base_a$ano == ano_ref],
+        base_a$lon_res[base_a$ano == ano_ref]
+      )
+    )
+    
+    
+    #Banda Fixa
+    rlist[[as.character(paste0(df,"_",ano_comp,"-",ano_ref,"BW|TC"))]] <- rdrobust(
+      y = base_a$d.media[base_a$ano == ano_comp],
+      x = base_a$dist_hv_res[base_a$ano == ano_ref],
+      c = 0,
+      p = 1,
+      vce = "hc0",
+      covs = cbind(
+        ef,
+        base_a$lat_res[base_a$ano == ano_ref],
+        base_a$lon_res[base_a$ano == ano_ref]
+      )
+    )
+    
+    
+  }
+  
+}
+rm(ef, ano_ref, ano_comp, ano_list)
+
+
+# ---------------------------------------------------------------------------- #
+####8.3.5.2 Result Table ----
+# ---------------------------------------------------------------------------- #
+t10cc <- data.frame(
+  coef   = sapply(rlist, function(x) x$coef[3]),
+  se     = sapply(rlist, function(x) x$se[3]),
+  pv     = sapply(rlist, function(x) x$pv[3]),
+  n_left = sapply(rlist, function(x) x$N_h[1]),
+  n_rght = sapply(rlist, function(x) x$N_h[2]),
+  bw     = sapply(rlist, function(x) x$bws[1, 1]),
+  totr   = sapply(rlist, function(x) x$N[2]),
+  totl   = sapply(rlist, function(x) x$N[1])
+)
+
+
+
+
+result <- data.frame(
+  ` ` = c(
+    "2019 $-$ 2018",
+    " ", " ", " "
+  ),
+  `(1)` = c(#Low
+    fmt_est(t10cc$coef[1], t10cc$pv[1]),
+    fmt_se(t10cc$se[1]),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[1]),", N$_R$ = ", fmt_n(t10cc$n_rght[1])),
+    paste0("BW = ", fmt_bw(t10cc$bw[1]))
+  ),
+  `(2)` = c(#Low
+    fmt_est(t10cc$coef[3], t10cc$pv[3]),
+    fmt_se(t10cc$se[3]),
+    paste0("N$_L$ = ", fmt_n(t10cc$n_left[3]),", N$_R$ = ", fmt_n(t10cc$n_rght[3])),
+    paste0("BW = ", fmt_bw(t10cc$bw[3]))
+    
+  ),
+  check.names = FALSE,
+  stringsAsFactors = FALSE
+)
+
+# ---------------------------------------------------------------------------- #
+# Latex 
+# ---------------------------------------------------------------------------- #
+
+
+# Cria a tabela LaTeX
+latex_table <- knitr::kable(
+  result,
+  format = "latex",
+  booktabs = TRUE,
+  escape = F,
+  align = "lcc",
+  linesep = ""
+)
+
+
+writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/final/Mae_Education_simple_v1.tex")
+
 rm(base_low, result, base_high, rlist, t10cc, df, latex_table, base_a, ano_list, names, names2)
 
 
@@ -6214,11 +6330,75 @@ save(t10cc,
 
 
 rm(base_a, base_t, c_rlist, result, rlist, t10cc, t10nc, ano, ano_list,
-   latex_table, names, ef, p, base, ano_ref, bw_main_a, bw_main_p, bw_bias_a, bw_bias_p)
+   latex_table, names, ef, p, ano_ref, bw_main_a, bw_main_p, bw_bias_a, bw_bias_p)
+
+# ---------------------------------------------------------------------------- #
+##14.4 Diff-in-diff ----
+# ---------------------------------------------------------------------------- #
+
+base <- base %>% 
+  mutate(aux_uf = mun_res %/% 100000,
+         
+         treat_west = ifelse(aux_uf %in% c(12,13,14,11, #AC, AM, RR, RO
+                                           51, 50 #MT, MS
+                                           ), 1, 0),
+         end_dst = ifelse(ano == 2019, 1, 0)) %>% 
+  arrange(mun_res, ano)
+
+
+# ---------------------------------------------------------------------------- #
+### 14.4.1 Regression ----
+# ---------------------------------------------------------------------------- #
+
+library(fixest)
+
+out <- feols(
+  media_nota ~ treat_west*end_dst + abs(dist_hv_res),
+  data = base,
+  cluster = ~ seg_res,
+  weights = ~ obs)
 
 
 
+etable(out)
 
+
+out2 <- feols(
+  media_nota ~ treat_west:i(ano, ref = 2018)| 
+     lat_res + lon_res,
+  data = base,
+  cluster = ~ seg_res,
+  weights = ~ obs)
+
+
+
+etable(out2)
+
+iplot(out2)
+
+# ---------------------------------------------------------------------------- #
+### 14.4.2 Graph ----
+# ---------------------------------------------------------------------------- #
+
+p <- ggplot(out, aes(x = ano, y = coef)) +
+  geom_errorbar(aes(ymin = ymin, ymax = ymax), width = 0.2, size = 0.8, color = "black") +
+  geom_point(size = 3, color = "black") +
+  geom_hline(yintercept = 0, color = "#D62728", linewidth = 1) +
+  labs(x = "Year", y = "ENEM Score") +
+  geom_vline(xintercept = 2018.5, color = "#BEBEBE", linetype = "dashed", size = 0.8) +
+  theme_minimal(base_size = 20) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(),
+    axis.text.y = element_text(size = 18),
+    axis.text.x = element_text(size = 18),
+    legend.position = "none"
+  ) +
+  scale_x_continuous(breaks = t10cc$ano) 
+
+
+print(p)
 
 # ---------------------------------------------------------------------------- #
 # 15. Filter + Desc ----
