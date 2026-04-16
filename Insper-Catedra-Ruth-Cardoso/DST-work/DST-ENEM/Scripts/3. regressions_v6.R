@@ -5258,6 +5258,8 @@ for (i in time_list){
     x = b_temp$dist_hv_res[b_temp$ano == 2018],
     c = 0,
     p = 1,
+    h = bw_main_r,
+    b = bw_bias_r,
     cluster = b_temp$seg_res[b_temp$ano == 2018],
     weights = b_temp$obs[b_temp$ano == 2018],
     vce = "hc0",
