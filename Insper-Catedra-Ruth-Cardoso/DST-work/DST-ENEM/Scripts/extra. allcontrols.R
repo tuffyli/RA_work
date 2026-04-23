@@ -1260,7 +1260,7 @@ ef <- ef %>% select(-1,-2)
 ### Main 
 list[[as.character(paste0(2019,"-",2018,"esc|Res"))]] <- rdrobust(
   y = base_esc$d.media[base_esc$ano == 2019],
-  x = base_esc$dist_hv_border[base_esc$ano == 2018],
+  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
   c = 0,
   cluster = base_esc$seg[base_esc$ano == 2018],
   weights = base_esc$obs[base_esc$ano == 2018],
@@ -1283,7 +1283,7 @@ list[[as.character(paste0(2019,"-",2018,"esc|Res"))]] <- rdrobust(
 
 list[[as.character(paste0(2019,"-",2018,"esc|fuso+temp"))]] <- rdrobust(
   y = base_esc$d.media[base_esc$ano == 2019],
-  x = base_esc$dist_hv_border[base_esc$ano == 2018],
+  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
   c = 0,
   cluster = base_esc$seg[base_esc$ano == 2018],
   weights = base_esc$obs[base_esc$ano == 2018],
@@ -1312,7 +1312,7 @@ list[[as.character(paste0(2019,"-",2018,"esc|fuso+temp"))]] <- rdrobust(
 
 list[[as.character(paste0(2019,"-",2018,"esc|all"))]] <- rdrobust(
   y = base_esc$d.media[base_esc$ano == 2019],
-  x = base_esc$dist_hv_border[base_esc$ano == 2018],
+  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
   c = 0,
   p = 1,
   cluster = base_esc$seg[base_esc$ano == 2018],
@@ -1347,7 +1347,7 @@ list[[as.character(paste0(2019,"-",2018,"esc|all"))]] <- rdrobust(
 
 list[[as.character(paste0(2019,"-",2018,"esc|all"))]] <- rdrobust(
   y = base_esc$d.media[base_esc$ano == 2019],
-  x = base_esc$dist_hv_border[base_esc$ano == 2018],
+  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
   c = 0,
   p = 1,
   cluster = base_esc$seg[base_esc$ano == 2018],
@@ -1399,7 +1399,7 @@ list[[as.character(paste0(2019,"-",2018,"esc|all"))]] <- rdrobust(
 
 list[[as.character(paste0(2019,"-",2018,"esc|all+pol"))]] <- rdrobust(
   y = base_esc$d.media[base_esc$ano == 2019],
-  x = base_esc$dist_hv_border[base_esc$ano == 2018],
+  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
   c = 0,
   p = 2,
   cluster = base_esc$seg[base_esc$ano == 2018],
@@ -1525,344 +1525,7 @@ rm(ef, list, result, t10, latex_table)
 rm(base_esc, base_a, bw_main_a, bw_bias_a)
 
 # ---------------------------------------------------------------------------- #
-## 1.3 Control Test ----
-# ---------------------------------------------------------------------------- #
-### 1.3.1 Data ----
-# ---------------------------------------------------------------------------- #
-
-# ---------- #
-#Res
-# ---------- #
-
-vars_diff <- c(
-  "media",
-  "escm", "escp", "pessoa", "empr_dom",
-  "n_ban", "n_qua", "n_car", "n_gel", "n_cel",
-  "pc", "internet", "renda1", "renda110", "renda10",
-  "pibpc",
-  "fem", "idade", "ppi",
-  "tempd1", "tempd2", "umidd2", "umidd1"
-)
-
-base_res <- base[priv0 == 1, .(
-  media    = mean(media, na.rm = TRUE),
-  escm     = mean(escm, na.rm = TRUE),
-  escp     = mean(escp, na.rm = TRUE),
-  pessoa   = mean(pessoas_dom, na.rm = TRUE),
-  empr_dom = mean(empr_dom, na.rm = TRUE),
-  n_ban    = mean(n_banheiro, na.rm = TRUE),
-  n_qua    = mean(n_quartos, na.rm = TRUE),
-  n_car    = mean(n_carros, na.rm = TRUE),
-  n_gel    = mean(n_geladeira, na.rm = TRUE),
-  n_cel    = mean(n_celular, na.rm = TRUE),
-  pc       = mean(pc, na.rm = TRUE),
-  internet = mean(internet, na.rm = TRUE),
-  renda1   = mean(renda1, na.rm = TRUE),
-  renda110 = mean(renda_1_10, na.rm = TRUE),
-  renda10  = mean(renda_10, na.rm = TRUE),
-  pibpc    = mean(pibpc, na.rm = TRUE),
-  fem      = mean(fem, na.rm = TRUE),
-  idade    = mean(id18, na.rm = TRUE),
-  ppi      = mean(ppi, na.rm = TRUE),
-  tempd1   = mean(temp_d1, na.rm = TRUE),
-  tempd2   = mean(temp_d2, na.rm = TRUE),
-  umidd2   = mean(umid_d2, na.rm = TRUE),
-  umidd1   = mean(umid_d1, na.rm = TRUE),
-  h13 = first(h13),
-  h12 = first(h12),
-  h11 = first(h11),
-  h10 = first(h10),
-  obs = .N
-), by = .(mun_res, ano, dist_hv_res, seg_res, lat_res, lon_res)] %>%
-  filter(as.numeric(ano) %in% c(2018, 2019)) %>%
-  arrange(mun_res, ano) %>%
-  group_by(mun_res) %>%
-  filter(n_distinct(ano) == 2) %>%
-  ungroup()
-
-
-for (v in vars_diff) {
-  
-  if (!v %in% names(base_res)) {
-    warning(paste("Variável não encontrada:", v))
-    next
-  }
-  
-  v1 <- paste0("v1_", v)
-  v2 <- paste0("v2_", v)
-  dv <- paste0("d", v)
-  
-  base_res[[v1]] <- ifelse(base_res$ano == 2018, base_res[[v]], NA_real_)
-  
-  base_res[[v2]] <- ave(
-    base_res[[v1]], 
-    base_res$mun_res, 
-    FUN = function(x) {
-      if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
-    }
-  )
-  
-  base_res[[dv]] <- base_res[[v]] - base_res[[v2]]
-  
-  base_res[[dv]][!is.finite(base_res[[dv]])] <- NA
-}
-
-temp_cols <- grep("^(v1_|v2_)", names(base_res), value = TRUE)
-base_res <- base_res %>% select(-all_of(temp_cols)) %>% 
-  mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) #Turning INF to NA
-
-
-rm(v, v1, v2, vars_diff, temp_cols, dv)
-
-# ---------------------------------------------------------------------------- #
-### 1.3.2 Regression ----
-# ---------------------------------------------------------------------------- #
-
-list <- list()
-
-efr <- dummy_cols(base_res$seg_res[base_res$ano == 2018])
-efr <- efr %>% select(-1,-2)
-
-# ------------------------------- #
-### More dist 
-# ------------------------------- #
-
-
-list[[as.character(paste0(2019,"-",2018,"|Dists"))]] <- rdrobust(
-  y = base_res$dmedia[base_res$ano == 2019],
-  x = base_res$dist_hv_res[base_res$ano == 2018],
-  c = 0,
-  cluster = base_res$seg_res[base_res$ano == 2018],
-  weights = base_res$obs[base_res$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    efr,
-    base_res$lat_res[base_res$ano == 2018],
-    base_res$lon_res[base_res$ano == 2018],
-    #Dists
-    base_res$dtempd1[base_res$ano == 2019], #Temperature
-    base_res$descm[base_res$ano == 2019], #mother educ
-    base_res$dn_ban[base_res$ano == 2019], #bathrooms
-    base_res$dumidd1[base_res$ano == 2019], #Humidity d1
-    base_res$dumidd2[base_res$ano == 2019], #Humidty d2
-    base_res$dfem[base_res$ano == 2019], #Female
-    
-    
-    #Fuso
-    base_res$h13[base_res$ano == 2019],
-    base_res$h12[base_res$ano == 2019],
-    base_res$h11[base_res$ano == 2019]
-  )
-)
-
-# ------------------------------- #
-### Socio + Fathers dist 
-# ------------------------------- #
-
-
-list[[as.character(paste0(2019,"-",2018,"|Socio"))]] <- rdrobust(
-  y = base_res$dmedia[base_res$ano == 2019],
-  x = base_res$dist_hv_res[base_res$ano == 2018],
-  c = 0,
-  cluster = base_res$seg_res[base_res$ano == 2018],
-  weights = base_res$obs[base_res$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    efr,
-    base_res$lat_res[base_res$ano == 2018],
-    base_res$lon_res[base_res$ano == 2018],
-    #Dists
-    base_res$dtempd1[base_res$ano == 2019], #Temperature
-    base_res$descm[base_res$ano == 2019], #mother educ
-    base_res$dn_ban[base_res$ano == 2019], #bathrooms
-    base_res$dumidd1[base_res$ano == 2019], #Humidity d1
-    base_res$dumidd2[base_res$ano == 2019], #Humidty d2
-    base_res$dfem[base_res$ano == 2019], #Female
-    base_res$dppi[base_res$ano == 2019], #PPI
-    base_res$didade[base_res$ano == 2019], #Age
-    base_res$descp[base_res$ano == 2019], #father educ
-    #Fuso
-    base_res$h13[base_res$ano == 2019],
-    base_res$h12[base_res$ano == 2019],
-    base_res$h11[base_res$ano == 2019]
-  )
-)
-
-# ------------------------------- #
-### Household 
-# ------------------------------- #
-
-list[[as.character(paste0(2019,"-",2018,"|House"))]] <- rdrobust(
-  y = base_res$dmedia[base_res$ano == 2019],
-  x = base_res$dist_hv_res[base_res$ano == 2018],
-  c = 0,
-  cluster = base_res$seg_res[base_res$ano == 2018],
-  weights = base_res$obs[base_res$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    efr,
-    base_res$lat_res[base_res$ano == 2018],
-    base_res$lon_res[base_res$ano == 2018],
-    #Dists
-    base_res$dtempd1[base_res$ano == 2019], #Temperature
-    base_res$descm[base_res$ano == 2019], #mother educ
-    base_res$dn_ban[base_res$ano == 2019], #bathrooms
-    base_res$dumidd1[base_res$ano == 2019], #Humidity d1
-    base_res$dumidd2[base_res$ano == 2019], #Humidty d2
-    base_res$dfem[base_res$ano == 2019], #Female
-    base_res$dppi[base_res$ano == 2019], #PPI
-    base_res$didade[base_res$ano == 2019], #Age
-    base_res$descp[base_res$ano == 2019], #father educ
-    
-    base_res$dpessoa[base_res$ano == 2019], #people in household
-    base_res$dn_qua[base_res$ano == 2019], #houses
-    base_res$dn_car[base_res$ano == 2019], #cars
-    base_res$dn_gel[base_res$ano == 2019], #geladeira
-    base_res$dn_cel[base_res$ano == 2019], #cel
-    base_res$dpc[base_res$ano == 2019],    #pc
-    base_res$dinternet[base_res$ano == 2019], #internet
-    
-    #Fuso
-    base_res$h13[base_res$ano == 2019],
-    base_res$h12[base_res$ano == 2019],
-    base_res$h11[base_res$ano == 2019]
-  )
-)
-
-
-# ------------------------------- #
-### All 
-# ------------------------------- #
-
-
-list[[as.character(paste0(2019,"-",2018,"|All"))]] <- rdrobust(
-  y = base_res$dmedia[base_res$ano == 2019],
-  x = base_res$dist_hv_res[base_res$ano == 2018],
-  c = 0,
-  cluster = base_res$seg_res[base_res$ano == 2018],
-  weights = base_res$obs[base_res$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    efr,
-    base_res$lat_res[base_res$ano == 2018],
-    base_res$lon_res[base_res$ano == 2018],
-    #Dists
-    base_res$dtempd1[base_res$ano == 2019], #Temperature
-    base_res$descm[base_res$ano == 2019], #mother educ
-    base_res$dn_ban[base_res$ano == 2019], #bathrooms
-    base_res$dumidd1[base_res$ano == 2019], #Humidity d1
-    base_res$dumidd2[base_res$ano == 2019], #Humidty d2
-    base_res$dfem[base_res$ano == 2019], #Female
-    base_res$dppi[base_res$ano == 2019], #PPI
-    base_res$didade[base_res$ano == 2019], #Age
-    base_res$descp[base_res$ano == 2019], #father educ
-    
-    base_res$dpessoa[base_res$ano == 2019], #people in household
-    base_res$dn_qua[base_res$ano == 2019], #houses
-    base_res$dn_car[base_res$ano == 2019], #cars
-    base_res$dn_gel[base_res$ano == 2019], #geladeira
-    base_res$dn_cel[base_res$ano == 2019], #cel
-    base_res$dpc[base_res$ano == 2019],    #pc
-    base_res$dinternet[base_res$ano == 2019], #internet
-    
-    base_res$drenda1[base_res$ano == 2019], #wage < 1MW
-    base_res$drenda110[base_res$ano == 2019], #wage 1MW - 10MW
-    base_res$drenda10[base_res$ano == 2019], #wage > 10MW
-    base_res$dpibpc[base_res$ano == 2019], #pibpc
-    
-    base_res$dtempd2[base_res$ano == 2019], #temp2
-    
-    #Fuso
-    base_res$h13[base_res$ano == 2019],
-    base_res$h12[base_res$ano == 2019],
-    base_res$h11[base_res$ano == 2019]
-  )
-)
-
-
-
-# ---------------------------------------------------------------------------- #
-### 1.3.3 Table ----
-# ---------------------------------------------------------------------------- #
-
-
-
-t10 <- data.frame(
-  coef   = sapply(list, function(x) x$coef[3]),
-  se     = sapply(list, function(x) x$se[3]),
-  pv     = sapply(list, function(x) x$pv[3]),
-  n_left = sapply(list, function(x) x$N_h[1]),
-  n_rght = sapply(list, function(x) x$N_h[2]),
-  bw     = sapply(list, function(x) x$bws[1, 1]),
-  totr   = sapply(list, function(x) x$N[2]),
-  totl   = sapply(list, function(x) x$N[1])
-)
-print(t10)
-
-
-# ---------------------------------------------------------------------------- #
-# Build final AER-style table
-# ---------------------------------------------------------------------------- #
-
-result <- data.frame(
-  ` ` = c(
-    "2019 - 2018",
-    " ",
-    "N = N$_L$, N$_R$",
-    "BW",
-    "Municipalities"
-  ),
-  `(1)` = c(
-    fmt_est(t10$coef[1], t10$pv[1]),
-    fmt_se(t10$se[1]),
-    fmt_npair(t10$n_left[1], t10$n_rght[1]),
-    fmt_bw(t10$bw[1]),
-    formatC(t10$totr[1] + t10$totl[1], format = "d", big.mark = ",")
-  ),
-  `(2)` = c(
-    fmt_est(t10$coef[2], t10$pv[2]),
-    fmt_se(t10$se[2]),
-    fmt_npair(t10$n_left[2], t10$n_rght[2]),
-    fmt_bw(t10$bw[2]),
-    ""
-  ),
-  `(3)` = c(
-    fmt_est(t10$coef[3], t10$pv[3]),
-    fmt_se(t10$se[3]),
-    fmt_npair(t10$n_left[3], t10$n_rght[3]),
-    fmt_bw(t10$bw[3]),
-    ""
-  ),
-  `(4)` = c(
-    fmt_est(t10$coef[4], t10$pv[4]),
-    fmt_se(t10$se[4]),
-    fmt_npair(t10$n_left[4], t10$n_rght[4]),
-    fmt_bw(t10$bw[4]),
-    ""
-  ),
-  check.names = FALSE,
-  stringsAsFactors = FALSE
-)
-
-# ---------------------------------------------------------------------------- #
-# Latex
-# ---------------------------------------------------------------------------- #
-
-latex_table <- knitr::kable(
-  result,
-  format = "latex",
-  booktabs = TRUE,
-  escape = F,
-  align = "lccc",
-  linesep = "",
-)
-
-
-writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/robust_vars.tex")
-rm(efr, list, result, t10, latex_table)
-
-# ---------------------------------------------------------------------------- #
-## 1.4 Main 2018-2017 ----
+## 1.3 Main 2018-2017 ----
 # ---------------------------------------------------------------------------- #
 
 
@@ -1910,7 +1573,7 @@ base_res <- base[priv0 == 1, .(
   arrange(mun_res, ano) %>%
   group_by(mun_res) %>%
   filter(n_distinct(ano) == 2) %>%
-  ungroup()
+  ungroup() 
 
 
 for (v in vars_diff) {
@@ -1942,7 +1605,33 @@ for (v in vars_diff) {
 temp_cols <- grep("^(v1_|v2_)", names(base_res), value = TRUE)
 base_res <- base_res %>% select(-all_of(temp_cols)) %>% 
   mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) %>%  #Turning INF to NA
-  rename(d.media = dmedia)
+  rename(d.media = dmedia) %>% 
+  mutate(
+    aux_uf = mun_res %/% 100000,
+    
+    # Exam start time dummies
+    h13 = ifelse(
+      aux_uf %in% c(
+        52, 53, 31, 32, 33, 35, 42, 41, 43,
+        29, 28, 27, 26, 25, 24, 23, 22, 21, 17, 15, 16
+      ),
+      1,0
+    ),
+    
+    h12 = ifelse(
+      aux_uf %in% c(51, 50, 11, 14) |
+        (aux_uf == 13 & !mun_res %in% am_mun_special),
+      1, 0
+    ),
+    
+    h11 = ifelse(
+      
+      aux_uf == 12 |
+        mun_res %in% am_mun_special,
+      1, 0
+    )
+  ) %>% 
+  select(-aux_uf)
 
 
 
