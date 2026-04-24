@@ -332,7 +332,7 @@ save(bw_main_r, bw_bias_r,
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
-### 1.1.5 Pol + All ----
+### 1.1.6 Pol + All ----
 # ---------------------------------------------------------------------------- #
 
 list[[as.character(paste0(2019,"-",2018,"|all+p2"))]] <- rdrobust(
@@ -385,7 +385,7 @@ list[[as.character(paste0(2019,"-",2018,"|all+p2"))]] <- rdrobust(
 
 
 # ---------------------------------------------------------------------------- #
-### 1.1.6 Tabela  ----
+### 1.1.7 Tabela  ----
 # ---------------------------------------------------------------------------- #
 
 t10 <- data.frame(
@@ -1682,25 +1682,6 @@ efr <- dummy_cols(base_res$seg_res[base_res$ano == 2017])
 efr <- efr %>% select(-1,-2)
 
 ### Main 
-list[[as.character(paste0(2018,"-",2017,"C|Res"))]] <- rdrobust(
-  y = base_res$d.media[base_res$ano == 2018],
-  x = base_res$dist_hv_res[base_res$ano == 2017],
-  c = 0,
-  cluster = base_res$seg_res[base_res$ano == 2017],
-  weights = base_res$obs[base_res$ano == 2017],
-  vce = "hc0",
-  covs = cbind(
-    efr,
-    base_res$lat_res[base_res$ano == 2017],
-    base_res$lon_res[base_res$ano == 2017]
-  )
-)
-
-
-# ---------------------------------------------------------------------------- #
-### 1.4.2 Fuso ----
-# ---------------------------------------------------------------------------- #
-
 list[[as.character(paste0(2018,"-",2017,"|fuso"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2018],
   x = base_res$dist_hv_res[base_res$ano == 2017],
@@ -1718,11 +1699,12 @@ list[[as.character(paste0(2018,"-",2017,"|fuso"))]] <- rdrobust(
   )
 )
 
+
 # ---------------------------------------------------------------------------- #
-### 1.4.3 Fuso + All ----
+### 1.4.2 Temperature ----
 # ---------------------------------------------------------------------------- #
 
-list[[as.character(paste0(2018,"-",2017,"|fuso+all"))]] <- rdrobust(
+list[[as.character(paste0(2018,"-",2017,"|temp"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2018],
   x = base_res$dist_hv_res[base_res$ano == 2017],
   c = 0,
@@ -1733,33 +1715,45 @@ list[[as.character(paste0(2018,"-",2017,"|fuso+all"))]] <- rdrobust(
     efr,
     base_res$lat_res[base_res$ano == 2017],
     base_res$lon_res[base_res$ano == 2017],
-    #All
+    base_res$h13[base_res$ano == 2018],
+    base_res$h12[base_res$ano == 2018],
+    base_res$h11[base_res$ano == 2018],
+    #Dists
     base_res$dtempd1[base_res$ano == 2018], #Temperature
-    base_res$descm[base_res$ano == 2018], #mother educ
-    base_res$dn_ban[base_res$ano == 2018], #bathrooms
     base_res$dumidd1[base_res$ano == 2018], #Humidity d1
     base_res$dumidd2[base_res$ano == 2018], #Humidty d2
+    base_res$dtempd2[base_res$ano == 2018] #temp2
+  )
+)
+
+# ---------------------------------------------------------------------------- #
+### 1.4.3 Fuso + Temp + Socio ----
+# ---------------------------------------------------------------------------- #
+
+list[[as.character(paste0(2018,"-",2017,"|fuso+temp+socio"))]] <- rdrobust(
+  y = base_res$d.media[base_res$ano == 2018],
+  x = base_res$dist_hv_res[base_res$ano == 2017],
+  c = 0,
+  cluster = base_res$seg_res[base_res$ano == 2017],
+  weights = base_res$obs[base_res$ano == 2017],
+  vce = "hc0",
+  covs = cbind(
+    efr,
+    base_res$lat_res[base_res$ano == 2017],
+    base_res$lon_res[base_res$ano == 2017],
+    #Weather
+    base_res$dtempd1[base_res$ano == 2018], #Temperature
+    base_res$dumidd1[base_res$ano == 2018], #Humidity d1
+    base_res$dumidd2[base_res$ano == 2018], #Humidty d2
+    base_res$dtempd2[base_res$ano == 2018], #temp2
+    
+    #Parents and Individuals Characteristics
+    base_res$descm[base_res$ano == 2018], #mother educ
     base_res$dfem[base_res$ano == 2018], #Female
     base_res$dppi[base_res$ano == 2018], #PPI
     base_res$didade[base_res$ano == 2018], #Age
     base_res$descp[base_res$ano == 2018], #father educ
-    
-    base_res$dpessoa[base_res$ano == 2018], #people in household
-    base_res$dn_qua[base_res$ano == 2018], #houses
-    base_res$dn_car[base_res$ano == 2018], #cars
-    base_res$dn_gel[base_res$ano == 2018], #geladeira
-    base_res$dn_cel[base_res$ano == 2018], #cel
-    base_res$dpc[base_res$ano == 2018],    #pc
-    base_res$dinternet[base_res$ano == 2018], #internet
-    
-    base_res$drenda1[base_res$ano == 2018], #wage < 1MW
-    base_res$drenda110[base_res$ano == 2018], #wage 1MW - 10MW
-    base_res$drenda10[base_res$ano == 2018], #wage > 10MW
-    base_res$dpibpc[base_res$ano == 2018], #pibpc
-    
-    base_res$dtempd2[base_res$ano == 2018], #temp2
-    
-    #Fuso
+    #Timezones
     base_res$h13[base_res$ano == 2018],
     base_res$h12[base_res$ano == 2018],
     base_res$h11[base_res$ano == 2018]
@@ -1767,14 +1761,14 @@ list[[as.character(paste0(2018,"-",2017,"|fuso+all"))]] <- rdrobust(
 )
 
 # ---------------------------------------------------------------------------- #
-### 1.1.4 Pol + Fuso + Cont ----
+### 1.1.4 All ----
 # ---------------------------------------------------------------------------- #
 
-list[[as.character(paste0(2018,"-",2017,"|pol+fuso"))]] <- rdrobust(
+list[[as.character(paste0(2018,"-",2017,"|all"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2018],
   x = base_res$dist_hv_res[base_res$ano == 2017],
   c = 0,
-  p = 2, 
+  p = 1, 
   cluster = base_res$seg_res[base_res$ano == 2017],
   weights = base_res$obs[base_res$ano == 2017],
   vce = "hc0",
@@ -1790,10 +1784,10 @@ list[[as.character(paste0(2018,"-",2017,"|pol+fuso"))]] <- rdrobust(
 )
 
 # ---------------------------------------------------------------------------- #
-### 1.4.5 Pol + Fuso + All ----
+### 1.4.5 Pol + All ----
 # ---------------------------------------------------------------------------- #
 
-list[[as.character(paste0(2018,"-",2017,"|pol+fuso+all"))]] <- rdrobust(
+list[[as.character(paste0(2018,"-",2017,"|pol+all"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2018],
   x = base_res$dist_hv_res[base_res$ano == 2017],
   c = 0,
@@ -1805,17 +1799,15 @@ list[[as.character(paste0(2018,"-",2017,"|pol+fuso+all"))]] <- rdrobust(
     efr,
     base_res$lat_res[base_res$ano == 2017],
     base_res$lon_res[base_res$ano == 2017],
-    #All
+    
+    #Weather
     base_res$dtempd1[base_res$ano == 2018], #Temperature
-    base_res$descm[base_res$ano == 2018], #mother educ
-    base_res$dn_ban[base_res$ano == 2018], #bathrooms
     base_res$dumidd1[base_res$ano == 2018], #Humidity d1
     base_res$dumidd2[base_res$ano == 2018], #Humidty d2
-    base_res$dfem[base_res$ano == 2018], #Female
-    base_res$dppi[base_res$ano == 2018], #PPI
-    base_res$didade[base_res$ano == 2018], #Age
-    base_res$descp[base_res$ano == 2018], #father educ
+    base_res$dtempd2[base_res$ano == 2018], #temp2
     
+    #House
+    base_res$dn_ban[base_res$ano == 2018], #bathrooms
     base_res$dpessoa[base_res$ano == 2018], #people in household
     base_res$dn_qua[base_res$ano == 2018], #houses
     base_res$dn_car[base_res$ano == 2018], #cars
@@ -1823,13 +1815,18 @@ list[[as.character(paste0(2018,"-",2017,"|pol+fuso+all"))]] <- rdrobust(
     base_res$dn_cel[base_res$ano == 2018], #cel
     base_res$dpc[base_res$ano == 2018],    #pc
     base_res$dinternet[base_res$ano == 2018], #internet
+    base_res$dempr_dom[base_res$ano == 2018], #Housekeeping
     
+    #remaining
+    base_res$descm[base_res$ano == 2018], #mother educ
+    base_res$dfem[base_res$ano == 2018], #Female
+    base_res$dppi[base_res$ano == 2018], #PPI
+    base_res$didade[base_res$ano == 2018], #Age
+    base_res$descp[base_res$ano == 2018], #father educ
     base_res$drenda1[base_res$ano == 2018], #wage < 1MW
     base_res$drenda110[base_res$ano == 2018], #wage 1MW - 10MW
     base_res$drenda10[base_res$ano == 2018], #wage > 10MW
     base_res$dpibpc[base_res$ano == 2018], #pibpc
-    
-    base_res$dtempd2[base_res$ano == 2018], #temp2
     
     #Fuso
     base_res$h13[base_res$ano == 2018],
@@ -2853,17 +2850,15 @@ for (i in d_list){
         ef, 
         base_res$lat_res[base_res$ano == 2018],
         base_res$lon_res[base_res$ano == 2018],
-        #All
+        
+        #Weather
         base_res$dtempd1[base_res$ano == 2019], #Temperature
-        base_res$descm[base_res$ano == 2019], #mother educ
-        base_res$dn_ban[base_res$ano == 2019], #bathrooms
         base_res$dumidd1[base_res$ano == 2019], #Humidity d1
         base_res$dumidd2[base_res$ano == 2019], #Humidty d2
-        base_res$dfem[base_res$ano == 2019], #Female
-        base_res$dppi[base_res$ano == 2019], #PPI
-        base_res$didade[base_res$ano == 2019], #Age
-        base_res$descp[base_res$ano == 2019], #father educ
+        base_res$dtempd2[base_res$ano == 2019], #temp2
         
+        #House
+        base_res$dn_ban[base_res$ano == 2019], #bathrooms
         base_res$dpessoa[base_res$ano == 2019], #people in household
         base_res$dn_qua[base_res$ano == 2019], #houses
         base_res$dn_car[base_res$ano == 2019], #cars
@@ -2871,13 +2866,18 @@ for (i in d_list){
         base_res$dn_cel[base_res$ano == 2019], #cel
         base_res$dpc[base_res$ano == 2019],    #pc
         base_res$dinternet[base_res$ano == 2019], #internet
+        base_res$dempr_dom[base_res$ano == 2019], #Housekeeping
         
+        #remaining
+        base_res$descm[base_res$ano == 2019], #mother educ
+        base_res$dfem[base_res$ano == 2019], #Female
+        base_res$dppi[base_res$ano == 2019], #PPI
+        base_res$didade[base_res$ano == 2019], #Age
+        base_res$descp[base_res$ano == 2019], #father educ
         base_res$drenda1[base_res$ano == 2019], #wage < 1MW
         base_res$drenda110[base_res$ano == 2019], #wage 1MW - 10MW
         base_res$drenda10[base_res$ano == 2019], #wage > 10MW
         base_res$dpibpc[base_res$ano == 2019], #pibpc
-        
-        base_res$dtempd2[base_res$ano == 2019], #temp2
         
         #Fuso
         base_res$h13[base_res$ano == 2019],
@@ -2975,7 +2975,7 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/Materias_v1.tex")
 #5548
-rm(result, latex_table, notas_tab, names, d_list, p_list)
+rm(result, latex_table, notas_tab, d_list, p_list)
 
 # ---------------------------------------------------------------------------- #
 # 4. Redação ----
@@ -3065,17 +3065,15 @@ for (i in d_list){
         ef, 
         base_res$lat_res[base_res$ano == 2018],
         base_res$lon_res[base_res$ano == 2018],
-        #All
+        
+        #Weather
         base_res$dtempd1[base_res$ano == 2019], #Temperature
-        base_res$descm[base_res$ano == 2019], #mother educ
-        base_res$dn_ban[base_res$ano == 2019], #bathrooms
         base_res$dumidd1[base_res$ano == 2019], #Humidity d1
         base_res$dumidd2[base_res$ano == 2019], #Humidty d2
-        base_res$dfem[base_res$ano == 2019], #Female
-        base_res$dppi[base_res$ano == 2019], #PPI
-        base_res$didade[base_res$ano == 2019], #Age
-        base_res$descp[base_res$ano == 2019], #father educ
+        base_res$dtempd2[base_res$ano == 2019], #temp2
         
+        #House
+        base_res$dn_ban[base_res$ano == 2019], #bathrooms
         base_res$dpessoa[base_res$ano == 2019], #people in household
         base_res$dn_qua[base_res$ano == 2019], #houses
         base_res$dn_car[base_res$ano == 2019], #cars
@@ -3083,13 +3081,18 @@ for (i in d_list){
         base_res$dn_cel[base_res$ano == 2019], #cel
         base_res$dpc[base_res$ano == 2019],    #pc
         base_res$dinternet[base_res$ano == 2019], #internet
+        base_res$dempr_dom[base_res$ano == 2019], #Housekeeping
         
+        #remaining
+        base_res$descm[base_res$ano == 2019], #mother educ
+        base_res$dfem[base_res$ano == 2019], #Female
+        base_res$dppi[base_res$ano == 2019], #PPI
+        base_res$didade[base_res$ano == 2019], #Age
+        base_res$descp[base_res$ano == 2019], #father educ
         base_res$drenda1[base_res$ano == 2019], #wage < 1MW
         base_res$drenda110[base_res$ano == 2019], #wage 1MW - 10MW
         base_res$drenda10[base_res$ano == 2019], #wage > 10MW
         base_res$dpibpc[base_res$ano == 2019], #pibpc
-        
-        base_res$dtempd2[base_res$ano == 2019], #temp2
         
         #Fuso
         base_res$h13[base_res$ano == 2019],
@@ -3305,17 +3308,15 @@ for (i in d_list){
         ef,
         base_res$lat_res[base_res$ano == 2018],
         base_res$lon_res[base_res$ano == 2018],
-        #All
+        
+        #Weather
         base_res$dtempd1[base_res$ano == 2019], #Temperature
-        base_res$descm[base_res$ano == 2019], #mother educ
-        base_res$dn_ban[base_res$ano == 2019], #bathrooms
         base_res$dumidd1[base_res$ano == 2019], #Humidity d1
         base_res$dumidd2[base_res$ano == 2019], #Humidty d2
-        base_res$dfem[base_res$ano == 2019], #Female
-        base_res$dppi[base_res$ano == 2019], #PPI
-        base_res$didade[base_res$ano == 2019], #Age
-        base_res$descp[base_res$ano == 2019], #father educ
+        base_res$dtempd2[base_res$ano == 2019], #temp2
         
+        #House
+        base_res$dn_ban[base_res$ano == 2019], #bathrooms
         base_res$dpessoa[base_res$ano == 2019], #people in household
         base_res$dn_qua[base_res$ano == 2019], #houses
         base_res$dn_car[base_res$ano == 2019], #cars
@@ -3323,13 +3324,18 @@ for (i in d_list){
         base_res$dn_cel[base_res$ano == 2019], #cel
         base_res$dpc[base_res$ano == 2019],    #pc
         base_res$dinternet[base_res$ano == 2019], #internet
+        base_res$dempr_dom[base_res$ano == 2019], #Housekeeping
         
+        #remaining
+        base_res$descm[base_res$ano == 2019], #mother educ
+        base_res$dfem[base_res$ano == 2019], #Female
+        base_res$dppi[base_res$ano == 2019], #PPI
+        base_res$didade[base_res$ano == 2019], #Age
+        base_res$descp[base_res$ano == 2019], #father educ
         base_res$drenda1[base_res$ano == 2019], #wage < 1MW
         base_res$drenda110[base_res$ano == 2019], #wage 1MW - 10MW
         base_res$drenda10[base_res$ano == 2019], #wage > 10MW
         base_res$dpibpc[base_res$ano == 2019], #pibpc
-        
-        base_res$dtempd2[base_res$ano == 2019], #temp2
         
         #Fuso
         base_res$h13[base_res$ano == 2019],
@@ -3385,17 +3391,15 @@ for (i in new_list){
         ef,
         base_res$lat_res[base_res$ano == 2018],
         base_res$lon_res[base_res$ano == 2018],
-        #All
+        
+        #Weather
         base_res$dtempd1[base_res$ano == 2019], #Temperature
-        base_res$descm[base_res$ano == 2019], #mother educ
-        base_res$dn_ban[base_res$ano == 2019], #bathrooms
         base_res$dumidd1[base_res$ano == 2019], #Humidity d1
         base_res$dumidd2[base_res$ano == 2019], #Humidty d2
-        base_res$dfem[base_res$ano == 2019], #Female
-        base_res$dppi[base_res$ano == 2019], #PPI
-        base_res$didade[base_res$ano == 2019], #Age
-        base_res$descp[base_res$ano == 2019], #father educ
+        base_res$dtempd2[base_res$ano == 2019], #temp2
         
+        #House
+        base_res$dn_ban[base_res$ano == 2019], #bathrooms
         base_res$dpessoa[base_res$ano == 2019], #people in household
         base_res$dn_qua[base_res$ano == 2019], #houses
         base_res$dn_car[base_res$ano == 2019], #cars
@@ -3403,13 +3407,18 @@ for (i in new_list){
         base_res$dn_cel[base_res$ano == 2019], #cel
         base_res$dpc[base_res$ano == 2019],    #pc
         base_res$dinternet[base_res$ano == 2019], #internet
+        base_res$dempr_dom[base_res$ano == 2019], #Housekeeping
         
+        #remaining
+        base_res$descm[base_res$ano == 2019], #mother educ
+        base_res$dfem[base_res$ano == 2019], #Female
+        base_res$dppi[base_res$ano == 2019], #PPI
+        base_res$didade[base_res$ano == 2019], #Age
+        base_res$descp[base_res$ano == 2019], #father educ
         base_res$drenda1[base_res$ano == 2019], #wage < 1MW
         base_res$drenda110[base_res$ano == 2019], #wage 1MW - 10MW
         base_res$drenda10[base_res$ano == 2019], #wage > 10MW
         base_res$dpibpc[base_res$ano == 2019], #pibpc
-        
-        base_res$dtempd2[base_res$ano == 2019], #temp2
         
         #Fuso
         base_res$h13[base_res$ano == 2019],
@@ -3622,6 +3631,7 @@ for (i in c(0:1)) {
           temp_ag$dn_cel[temp_ag$ano == 2019], #cel
           temp_ag$dpc[temp_ag$ano == 2019],    #pc
           temp_ag$dinternet[temp_ag$ano == 2019], #internet
+          temp_ag$dempr_dom[temp_ag$ano == 2019], #housekeeping
           
           temp_ag$drenda1[temp_ag$ano == 2019], #wage < 1MW
           temp_ag$drenda110[temp_ag$ano == 2019], #wage 1MW - 10MW
@@ -3745,7 +3755,6 @@ latex_table <- knitr::kable(
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/Dificuldade_mae.tex")
 #0 = 5465, 1 = 5433
 rm( mat_nota, result, latex_table)
-rm(dif_list, dif_tab, mat_nota, result, rp_list, latex_table, d_list)
 
 # ---------------------------------------------------------------------------- #
 # 6. DIAS (comparabilidade) ----
@@ -3818,17 +3827,15 @@ for (i in d_list){
         ef, 
         base_res$lat_res[base_res$ano == 2018],
         base_res$lon_res[base_res$ano == 2018],
-        #All
+        
+        #Weather
         base_res$dtempd1[base_res$ano == 2019], #Temperature
-        base_res$descm[base_res$ano == 2019], #mother educ
-        base_res$dn_ban[base_res$ano == 2019], #bathrooms
         base_res$dumidd1[base_res$ano == 2019], #Humidity d1
         base_res$dumidd2[base_res$ano == 2019], #Humidty d2
-        base_res$dfem[base_res$ano == 2019], #Female
-        base_res$dppi[base_res$ano == 2019], #PPI
-        base_res$didade[base_res$ano == 2019], #Age
-        base_res$descp[base_res$ano == 2019], #father educ
+        base_res$dtempd2[base_res$ano == 2019], #temp2
         
+        #House
+        base_res$dn_ban[base_res$ano == 2019], #bathrooms
         base_res$dpessoa[base_res$ano == 2019], #people in household
         base_res$dn_qua[base_res$ano == 2019], #houses
         base_res$dn_car[base_res$ano == 2019], #cars
@@ -3836,13 +3843,18 @@ for (i in d_list){
         base_res$dn_cel[base_res$ano == 2019], #cel
         base_res$dpc[base_res$ano == 2019],    #pc
         base_res$dinternet[base_res$ano == 2019], #internet
+        base_res$dempr_dom[base_res$ano == 2019], #Housekeeping
         
+        #remaining
+        base_res$descm[base_res$ano == 2019], #mother educ
+        base_res$dfem[base_res$ano == 2019], #Female
+        base_res$dppi[base_res$ano == 2019], #PPI
+        base_res$didade[base_res$ano == 2019], #Age
+        base_res$descp[base_res$ano == 2019], #father educ
         base_res$drenda1[base_res$ano == 2019], #wage < 1MW
         base_res$drenda110[base_res$ano == 2019], #wage 1MW - 10MW
         base_res$drenda10[base_res$ano == 2019], #wage > 10MW
         base_res$dpibpc[base_res$ano == 2019], #pibpc
-        
-        base_res$dtempd2[base_res$ano == 2019], #temp2
         
         #Fuso
         base_res$h13[base_res$ano == 2019],
@@ -3938,22 +3950,202 @@ rm(dias, p_list, result, d_list, latex_table)
 # ---------------------------------------------------------------------------- #
 gc()
 
+inpe_days_1819 <- list(
+  `2018` = c(d1 = 4, d2 = 11),
+  `2019` = c(d1 = 3, d2 = 10)
+)
+
+# Municipalities with special timezone treatment in Amazonas
+am_mun_special <- c(
+  1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+  1302306, 1302405, 1303502, 1303908, 1304062
+)
+
+add_inpe_prova_1819 <- function(base, inpe_path = "Z:/Tuffy/Paper - HV/Bases/inpe/mun") {
+  base <- as.data.table(copy(base))
+  
+  for (yr in sort(unique(base$ano))) {
+    if (!yr %in% c(2018, 2019)) next
+    
+    dd <- inpe_days_1819[[as.character(yr)]]
+    
+    inpe <- readRDS(file.path(inpe_path, paste0("inpe_mun_", yr, ".rds"))) %>%
+      as.data.table()
+    
+    inpe[, codmun := as.numeric(codmun)]
+    
+    inpe_prova <- inpe[
+      ,
+      .(
+        codmun,
+        ano = yr,
+        temp_d1 = get(paste0("temp_", dd["d1"])),
+        temp_d2 = get(paste0("temp_", dd["d2"])),
+        umid_d1 = get(paste0("umid_", dd["d1"])),
+        umid_d2 = get(paste0("umid_", dd["d2"]))
+      )
+    ]
+    
+    base[
+      inpe_prova,
+      on = .(mun_prova = codmun, ano),
+      `:=`(
+        temp_d1 = i.temp_d1,
+        temp_d2 = i.temp_d2,
+        umid_d1 = i.umid_d1,
+        umid_d2 = i.umid_d2
+      )
+    ]
+    
+    rm(inpe, inpe_prova, dd)
+    gc()
+  }
+  
+  base
+}
+
+
 base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_2018.RDS"))) %>%
   #Mig filter - over the DST border
-  mutate(aux_res = mun_res %/% 100000,
-         aux_pro = mun_prova %/% 100000,
-         
-         over_hv_border = case_when(
-           aux_res < 30 & aux_pro >= 30 ~ 1, #From Non-DST to DST
-           aux_res >= 30 & aux_pro < 30 ~ 1, #From DST to Non-DST
-           .default = 0
-         )) %>% 
-  select(-c(aux_res, aux_pro)) %>% 
+  mutate(
+    aux_res = mun_res %/% 100000,
+    aux_pro = mun_prova %/% 100000,
+    
+    # Exam start time dummies
+    h13 = ifelse(
+      aux_res %in% c(
+        52, 53, 31, 32, 33, 35, 42, 41, 43,
+        29, 28, 27, 26, 25, 24, 23, 22, 21, 17, 15, 16
+      ),
+      1,0
+    ),
+    
+    h12 = ifelse(
+      aux_res %in% c(51, 50, 11, 14) |
+        (aux_res == 13 & !mun_res %in% am_mun_special),
+      1, 0
+    ),
+    
+    h11 = ifelse(
+      
+      aux_res == 12 |
+        mun_res %in% am_mun_special,
+      1, 0
+    ),
+    
+    new_dist = dist_hv_border / 100000,
+    
+    escm = case_when(
+      esc_mae %in% c("D","E","F") ~ 1, #With high school
+      esc_mae %in% c("A","B","C") ~ 0,
+      .default = NA),
+    
+    escp = case_when(
+      esc_pai %in% c("D","E","F") ~ 1, #With High school
+      esc_pai %in% c("A","B","C") ~ 0,
+      .default = NA
+    ),
+    
+    
+    renda_1_10 = ifelse(renda_dom == "C", 1, 0),
+    renda_10   = ifelse(renda_dom == "D", 1, 0),
+    
+    over_hv_border = case_when(
+      aux_res < 30 & aux_pro >= 30 ~ 1,
+      aux_res >= 30 & aux_pro < 30 ~ 1,
+      TRUE ~ 0
+    )
+  ) %>%
+  select(-aux_res, -aux_pro) %>% 
+  add_inpe_prova_1819() %>% 
+  
   #filter(over_hv_border == 0) %>%  #No migration over the border
   setDT()
 
 
+
+
+vars_diff <- c(
+  "abs",
+  "escm", "escp", "pessoa", "empr_dom",
+  "n_ban", "n_qua", "n_car", "n_gel", "n_cel",
+  "pc", "internet", "renda1", "renda110", "renda10",
+  "pibpc",
+  "fem", "idade", "ppi",
+  "tempd1", "tempd2", "umidd2", "umidd1"
+)
+
+base_ag_abs <- base_abs[priv0 == 1, .(
+  abs    = mean(abs, na.rm = TRUE),
+  escm     = mean(escm, na.rm = TRUE),
+  escp     = mean(escp, na.rm = TRUE),
+  pessoa   = mean(pessoas_dom, na.rm = TRUE),
+  empr_dom = mean(empr_dom, na.rm = TRUE),
+  n_ban    = mean(n_banheiro, na.rm = TRUE),
+  n_qua    = mean(n_quartos, na.rm = TRUE),
+  n_car    = mean(n_carros, na.rm = TRUE),
+  n_gel    = mean(n_geladeira, na.rm = TRUE),
+  n_cel    = mean(n_celular, na.rm = TRUE),
+  pc       = mean(pc, na.rm = TRUE),
+  internet = mean(internet, na.rm = TRUE),
+  renda1   = mean(renda1, na.rm = TRUE),
+  renda110 = mean(renda_1_10, na.rm = TRUE),
+  renda10  = mean(renda_10, na.rm = TRUE),
+  pibpc    = mean(pibpc, na.rm = TRUE),
+  fem      = mean(fem, na.rm = TRUE),
+  idade    = mean(id18, na.rm = TRUE),
+  ppi      = mean(ppi, na.rm = TRUE),
+  tempd1   = mean(temp_d1, na.rm = TRUE),
+  tempd2   = mean(temp_d2, na.rm = TRUE),
+  umidd2   = mean(umid_d2, na.rm = TRUE),
+  umidd1   = mean(umid_d1, na.rm = TRUE),
+  h13 = first(h13),
+  h12 = first(h12),
+  h11 = first(h11),
+  h10 = first(h10),
+  obs = .N
+), by = .(mun_res, ano)] %>%
+  filter(as.numeric(ano) %in% c(2018, 2019)) %>%
+  arrange(mun_res, ano) %>%
+  group_by(mun_res) %>%
+  filter(n_distinct(ano) == 2) %>%
+  ungroup()
+
+
+for (v in vars_diff) {
+  
+  if (!v %in% names(base_ag_abs)) {
+    warning(paste("Variável não encontrada:", v))
+    next
+  }
+  
+  v1 <- paste0("v1_", v)
+  v2 <- paste0("v2_", v)
+  dv <- paste0("d", v)
+  
+  base_ag_abs[[v1]] <- ifelse(base_ag_abs$ano == 2018, base_ag_abs[[v]], NA_real_)
+  
+  base_ag_abs[[v2]] <- ave(
+    base_ag_abs[[v1]], 
+    base_ag_abs$mun_res, 
+    FUN = function(x) {
+      if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
+    }
+  )
+  
+  base_ag_abs[[dv]] <- base_ag_abs[[v]] - base_ag_abs[[v2]]
+  
+  base_ag_abs[[dv]][!is.finite(base_ag_abs[[dv]])] <- NA
+}
+
+temp_cols <- grep("^(v1_|v2_)", names(base_ag_abs), value = TRUE)
+base_ag_abs <- base_ag_abs %>% select(-all_of(temp_cols)) %>% 
+  mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) %>%  #Turning INF to NA
+  rename(d.media = dmedia)
+
+
+rm(vars_diff, v, v1, v2)
 # ---------------------------------------------------------------------------- #
 ## 7.1 Reg ----
 # ---------------------------------------------------------------------------- #
@@ -4085,6 +4277,7 @@ for (i in d_list){
         base_a$dn_cel[base_a$ano == 2019], #cel
         base_a$dpc[base_a$ano == 2019],    #pc
         base_a$dinternet[base_a$ano == 2019], #internet
+        base_a$dempr_dom[base_a$ano == 2019], #Housekeeping
         
         base_a$drenda1[base_a$ano == 2019], #wage < 1MW
         base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -4228,6 +4421,7 @@ for (i in d_list){
         temp$dn_cel, #cel
         temp$dpc,    #pc
         temp$dinternet, #internet
+        temp$dempr_dom, #housekeeping
         
         temp$drenda1, #wage < 1MW
         temp$drenda110, #wage 1MW - 10MW
@@ -4456,6 +4650,7 @@ for(ano_ref in ano_list) {
         base_a$dn_cel[base_a$ano == 2019], #cel
         base_a$dpc[base_a$ano == 2019],    #pc
         base_a$dinternet[base_a$ano == 2019], #internet
+        base_a$dempr_dom[base_a$ano == 2019], #housekeeping
         
         base_a$drenda1[base_a$ano == 2019], #wage < 1MW
         base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -4504,6 +4699,7 @@ for(ano_ref in ano_list) {
         base_a$dn_cel[base_a$ano == 2019], #cel
         base_a$dpc[base_a$ano == 2019],    #pc
         base_a$dinternet[base_a$ano == 2019], #internet
+        base_a$dempr_dom[base_a$ano == 2019], #housekeeping
         
         base_a$drenda1[base_a$ano == 2019], #wage < 1MW
         base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -4595,7 +4791,7 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/Raca_v1.tex")
 #5417, 5336
-rm(base_ab, base_ppi, result, rlist, t10cc, latex_table, names2)
+rm(base_ab, base_ppi, result, rlist, t10cc, latex_table)
 
 # ---------------------------------------------------------------------------- #
 ## 8.2 Sex ----
@@ -4711,6 +4907,7 @@ for(ano_ref in ano_list) {
         base_a$dn_cel[base_a$ano == 2019], #cel
         base_a$dpc[base_a$ano == 2019],    #pc
         base_a$dinternet[base_a$ano == 2019], #internet
+        base_a$dempr_dom[base_a$ano == 2019], #housekeeper
         
         base_a$drenda1[base_a$ano == 2019], #wage < 1MW
         base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -4759,6 +4956,7 @@ for(ano_ref in ano_list) {
         base_a$dn_cel[base_a$ano == 2019], #cel
         base_a$dpc[base_a$ano == 2019],    #pc
         base_a$dinternet[base_a$ano == 2019], #internet
+        base_a$dempr_dom[base_a$ano == 2019], #house
         
         base_a$drenda1[base_a$ano == 2019], #wage < 1MW
         base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -4973,6 +5171,8 @@ for(ano_ref in ano_list) {
         base_a$dn_cel[base_a$ano == 2019], #cel
         base_a$dpc[base_a$ano == 2019],    #pc
         base_a$dinternet[base_a$ano == 2019], #internet
+        base_a$dempr_dom[base_a$ano == 2019], #house
+        
         
         base_a$drenda1[base_a$ano == 2019], #wage < 1MW
         base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -5022,6 +5222,7 @@ for(ano_ref in ano_list) {
         base_a$dn_cel[base_a$ano == 2019], #cel
         base_a$dpc[base_a$ano == 2019],    #pc
         base_a$dinternet[base_a$ano == 2019], #internet
+        base_a$dempr_dom[base_a$ano == 2019], #house
         
         base_a$drenda1[base_a$ano == 2019], #wage < 1MW
         base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -5211,6 +5412,7 @@ for (j in c(0:1)){
       base_a$dn_cel[base_a$ano == 2019], #cel
       base_a$dpc[base_a$ano == 2019],    #pc
       base_a$dinternet[base_a$ano == 2019], #internet
+      base_a$dempr_dom[base_a$ano == 2019], #house
       
       base_a$drenda1[base_a$ano == 2019], #wage < 1MW
       base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -5258,6 +5460,7 @@ for (j in c(0:1)){
       base_a$dn_cel[base_a$ano == 2019], #cel
       base_a$dpc[base_a$ano == 2019],    #pc
       base_a$dinternet[base_a$ano == 2019], #internet
+      base_a$dempr_dom[base_a$ano == 2019], #house
       
       base_a$drenda1[base_a$ano == 2019], #wage < 1MW
       base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -5435,6 +5638,7 @@ for (i in var_list) {
       base_a$dn_cel[base_a$ano == 2019], #cel
       base_a$dpc[base_a$ano == 2019],    #pc
       base_a$dinternet[base_a$ano == 2019], #internet
+      base_a$dempr_dom[base_a$ano == 2019], #house
       
       base_a$drenda1[base_a$ano == 2019], #wage < 1MW
       base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -5483,6 +5687,7 @@ for (i in var_list) {
       base_a$dn_cel[base_a$ano == 2019], #cel
       base_a$dpc[base_a$ano == 2019],    #pc
       base_a$dinternet[base_a$ano == 2019], #internet
+      base_a$dempr_dom[base_a$ano == 2019], #house
       
       base_a$drenda1[base_a$ano == 2019], #wage < 1MW
       base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -5686,6 +5891,7 @@ for (i in time_list){
       b_temp$dn_cel[b_temp$ano == 2019], #cel
       b_temp$dpc[b_temp$ano == 2019],    #pc
       b_temp$dinternet[b_temp$ano == 2019], #internet
+      b_temp$dempr_dom[b_temp$ano == 2019], #housekeeping
       
       b_temp$drenda1[b_temp$ano == 2019], #wage < 1MW
       b_temp$drenda110[b_temp$ano == 2019], #wage 1MW - 10MW
@@ -5836,6 +6042,7 @@ for (c in 1:length(bws)) {
                  base_a$dn_cel[base_a$ano == 2019], #cel
                  base_a$dpc[base_a$ano == 2019],    #pc
                  base_a$dinternet[base_a$ano == 2019], #internet
+                 base_a$dempr_dom[base_a$ano == 2019], #housekeeping
                  
                  base_a$drenda1[base_a$ano == 2019], #wage < 1MW
                  base_a$drenda110[base_a$ano == 2019], #wage 1MW - 10MW
@@ -6401,7 +6608,7 @@ for (i in c("5","9","3")) {
     filter(ano == 2019) %>% 
     select(dtempd1, dtempd2, dumidd1, dumidd2,
            
-           dn_ban, dn_qua, dn_car, dn_gel, dn_cel, dpc, dinternet,
+           dn_ban, dn_qua, dn_car, dn_gel, dn_cel, dpc, dinternet, dempr_dom,
            
            dfem, descm, dppi, didade, descp,
            
@@ -6603,7 +6810,8 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/Saeb.tex")
 
-rm(rlist_saeb, saeb_base, tab,result, names, latex_table, base, base_a )
+rm(rlist_saeb, saeb_base, tab,result, latex_table, base, base_a, all, base_res,
+   time, v, v1, v2, vars_diff, vnames)
 
 
 # ---------------------------------------------------------------------------- #
@@ -6837,247 +7045,6 @@ base <- base %>%
   
 rm(pib)
 # ---------------------------------------------------------------------------- #
-## 14.2 Regression Yearly ----
-# ---------------------------------------------------------------------------- #
-
-#2) Com os resultados da nota em nível:
-c_rlist <- list() #lista para armazenar os resultados
-#t_rlist <- list()
-
-
-ano_list <- c(2013:2019) #Lista dos anos que serão comparados no loop
-
-#Loop de regressão por ano:
-for(ano_ref in ano_list) {
-  
-  base_t <- base %>% 
-    filter(ano == ano_ref) #Selecionando apenas os dados no ano de referência
-  
-  #Com controles no ano de referência
-  ef <- dummy_cols(base_t$seg_res[base_t$ano == ano_ref]) #EF de segmento
-  ef <- ef %>% select(-1,-2)
-  
-  c_rlist[[as.character(paste0(ano_ref,"C|TC"))]] <- rdrobust( #Resultado armazenado na lista
-    y = base_t$media[base_t$ano == ano_ref], #nota media no município
-    x = base_t$dist_hv_res[base_t$ano == ano_ref], #RV de distância
-    c = 0, #Ponto de corte
-    p = 1,
-    h = bw_main_r, #Limitando para a banda ótima de ref.
-    b = bw_bias_r, #Limitando para a banda ótima de ref.
-    cluster = base_t$seg_res[base_t$ano == ano_ref], #cluster no segmento
-    weights = base_t$obs[base_t$ano == ano_ref], #peso nas amostras
-    vce = "hc0", 
-    covs = cbind( #covariadas
-      ef,
-      base_t$lat_res[base_t$ano == ano_ref],
-      base_t$lon_res[base_t$ano == ano_ref],
-      
-      #All
-      base_t$tempd1[base_t$ano == ano_ref], #Temperature
-      base_t$escm[base_t$ano == ano_ref], #mother educ
-      base_t$n_ban[base_t$ano == ano_ref], #bathrooms
-      base_t$umidd1[base_t$ano == ano_ref], #Humidity d1
-      base_t$umidd2[base_t$ano == ano_ref], #Humidty d2
-      base_t$fem[base_t$ano == ano_ref] #Female
-      #base_t$ppi[base_t$ano == ano_ref], #PPI
-      #base_t$idade[base_t$ano == ano_ref], #Age
-      #base_t$escp[base_t$ano == ano_ref], #father educ
-      # 
-      # base_t$pessoa[base_t$ano == ano_ref], #people in household
-      # base_t$n_qua[base_t$ano == ano_ref], #houses
-      # base_t$n_car[base_t$ano == ano_ref], #cars
-      # base_t$n_gel[base_t$ano == ano_ref], #geladeira
-      # base_t$n_cel[base_t$ano == ano_ref], #cel
-      # base_t$pc[base_t$ano == ano_ref],    #pc
-      # base_t$internet[base_t$ano == ano_ref], #internet
-      # 
-      # base_t$renda1[base_t$ano == ano_ref], #wage < 1MW
-      # base_t$renda110[base_t$ano == ano_ref], #wage 1MW - 10MW
-      # base_t$renda10[base_t$ano == ano_ref], #wage > 10MW
-      # base_t$pibpc[base_t$ano == ano_ref], #pibpc
-      # 
-      # base_t$tempd2[base_t$ano == ano_ref], #temp2
-      # 
-      # #Fuso
-      # base_t$h13[base_t$ano == ano_ref],
-      # base_t$h12[base_t$ano == ano_ref],
-      # base_t$h11[base_t$ano == ano_ref]
-    )
-  )
-  
-  
-}
-
-# ---------------------------------------------------------------------------- #
-##14.3 Plot ----
-# ---------------------------------------------------------------------------- #
-t10cc <- data.frame(
-  coef = do.call(rbind,lapply(c_rlist, FUN = function(x){x$coef[3]})),
-  se = do.call(rbind,lapply(c_rlist, FUN = function(x){x$se[3]})),
-  pv = do.call(rbind,lapply(c_rlist, FUN = function(x){x$pv[3]})),
-  n = do.call(rbind, lapply(c_rlist, FUN = function(x){x$N_h})),
-  t = do.call(rbind, lapply(c_rlist, FUN = function(x){x$N}))
-) %>% 
-  mutate(
-    N = n.1 + n.2,
-    Tot = t.1 + t.2,
-    ano = 2013:2019,
-    ymin = coef - 1.96 * se,
-    ymax = coef + 1.96 * se
-  ) %>% 
-  select(-c(n.1, n.2))
-
-
-
-
-
-p <- ggplot(t10cc, aes(x = ano, y = coef)) +
-  geom_errorbar(aes(ymin = ymin, ymax = ymax), width = 0.2, size = 0.8, color = "black") +
-  geom_point(size = 3, color = "black") +
-  geom_hline(yintercept = 0, color = "#D62728", linewidth = 1) +
-  labs(x = "Year", y = "Average ENEM Score Coefficient") +
-  geom_vline(xintercept = 2018.5, color = "#BEBEBE", linetype = "dashed", size = 0.8) +
-  theme_minimal(base_size = 20) +
-  theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(),
-    axis.text.y = element_text(size = 18),
-    axis.text.x = element_text(size = 18),
-    legend.position = "none"
-  ) +
-  scale_x_continuous(breaks = t10cc$ano) 
-
-
-print(p)
-
-ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/anos_lvl_v2.png"), device = "png", height = 7, width = 10)
-ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/pdf/anos_lvl_v2.eps"), device = "eps", height = 7, width = 10)
-
-# ---------------------------------------------------------------------------- #
-## 14.4 Regression without quartos ----
-# ---------------------------------------------------------------------------- #
-#Not present.
-
-#2) Com os resultados da nota em nível:
-c_rlist <- list() #lista para armazenar os resultados
-#t_rlist <- list()
-
-
-ano_list <- c(2013:2019) #Lista dos anos que serão comparados no loop
-
-#Loop de regressão por ano:
-for(ano_ref in ano_list) {
-  
-  base_t <- base %>% 
-    filter(ano == ano_ref) #Selecionando apenas os dados no ano de referência
-  
-  #Com controles no ano de referência
-  ef <- dummy_cols(base_t$seg_res[base_t$ano == ano_ref]) #EF de segmento
-  ef <- ef %>% select(-1,-2)
-  
-  c_rlist[[as.character(paste0(ano_ref,"C|TC"))]] <- rdrobust( #Resultado armazenado na lista
-    y = base_t$media[base_t$ano == ano_ref], #nota media no município
-    x = base_t$dist_hv_res[base_t$ano == ano_ref], #RV de distância
-    c = 0, #Ponto de corte
-    p = 1,
-    # h = bw_main_r, #Limitando para a banda ótima de ref.
-    # b = bw_bias_r, #Limitando para a banda ótima de ref.
-    cluster = base_t$seg_res[base_t$ano == ano_ref], #cluster no segmento
-    weights = base_t$obs[base_t$ano == ano_ref], #peso nas amostras
-    vce = "hc0", 
-    covs = cbind( #covariadas
-      ef,
-      base_t$lat_res[base_t$ano == ano_ref],
-      base_t$lon_res[base_t$ano == ano_ref],
-      
-      #All
-      base_t$tempd1[base_t$ano == ano_ref], #Temperature
-      base_t$escm[base_t$ano == ano_ref], #mother educ
-      base_t$n_ban[base_t$ano == ano_ref], #bathrooms
-      base_t$umidd1[base_t$ano == ano_ref], #Humidity d1
-      base_t$umidd2[base_t$ano == ano_ref], #Humidty d2
-      base_t$fem[base_t$ano == ano_ref], #Female
-      base_t$ppi[base_t$ano == ano_ref], #PPI
-      base_t$idade[base_t$ano == ano_ref], #Age
-      base_t$escp[base_t$ano == ano_ref], #father educ
-
-      base_t$pessoa[base_t$ano == ano_ref], #people in household
-      base_t$n_car[base_t$ano == ano_ref], #cars
-      base_t$n_gel[base_t$ano == ano_ref], #geladeira
-      base_t$n_cel[base_t$ano == ano_ref], #cel
-      base_t$pc[base_t$ano == ano_ref],    #pc
-      base_t$internet[base_t$ano == ano_ref], #internet
-
-      base_t$renda1[base_t$ano == ano_ref], #wage < 1MW
-      base_t$renda110[base_t$ano == ano_ref], #wage 1MW - 10MW
-      base_t$renda10[base_t$ano == ano_ref], #wage > 10MW
-      base_t$pibpc[base_t$ano == ano_ref], #pibpc
-
-      base_t$tempd2[base_t$ano == ano_ref], #temp2
-
-      #Fuso
-      base_t$h13[base_t$ano == ano_ref],
-      base_t$h12[base_t$ano == ano_ref],
-      base_t$h11[base_t$ano == ano_ref]
-    )
-  )
-  
-  
-}
-
-# ---------------------------------------------------------------------------- #
-##14.5 Plot ----
-# ---------------------------------------------------------------------------- #
-t10cc <- data.frame(
-  coef = do.call(rbind,lapply(c_rlist, FUN = function(x){x$coef[3]})),
-  se = do.call(rbind,lapply(c_rlist, FUN = function(x){x$se[3]})),
-  pv = do.call(rbind,lapply(c_rlist, FUN = function(x){x$pv[3]})),
-  n = do.call(rbind, lapply(c_rlist, FUN = function(x){x$N_h})),
-  t = do.call(rbind, lapply(c_rlist, FUN = function(x){x$N}))
-) %>% 
-  mutate(
-    N = n.1 + n.2,
-    Tot = t.1 + t.2,
-    ano = 2013:2019,
-    ymin = coef - 1.96 * se,
-    ymax = coef + 1.96 * se
-  ) %>% 
-  select(-c(n.1, n.2))
-
-
-
-
-
-p <- ggplot(t10cc, aes(x = ano, y = coef)) +
-  geom_errorbar(aes(ymin = ymin, ymax = ymax), width = 0.2, size = 0.8, color = "black") +
-  geom_point(size = 3, color = "black") +
-  geom_hline(yintercept = 0, color = "#D62728", linewidth = 1) +
-  labs(x = "Year", y = "Average ENEM Score Coefficient") +
-  geom_vline(xintercept = 2018.5, color = "#BEBEBE", linetype = "dashed", size = 0.8) +
-  theme_minimal(base_size = 20) +
-  theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(),
-    axis.text.y = element_text(size = 18),
-    axis.text.x = element_text(size = 18),
-    legend.position = "none"
-  ) +
-  scale_x_continuous(breaks = t10cc$ano) 
-
-
-print(p)
-
-ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/anos_lvl_v4.png"), device = "png", height = 7, width = 10)
-ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/pdf/anos_lvl_v4.eps"), device = "eps", height = 7, width = 10)
-
-
-
-rm(base_a, base_t, c_rlist, result, rlist, t10cc, t10nc, ano, ano_list,
-   latex_table, names, ef, p, ano_ref, bw_main_a, bw_main_p, bw_bias_a, bw_bias_p)
-
-# ---------------------------------------------------------------------------- #
 ## 14.6 Year-diff----
 # ---------------------------------------------------------------------------- #
 ###14.6.1 Regressions ----
@@ -7167,6 +7134,7 @@ for (ano_ref in ano_list) {
       base_t$dn_cel,
       base_t$dpc,
       base_t$dinternet,
+      base_t$dempr_dom,
       base_t$drenda1,
       base_t$drenda110,
       base_t$drenda10,
@@ -7212,79 +7180,97 @@ t10cc <- data.frame(
     N = n.1 + n.2,
     Tot = t.1 + t.2,
     ano = 2014:2019,
+    year_diff = c(
+      "2014–2013",
+      "2015–2014",
+      "2016–2015",
+      "2017–2016",
+      "2018–2017",
+      "2019–2018"
+    ),
     ymin = coef - 1.96 * se,
     ymax = coef + 1.96 * se
   ) %>% 
   select(-c(n.1, n.2))
 
+t10cc_plot <- t10cc %>%
+  filter(year_diff != "2017–2016") %>%
+  mutate(x_pos = row_number())
 
-
-p <- ggplot(t10cc, aes(x = ano, y = coef)) +
-  geom_errorbar(aes(ymin = ymin, ymax = ymax), width = 0.2, size = 0.8, color = "black") +
+p <- ggplot(t10cc_plot, aes(x = x_pos, y = coef)) +
+  geom_errorbar(
+    aes(ymin = ymin, ymax = ymax),
+    width = 0.2,
+    size = 0.8,
+    color = "black"
+  ) +
   geom_point(size = 3, color = "black") +
   geom_hline(yintercept = 0, color = "#D62728", linewidth = 1) +
-  labs(x = "Year", y = "Average ENEM Score Coefficient") +
-  geom_vline(xintercept = 2018.5, color = "#BEBEBE", linetype = "dashed", size = 0.8) +
+  labs(x = "Year Difference", y = "Average ENEM Score Coefficient") +
+  #geom_vline(xintercept = 4.5, color = "#BEBEBE", linetype = "dashed", size = 0.8) +
   theme_minimal(base_size = 20) +
   theme(
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line = element_line(),
     axis.text.y = element_text(size = 18),
-    axis.text.x = element_text(size = 18),
+    axis.text.x = element_text(size = 18, angle = 35, hjust = 1),
     legend.position = "none"
   ) +
-  scale_x_continuous(breaks = t10cc$ano) 
-
+  scale_x_continuous(
+    breaks = t10cc_plot$x_pos,
+    labels = t10cc_plot$year_diff
+  )
 
 print(p)
 
-ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/anos_dif_v3.png"), device = "png", height = 7, width = 10)
-ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/pdf/anos_dif_v3.eps"), device = "eps", height = 7, width = 10)
-
-#Without controls
-t10cc <- data.frame(
-  coef = do.call(rbind,lapply(n_list, FUN = function(x){x$coef[3]})),
-  se = do.call(rbind,lapply(n_list, FUN = function(x){x$se[3]})),
-  pv = do.call(rbind,lapply(n_list, FUN = function(x){x$pv[3]})),
-  n = do.call(rbind, lapply(n_list, FUN = function(x){x$N_h})),
-  t = do.call(rbind, lapply(n_list, FUN = function(x){x$N}))
-) %>% 
-  mutate(
-    N = n.1 + n.2,
-    Tot = t.1 + t.2,
-    ano = 2014:2019,
-    ymin = coef - 1.96 * se,
-    ymax = coef + 1.96 * se
-  ) %>% 
-  select(-c(n.1, n.2))
+ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/anos_dif_final.png"), device = "png", height = 7, width = 10)
+ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/pdf/anos_dif_final.eps"), device = "eps", height = 7, width = 10)
 
 
-
-
-
-p <- ggplot(t10cc, aes(x = ano, y = coef)) +
-  geom_errorbar(aes(ymin = ymin, ymax = ymax), width = 0.2, size = 0.8, color = "black") +
-  geom_point(size = 3, color = "black") +
-  geom_hline(yintercept = 0, color = "#D62728", linewidth = 1) +
-  labs(x = "Year", y = "Average ENEM Score Coefficient") +
-  geom_vline(xintercept = 2018.5, color = "#BEBEBE", linetype = "dashed", size = 0.8) +
-  theme_minimal(base_size = 20) +
-  theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(),
-    axis.text.y = element_text(size = 18),
-    axis.text.x = element_text(size = 18),
-    legend.position = "none"
-  ) +
-  scale_x_continuous(breaks = t10cc$ano) 
-
-
-print(p)
-
-ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/anos_dif_v4.png"), device = "png", height = 7, width = 10)
-ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/pdf/anos_dif_v4.eps"), device = "eps", height = 7, width = 10)
+# #Without controls
+# t10cc <- data.frame(
+#   coef = do.call(rbind,lapply(n_list, FUN = function(x){x$coef[3]})),
+#   se = do.call(rbind,lapply(n_list, FUN = function(x){x$se[3]})),
+#   pv = do.call(rbind,lapply(n_list, FUN = function(x){x$pv[3]})),
+#   n = do.call(rbind, lapply(n_list, FUN = function(x){x$N_h})),
+#   t = do.call(rbind, lapply(n_list, FUN = function(x){x$N}))
+# ) %>% 
+#   mutate(
+#     N = n.1 + n.2,
+#     Tot = t.1 + t.2,
+#     ano = 2014:2019,
+#     ymin = coef - 1.96 * se,
+#     ymax = coef + 1.96 * se
+#   ) %>% 
+#   select(-c(n.1, n.2))
+# 
+# 
+# 
+# 
+# 
+# p <- ggplot(t10cc, aes(x = ano, y = coef)) +
+#   geom_errorbar(aes(ymin = ymin, ymax = ymax), width = 0.2, size = 0.8, color = "black") +
+#   geom_point(size = 3, color = "black") +
+#   geom_hline(yintercept = 0, color = "#D62728", linewidth = 1) +
+#   labs(x = "Year", y = "Average ENEM Score Coefficient") +
+#   geom_vline(xintercept = 2018.5, color = "#BEBEBE", linetype = "dashed", size = 0.8) +
+#   theme_minimal(base_size = 20) +
+#   theme(
+#     panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     axis.line = element_line(),
+#     axis.text.y = element_text(size = 18),
+#     axis.text.x = element_text(size = 18),
+#     legend.position = "none"
+#   ) +
+#   scale_x_continuous(breaks = t10cc$ano) 
+# 
+# 
+# print(p)
+# 
+# ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/anos_dif_v4.png"), device = "png", height = 7, width = 10)
+# ggsave(plot = p, filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/img/pdf/anos_dif_v4.eps"), device = "eps", height = 7, width = 10)
 
 
 
@@ -7355,7 +7341,7 @@ p <- ggplot(out, aes(x = ano, y = coef)) +
 
 
 print(p)
-
+rm(p, gap_x, ano_ref, ano_ref2, ano_list, ano, t10cc, t10ccplot, n_list, base_t)
 # ---------------------------------------------------------------------------- #
 # 15. Filter + Desc ----
 # ---------------------------------------------------------------------------- #
