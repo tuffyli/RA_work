@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Data description
 # Last edited by: Tuffy Licciardi Issa
-# Date: 06/04/2026
+# Date: 09/04/2026
 # ---------------------------------------------------------------------------- #
 # Library -----
 # ---------------------------------------------------------------------------- #
@@ -31,7 +31,7 @@ library(scales)
 # 1. Main Data and Description ------
 # ---------------------------------------------------------------------------- #
 base <- readRDS("Z:/Tuffy/Paper - HV/Bases/base_final.RDS") %>% 
-  filter(ano %in% c(2019,2018))
+  filter(ano == 2018)
 
 # Creating the variables
 base <- base %>% 
@@ -84,7 +84,7 @@ base <- base %>%
 
 #Absence database
 base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",2018,".RDS")) %>%
-  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",2019,".RDS"))) %>%
+  #bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_abs_",2019,".RDS"))) %>%
   select(id_enem,priv, hv, ano, abs, uf, mun_res) %>% 
   mutate(aux_res = mun_res %/% 100000) %>% 
   filter(aux_res %in% c(11, 13, 15, 17, 29, #NON-DST
@@ -273,7 +273,7 @@ medias <- data.frame(
   obs0 = format(x = obs0[1:26], digits = 1, scientific = F, big.mark = ",")
 )
 
-rm(medias0,medias1,dps0,dps1,obs0,obs1,base_abs,base_ag, base)
+rm(medias0,medias1,dps0,dps1,obs0,obs1,base_abs,base_ag)
 
 row.names(medias) <- c(
   "ENEM Avg. Score", 
@@ -319,7 +319,7 @@ print.xtable(
   x = medias,
   include.rownames = T,
   include.colnames = T,
-  file = "Z:/Tuffy/Paper - HV/Resultados/definitive/desc_table_v3.tex",
+  file = "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/desc_table_v3.tex",
   sanitize.colnames.function = function(x) {
     x
   },

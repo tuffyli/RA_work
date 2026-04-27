@@ -3222,7 +3222,7 @@ org_data <- function(base,ano,vlist,cnames) {
     # Modificações somente de 2012 a 2019
     base <- base %>%
       mutate(
-        npessoas_dom = as.numeric(pessoas_dom)
+        npessoas_dom = as.numeric(pessoas_dom),
         pessoas_dom = case_when(
           pessoas_dom == 1 ~ 'A',
           pessoas_dom >= 2 & pessoas_dom <= 4 ~ 'B',
@@ -3931,6 +3931,14 @@ vlist_df <- data.frame(
     "Q002",
     "Q003",
     "Q004",
+    "Q007", #Empregada dom.
+    "Q008", #Banheiro
+    "Q009", #Quartos
+    "Q010", #Carro
+    "Q012", #Geladeira
+    "Q022", #Celular
+    "Q024", #PC
+    "Q025", #Internet
     "CO_MUNICIPIO_ESC",
     "NU_NOTA_COMP1",
     "NU_NOTA_COMP2",
@@ -3971,6 +3979,14 @@ vlist_df <- data.frame(
     "Q002",
     "Q003",
     "Q004",
+    "Q007", #Empregada dom.
+    "Q008", #Banheiro
+    "Q009", #Quartos
+    "Q010", #Carro
+    "Q012", #Geladeira
+    "Q022", #Celular
+    "Q024", #PC
+    "Q025", #Internet
     "CO_MUNICIPIO_ESC",
     "NU_NOTA_COMP1",
     "NU_NOTA_COMP2",
@@ -4010,6 +4026,14 @@ vlist_df <- data.frame(
              "esc_mae",
              "emp_pai",
              "emp_mae",
+             "empr_dom",
+             "n_banheiro",
+             "n_quartos",
+             "n_carros",
+             "n_geladeira",
+             "n_celular",
+             "pc",
+             "internet",
              "mun_escola",
              "rd1",
              "rd2",
@@ -4045,7 +4069,7 @@ for(i in 2018:2019){
   print(paste0("Ano: ",i))
   ini <- Sys.time()
   
-  j <- i - 2013
+  j <- i - 2017
   delta <- ifelse(i <= 2014,1,0)
   vlist <- vlist_df[1:(nrow(vlist_df) - delta),j]
   cnames <- vlist_df[1:(nrow(vlist_df) - delta),ncol(vlist_df)]
@@ -4107,7 +4131,7 @@ for(ano in 2018:2019){
   rm(enem)
   
   # Especificações da base de dados
-  j <- ano - 2013
+  j <- ano - 2017
   delta <- ifelse(ano == 2009, 1, 0)
   vlist <- vlist_item_df[1:(nrow(vlist_item_df) - delta),j]
   cnames <- vlist_item_df[1:(nrow(vlist_item_df) - delta),ncol(vlist_item_df)]
@@ -4639,91 +4663,91 @@ for(ano in 2018:2019){
 
   saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_",ano,".RDS"))
   rm(base_nota)
-  
-  # Base de abstenções
-  base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_",ano,"_v4.RDS")) %>%
-    select(-sexo,-status_rd) %>%
-    left_join(mun_hv,
-              by = c(
-                "mun_prova" = "co_municipio"
-              )) %>%
-    mutate(
-      priv = ifelse(dep_adm == 4, 1, 0),
-      priv0 = ifelse(priv == 0, 1, NA)
-    ) %>%
-    select(
-      -conclusao,
-      -cn,
-      -ch,
-      -lc,
-      -mt,
-      -rd,
-      -media,
-      -rd1,
-      -rd2,
-      -rd3,
-      -rd4,
-      -rd5,
-      -co_cn,
-      -co_ch,
-      -co_lc,
-      -co_mt,
-      -pres_cn,
-      -pres_ch,
-      -pres_lc,
-      -pres_mt
-      ,
-      -dep_adm
-    ) %>%
-    mutate(
-      abs = ifelse(
-        abs_rd == 1 &
-          abs_cn == 1 &
-          abs_ch == 1 &
-          abs_lc == 1 &
-          abs_mt == 1,
-        1,
-        0),
-      uf_prova = mun_prova %/% 10^5,
-      dist_hv_border = ifelse(hv == 1, dist_hv_border,-dist_hv_border)
-    )
-  
-  
-  
-  
-  base_abs <- base_abs %>% 
-    
-    filter(
-      !is.na(abs_rd) & !is.na(abs_mt) & !is.na(abs_lc) & !is.na(abs_cn) & !is.na(abs_ch)
-    ) %>% 
-    
-    mutate(
-      
-      in_d1 = ifelse(abs_rd == 0 & abs_ch == 0 & abs_lc == 0, 1, 0),
-      
-      in_d2 = ifelse(abs_mt == 0 & abs_cn == 0, 1, 0)
-    ) %>% 
-    mutate(
-      first_n_last = ifelse(in_d1 == 1 & in_d2 == 0, 1, 0),
-      last_n_first = ifelse(in_d1 == 0 & in_d2 == 1, 1, 0)
-    )
-  
-  
-  base_ab <- base_abs[,.(media_abs = mean(abs, na.rm = T),
-                         in_d1_nd2 = mean(first_n_last, na.rm = T),
-                         in_d2_nd1 = mean(last_n_first, na.rm = T),
-                         obs = .N),
-                      by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
-    filter(as.numeric(ano) %in% c(2018,2019)) %>% 
-    arrange(mun_prova,ano)
-  
-  
-  
-  
-  
-  
-  saveRDS(base_ab, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_abs_mun_",ano,".RDS"))
-  rm(base_abs)
+  # 
+  # # Base de abstenções
+  # base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_",ano,"_v4.RDS")) %>%
+  #   select(-sexo,-status_rd) %>%
+  #   left_join(mun_hv,
+  #             by = c(
+  #               "mun_prova" = "co_municipio"
+  #             )) %>%
+  #   mutate(
+  #     priv = ifelse(dep_adm == 4, 1, 0),
+  #     priv0 = ifelse(priv == 0, 1, NA)
+  #   ) %>%
+  #   select(
+  #     -conclusao,
+  #     -cn,
+  #     -ch,
+  #     -lc,
+  #     -mt,
+  #     -rd,
+  #     -media,
+  #     -rd1,
+  #     -rd2,
+  #     -rd3,
+  #     -rd4,
+  #     -rd5,
+  #     -co_cn,
+  #     -co_ch,
+  #     -co_lc,
+  #     -co_mt,
+  #     -pres_cn,
+  #     -pres_ch,
+  #     -pres_lc,
+  #     -pres_mt
+  #     ,
+  #     -dep_adm
+  #   ) %>%
+  #   mutate(
+  #     abs = ifelse(
+  #       abs_rd == 1 &
+  #         abs_cn == 1 &
+  #         abs_ch == 1 &
+  #         abs_lc == 1 &
+  #         abs_mt == 1,
+  #       1,
+  #       0),
+  #     uf_prova = mun_prova %/% 10^5,
+  #     dist_hv_border = ifelse(hv == 1, dist_hv_border,-dist_hv_border)
+  #   )
+  # 
+  # 
+  # 
+  # 
+  # base_abs <- base_abs %>% 
+  #   
+  #   filter(
+  #     !is.na(abs_rd) & !is.na(abs_mt) & !is.na(abs_lc) & !is.na(abs_cn) & !is.na(abs_ch)
+  #   ) %>% 
+  #   
+  #   mutate(
+  #     
+  #     in_d1 = ifelse(abs_rd == 0 & abs_ch == 0 & abs_lc == 0, 1, 0),
+  #     
+  #     in_d2 = ifelse(abs_mt == 0 & abs_cn == 0, 1, 0)
+  #   ) %>% 
+  #   mutate(
+  #     first_n_last = ifelse(in_d1 == 1 & in_d2 == 0, 1, 0),
+  #     last_n_first = ifelse(in_d1 == 0 & in_d2 == 1, 1, 0)
+  #   )
+  # 
+  # 
+  # base_ab <- base_abs[,.(media_abs = mean(abs, na.rm = T),
+  #                        in_d1_nd2 = mean(first_n_last, na.rm = T),
+  #                        in_d2_nd1 = mean(last_n_first, na.rm = T),
+  #                        obs = .N),
+  #                     by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+  #   filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+  #   arrange(mun_prova,ano)
+  # 
+  # 
+  # 
+  # 
+  # 
+  # 
+  # saveRDS(base_ab, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_abs_mun_",ano,".RDS"))
+  # rm(base_abs)
   rm(ano)
   
 }

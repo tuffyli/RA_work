@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 24/04/2026
+# Date: 27/04/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1310,7 +1310,7 @@ list[[as.character(paste0(2019,"-",2018,"esc|fuso+temp"))]] <- rdrobust(
 ### Fuso + Temp + Socio 
 # ---------------------------------------------------------------------------- #
 
-list[[as.character(paste0(2019,"-",2018,"esc|all"))]] <- rdrobust(
+list[[as.character(paste0(2019,"-",2018,"esc|temp+socio"))]] <- rdrobust(
   y = base_esc$d.media[base_esc$ano == 2019],
   x = base_esc$dist_hv_esc[base_esc$ano == 2018],
   c = 0,
@@ -1776,7 +1776,36 @@ list[[as.character(paste0(2018,"-",2017,"|all"))]] <- rdrobust(
     efr,
     base_res$lat_res[base_res$ano == 2017],
     base_res$lon_res[base_res$ano == 2017],
-    #Timezones
+    
+    #Weather
+    base_res$dtempd1[base_res$ano == 2018], #Temperature
+    base_res$dumidd1[base_res$ano == 2018], #Humidity d1
+    base_res$dumidd2[base_res$ano == 2018], #Humidty d2
+    base_res$dtempd2[base_res$ano == 2018], #temp2
+    
+    #House
+    base_res$dn_ban[base_res$ano == 2018], #bathrooms
+    base_res$dpessoa[base_res$ano == 2018], #people in household
+    base_res$dn_qua[base_res$ano == 2018], #houses
+    base_res$dn_car[base_res$ano == 2018], #cars
+    base_res$dn_gel[base_res$ano == 2018], #geladeira
+    base_res$dn_cel[base_res$ano == 2018], #cel
+    base_res$dpc[base_res$ano == 2018],    #pc
+    base_res$dinternet[base_res$ano == 2018], #internet
+    base_res$dempr_dom[base_res$ano == 2018], #Housekeeping
+    
+    #remaining
+    base_res$descm[base_res$ano == 2018], #mother educ
+    base_res$dfem[base_res$ano == 2018], #Female
+    base_res$dppi[base_res$ano == 2018], #PPI
+    base_res$didade[base_res$ano == 2018], #Age
+    base_res$descp[base_res$ano == 2018], #father educ
+    base_res$drenda1[base_res$ano == 2018], #wage < 1MW
+    base_res$drenda110[base_res$ano == 2018], #wage 1MW - 10MW
+    base_res$drenda10[base_res$ano == 2018], #wage > 10MW
+    base_res$dpibpc[base_res$ano == 2018], #pibpc
+    
+    #Fuso
     base_res$h13[base_res$ano == 2018],
     base_res$h12[base_res$ano == 2018],
     base_res$h11[base_res$ano == 2018]
@@ -4047,9 +4076,16 @@ base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_ab
       .default = NA
     ),
     
+    id18 = ifelse(idade == 18, 1, 0),
+    fem = ifelse(mas == 0, 1, 0),
+    ppi = ifelse(raca %in% c("C","D","F"), 1, 0),
+    
+    
     
     renda_1_10 = ifelse(renda_dom == "C", 1, 0),
     renda_10   = ifelse(renda_dom == "D", 1, 0),
+    renda1 = ifelse(renda_dom %in% c("A","B"),1,0),
+    
     
     over_hv_border = case_when(
       aux_res < 30 & aux_pro >= 30 ~ 1,
@@ -4064,7 +4100,19 @@ base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_ab
   setDT()
 
 
+# PIB
+pib <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/pib.RDS") %>%
+  mutate(codmun = as.integer(codmun)) %>%
+  rename(mun_prova = codmun)
 
+base_abs <- base_abs %>% 
+  left_join(pib, by = c("mun_res" = "mun_prova", "ano")) 
+
+rm(pib)
+
+# --------  #
+# By mun 
+# -------- #
 
 vars_diff <- c(
   "abs",
@@ -4103,7 +4151,6 @@ base_ag_abs <- base_abs[priv0 == 1, .(
   h13 = first(h13),
   h12 = first(h12),
   h11 = first(h11),
-  h10 = first(h10),
   obs = .N
 ), by = .(mun_res, ano)] %>%
   filter(as.numeric(ano) %in% c(2018, 2019)) %>%
@@ -4141,32 +4188,13 @@ for (v in vars_diff) {
 
 temp_cols <- grep("^(v1_|v2_)", names(base_ag_abs), value = TRUE)
 base_ag_abs <- base_ag_abs %>% select(-all_of(temp_cols)) %>% 
-  mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) %>%  #Turning INF to NA
-  rename(d.media = dmedia)
+  mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) 
 
 
 rm(vars_diff, v, v1, v2)
 # ---------------------------------------------------------------------------- #
 ## 7.1 Reg ----
 # ---------------------------------------------------------------------------- #
-
-base_abs <- base_abs %>% 
-  mutate(abs_1d = ifelse(
-    abs_rd == 1 & abs_ch == 1 & abs_lc == 1 , 1, 0),
-    
-    abs_2d = ifelse(
-      abs_cn == 1 & abs_mt == 1, 1, 0)
-  ) %>% 
-  setDT()
-
-
-
-
-base_a <- base_abs[priv0 == 1,.(media_dia1 = mean(abs_1d, na.rm = T),
-                                media_dia2 = mean(abs_2d, na.rm = T),
-                                media_abs = mean(abs, na.rm = T),
-                                obs = .N),
-                   by = .(mun_res,ano)] 
 
 # Base de distâncias
 mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/mun_hv.RDS")
@@ -4192,49 +4220,24 @@ mun_hv <- mun_hv %>%
   select(co_municipio, dist_hv_border, lat, lon, seg) 
 
 #Res. Dist.
-base_a <- base_a %>% 
+base_a <- base_ag_abs %>% 
   left_join(mun_hv %>% rename(dist_hv_res = dist_hv_border) %>% #Coordinates of Residency 
               rename(lat_res = lat, 
                      lon_res = lon,
                      seg_res = seg), 
             by = c("mun_res" = "co_municipio")) 
 
-rm(mun_hv)
-base_a <- base_a %>%
-  arrange(mun_res,ano) %>%
-  group_by(mun_res) %>%
-  filter(!is.na(media_dia1) & !is.na(media_dia2)) %>% 
-  mutate(
-    dup1 = 1,
-    dup2 = sum(dup1),
-    
-    
-    #dia1_ 2019 REF
-    v1_d1 = ifelse(ano == 2018, media_dia1, NA), 
-    v2_d1 = max(v1_d1, na.rm = T),
-    d.media_d1 = media_dia1 - v2_d1,
-    
-    v1_d2 = ifelse(ano == 2018, media_dia2, NA), #Note que inverte
-    v2_d2 = max(v1_d2, na.rm = T),
-    d.media_d2 = media_dia2 - v2_d2,
-    
-    #ABS
-    v1 = ifelse(ano == 2018, media_abs, NA),
-    v2 = max(v1, na.rm = T),
-    d.media_abs = media_abs - v2
-    
-    
-  ) %>%
-  ungroup() %>%
-  filter(dup2 == 2) %>% 
-  select(-c(v1_d1, v2_d1, v2_d2, v1_d2, v1, v2)) %>% 
-  left_join(base_aux, by = c("mun_res", "ano"))
+rm(mun_hv, base_abs)
 
-
+base_a <- base_a %>% 
+  group_by(mun_res) %>% 
+  filter(!is.na(descm),
+         !is.na(descp)) %>% 
+  ungroup()
 
 result <- list()
 
-d_list <- c("d.media_abs")
+d_list <- c("dabs")
 
 
 for (i in d_list){
@@ -4308,40 +4311,14 @@ educ <- readRDS("Z:/Tuffy/Paper - HV/Bases/census_students.RDS")
 
 
 
-base_a <- base_abs[priv0 == 1,.(media_abs = mean(abs, na.rm = T),
-                                obs = .N),
-                   by = .(mun_res,ano)] %>% 
-  arrange(mun_res, ano) %>% 
+base_a <- base_a %>% 
   left_join(educ, by = c("mun_res" = "co_municipio", "ano")) #
 
 
-base_mun <- base %>% 
-  group_by(mun_res, ano) %>% 
-  summarise(
-    lat  = first(lat_res),
-    lon  = first(lon_res),
-    seg  = first(seg_res),
-    dist_hv_border = first(dist_hv_res),
-    .groups = "drop"
-  )
-
-
 base_a <- base_a %>% 
-  left_join(base_mun, by = c("mun_res", "ano")) %>% 
-  
   group_by(mun_res) %>% 
   filter(all(c(2018, 2019) %in% ano)) %>%
   mutate(
-    
-    
-    #dia1_ 2019 REF
-    v1_d1 = ifelse(ano == 2018, obs, NA), 
-    v2_d1 = max(v1_d1, na.rm = T),
-    dobs = obs - v2_d1,
-    
-    v1_d2 = ifelse(ano == 2018, alunos, NA), #Note que inverte
-    v2_d2 = max(v1_d2, na.rm = T),
-    dalunos = alunos - v2_d2,
     
     #ABS
     v1 = ifelse(ano == 2018, alunos-obs, NA),
@@ -4355,9 +4332,7 @@ base_a <- base_a %>%
     dlog_frac = log(frac2019) - log(frac2018)
   ) %>%
   ungroup() %>% 
-  select(-c(v1_d1, v1_d2, v1, v2_d1, v2_d2, v2)) %>% 
-  left_join(base_aux, by = c("mun_res", "ano"))
-
+  select(-c(v1, v2))
 # ---------------------------------------------------------------------------- #
 #### 7.1.1.2 Regression Diff-in-diff ----
 # ---------------------------------------------------------------------------- #
@@ -4373,10 +4348,10 @@ for (i in d_list){
     filter(n_distinct(ano) == 2) %>%
     ungroup() %>% 
     filter(
-      !is.na(seg) &
-        !is.na(lat) &
-        !is.na(lon) &
-        !is.na(dist_hv_border) &
+      !is.na(seg_res) &
+        !is.na(lat_res) &
+        !is.na(lon_res) &
+        !is.na(dist_hv_res) &
         !is.na(obs) &
         !is.na(alunos)
     ) %>% 
@@ -4385,24 +4360,24 @@ for (i in d_list){
   
   #Com Controles
   
-  ef <- dummy_cols(temp$seg)
+  ef <- dummy_cols(temp$seg_res)
   ef <- ef %>% select(-1,-2)
   
   
   result[[as.character(paste0("nc_",i,"|TC"))]] <-
     rdrobust(
       y = temp[[i]][temp$ano == 2019],
-      x = temp$dist_hv_border,
+      x = temp$dist_hv_res,
       c = 0,
       p = 1,
       h = bw_main_r,
       b = bw_bias_r,
-      cluster = temp$seg,
+      cluster = temp$seg_res,
       vce = "hc0",
       covs = cbind(
         ef, 
-        temp$lat,
-        temp$lon,
+        temp$lat_res,
+        temp$lon_res,
         #All
         temp$dtempd1, #Temperature
         temp$descm, #mother educ
@@ -4525,7 +4500,8 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/Abs_Dias_v1.tex")
 #N = 5559
-rm(latex_table, result, dias, d_list, p_list, names, base_abs, educ, temp, base_mun, base_a)
+rm(latex_table, result, dias, d_list, p_list, names, base_abs, educ, temp,
+   base_mun, base_a, base_ag_abs, dv, temp_cols, am_mun_special, inpe_days_1819)
 
 
 # ---------------------------------------------------------------------------- #
@@ -7374,7 +7350,7 @@ am_mun_special <- c(
 create_controls_1819 <- function(base) {
   base %>%
     as.data.table() %>%
-    .[ano %in% c(2018, 2019) & conclusao == 2] %>%
+    .[ano %in% c(2018, 2019)] %>%
     mutate(
       aux_res = mun_res %/% 100000,
       aux_pro = mun_prova %/% 100000,
@@ -7476,11 +7452,12 @@ add_inpe_prova_1819 <- function(base, inpe_path = "Z:/Tuffy/Paper - HV/Bases/inp
 }
 
 # ---------------------------------------------------------------------------- #
-# 15.0 Data raw ----
+## 15.0 Data raw ----
 # ---------------------------------------------------------------------------- #
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2018.RDS"))) %>%
+  filter(treineiro == 1) %>% 
   create_controls_1819() %>% 
   add_inpe_prova_1819() %>% 
   setDT()
@@ -7494,7 +7471,7 @@ base <- base %>%
             by = c("mun_res" = "co_municipio")) 
 
 
-base_trei <- base %>% filter(treineiro == 1) %>% 
+base_trei <- base %>% #filter(treineiro == 1) %>% 
   mutate(
     
     escm = case_when(
@@ -7526,7 +7503,6 @@ base_trei <- base %>% filter(treineiro == 1) %>%
 
 gc()
 
-rm(base)
 
 
 summary(base_trei$mun_escola)
