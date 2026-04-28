@@ -131,7 +131,7 @@ base_nota <- base %>%
     dist_hv_pos = abs(dist_hv_res)/1000,
     merge = 1
   ) %>% 
-  merge(y = base_abs, by = c("id_enem", "ano"), all.y = T) %>%
+  merge(y = base_abs, by = c("id_enem"), all.y = T) %>%
   mutate(
     priv = ifelse(merge == 1, priv.x, NA),
     priv = ifelse(is.na(merge), priv.y, priv),
@@ -141,17 +141,6 @@ base_nota <- base %>%
   select(-priv.x,priv.y,hv.x,hv.y) %>%
   setDT() 
 
-
-mun_presente_ambos_anos <- base_nota %>%
-  distinct(mun_res, ano) %>%
-  count(mun_res) %>%
-  filter(n == 2) %>%
-  pull(mun_res)
-
-
-base_nota <- base_nota %>%
-  filter(mun_res %in% mun_presente_ambos_anos) %>% 
-  setDT()
 
 rm(mun_presente_ambos_anos)
 

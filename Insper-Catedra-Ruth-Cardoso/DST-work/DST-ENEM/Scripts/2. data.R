@@ -3739,7 +3739,8 @@ org_data <- function(base,ano,vlist,cnames) {
     ) %>%
     relocate(media, .after = rd) %>%
     relocate(ano, .before = idade) %>%
-    relocate(mun_escola, .after = mun_prova)
+    relocate(mun_escola, .after = mun_prova) %>% 
+    filter(treineiro == 1)
   
   return(base)
   
@@ -4661,7 +4662,7 @@ for(ano in 2018:2019){
   gc()
   
 
-  saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_",ano,".RDS"))
+  saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_",ano,"_trei.RDS"))
   rm(base_nota)
   # 
   # # Base de abstenções

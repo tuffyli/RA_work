@@ -2,7 +2,7 @@
 # Regressions
 # Main estimations and Robustness
 # Last edited by: Tuffy Licciardi Issa
-# Date: 27/04/2026
+# Date: 24/04/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -207,7 +207,7 @@ list[[as.character(paste0(2019,"-",2018,"|fuso"))]] <- rdrobust(
 ### 1.1.3 Temperature ----
 # ---------------------------------------------------------------------------- #
 
-list[[as.character(paste0(2019,"-",2018,"|fuso+temp"))]] <- rdrobust(
+list[[as.character(paste0(2019,"-",2018,"|dem+temp"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2019],
   x = base_res$dist_hv_res[base_res$ano == 2018],
   c = 0,
@@ -224,6 +224,13 @@ list[[as.character(paste0(2019,"-",2018,"|fuso+temp"))]] <- rdrobust(
     base_res$dumidd1[base_res$ano == 2019], #Humidity d1
     base_res$dumidd2[base_res$ano == 2019], #Humidty d2
     base_res$dtempd2[base_res$ano == 2019], #temp2
+    
+    #Parents and Individuals Characteristics
+    base_res$descm[base_res$ano == 2019], #mother educ
+    base_res$dfem[base_res$ano == 2019], #Female
+    base_res$dppi[base_res$ano == 2019], #PPI
+    base_res$didade[base_res$ano == 2019], #Age
+    base_res$descp[base_res$ano == 2019], #father educ
     
     #Fuso
     base_res$h13[base_res$ano == 2019],
@@ -262,6 +269,19 @@ list[[as.character(paste0(2019,"-",2018,"|fuso+temp+house"))]] <- rdrobust(
     base_res$dppi[base_res$ano == 2019], #PPI
     base_res$didade[base_res$ano == 2019], #Age
     base_res$descp[base_res$ano == 2019], #father educ
+    
+    #House
+    base_res$dn_ban[base_res$ano == 2019], #bathrooms
+    base_res$dpessoa[base_res$ano == 2019], #people in household
+    base_res$dn_qua[base_res$ano == 2019], #houses
+    base_res$dn_car[base_res$ano == 2019], #cars
+    base_res$dn_gel[base_res$ano == 2019], #geladeira
+    base_res$dn_cel[base_res$ano == 2019], #cel
+    base_res$dpc[base_res$ano == 2019],    #pc
+    base_res$dinternet[base_res$ano == 2019], #internet
+    base_res$dempr_dom[base_res$ano == 2019], #Housekeeping
+    
+    
     #Timezones
     base_res$h13[base_res$ano == 2019],
     base_res$h12[base_res$ano == 2019],
@@ -655,7 +675,6 @@ base_a <- base_a %>% select(-all_of(temp_cols)) %>%
 # School 
 # --------- #
 
-
 base_esc <- base[priv0 == 1, .(
   media    = mean(media, na.rm = TRUE),
   escm     = mean(escm, na.rm = TRUE),
@@ -686,10 +705,9 @@ base_esc <- base[priv0 == 1, .(
   h10 = first(h10),
   obs = .N
 ), by = .(mun_escola, ano, dist_hv_esc, seg_esc, lat_esc, lon_esc)] %>%
-  filter(as.numeric(ano) %in% c(2017, 2018)) %>%
-  arrange(mun_escola, ano) %>%
-  group_by(mun_escola) %>%
-  filter(n_distinct(ano) == 2) %>%
+  filter(ano %in% c(2017, 2018)) %>%
+  group_by(mun_escola, dist_hv_esc, seg_esc, lat_esc, lon_esc) %>%
+  filter(n_distinct(ano) == 2, n() == 2) %>%
   ungroup()
 
 
@@ -750,6 +768,7 @@ base_esc <- base_esc %>% select(-all_of(temp_cols)) %>%
   ) %>% 
   select(-aux_uf)
 
+summary(base_esc)
 
 # ---------------------------------------------------------------------------- #
 #### 1.2.2.2 Regression ----
@@ -774,6 +793,36 @@ list[[as.character(paste0(2018,"-",2017,"prova|0"))]] <- rdrobust(
     ef,
     base_a$lat[base_a$ano == 2017],
     base_a$lon[base_a$ano == 2017],
+    
+    #Weather
+    base_a$dtempd1[base_a$ano == 2018], #Temperature
+    base_a$dumidd1[base_a$ano == 2018], #Humidity d1
+    base_a$dumidd2[base_a$ano == 2018], #Humidty d2
+    base_a$dtempd2[base_a$ano == 2018], #temp2
+    
+    #House
+    base_a$dn_ban[base_a$ano == 2018], #bathrooms
+    base_a$dpessoa[base_a$ano == 2018], #people in household
+    base_a$dn_qua[base_a$ano == 2018], #houses
+    base_a$dn_car[base_a$ano == 2018], #cars
+    base_a$dn_gel[base_a$ano == 2018], #geladeira
+    base_a$dn_cel[base_a$ano == 2018], #cel
+    base_a$dpc[base_a$ano == 2018],    #pc
+    base_a$dinternet[base_a$ano == 2018], #internet
+    base_a$dempr_dom[base_a$ano == 2018], #Housekeeping
+    
+    #remaining
+    base_a$descm[base_a$ano == 2018], #mother educ
+    base_a$dfem[base_a$ano == 2018], #Female
+    base_a$dppi[base_a$ano == 2018], #PPI
+    base_a$didade[base_a$ano == 2018], #Age
+    base_a$descp[base_a$ano == 2018], #father educ
+    base_a$drenda1[base_a$ano == 2018], #wage < 1MW
+    base_a$drenda110[base_a$ano == 2018], #wage 1MW - 10MW
+    base_a$drenda10[base_a$ano == 2018], #wage > 10MW
+    base_a$dpibpc[base_a$ano == 2018], #pibpc
+    
+    #Fuso
     base_a$h13[base_a$ano == 2018],
     base_a$h12[base_a$ano == 2018],
     base_a$h11[base_a$ano == 2018]
@@ -802,6 +851,36 @@ list[[as.character(paste0(2018,"-",2017,"esc|0"))]] <- rdrobust(
     ef,
     base_esc$lat_esc[base_esc$ano == 2017],
     base_esc$lon_esc[base_esc$ano == 2017],
+    
+    #Weather
+    base_esc$dtempd1[base_esc$ano == 2018], #Temperature
+    base_esc$dumidd1[base_esc$ano == 2018], #Humidity d1
+    base_esc$dumidd2[base_esc$ano == 2018], #Humidty d2
+    base_esc$dtempd2[base_esc$ano == 2018], #temp2
+    
+    #House
+    base_esc$dn_ban[base_esc$ano == 2018], #bathrooms
+    base_esc$dpessoa[base_esc$ano == 2018], #people in household
+    base_esc$dn_qua[base_esc$ano == 2018], #houses
+    base_esc$dn_car[base_esc$ano == 2018], #cars
+    base_esc$dn_gel[base_esc$ano == 2018], #geladeira
+    base_esc$dn_cel[base_esc$ano == 2018], #cel
+    base_esc$dpc[base_esc$ano == 2018],    #pc
+    base_esc$dinternet[base_esc$ano == 2018], #internet
+    base_esc$dempr_dom[base_esc$ano == 2018], #Housekeeping
+    
+    #remaining
+    base_esc$descm[base_esc$ano == 2018], #mother educ
+    base_esc$dfem[base_esc$ano == 2018], #Female
+    base_esc$dppi[base_esc$ano == 2018], #PPI
+    base_esc$didade[base_esc$ano == 2018], #Age
+    base_esc$descp[base_esc$ano == 2018], #father educ
+    base_esc$drenda1[base_esc$ano == 2018], #wage < 1MW
+    base_esc$drenda110[base_esc$ano == 2018], #wage 1MW - 10MW
+    base_esc$drenda10[base_esc$ano == 2018], #wage > 10MW
+    base_esc$dpibpc[base_esc$ano == 2018], #pibpc
+    
+    #Fuso
     base_esc$h13[base_esc$ano == 2018],
     base_esc$h12[base_esc$ano == 2018],
     base_esc$h11[base_esc$ano == 2018]
@@ -980,89 +1059,6 @@ ef <- dummy_cols(base_a$seg[base_a$ano == 2018])
 ef <- ef %>% select(-1,-2)
 
 
-### Main 
-list[[as.character(paste0(2019,"-",2018,"C|Res"))]] <- rdrobust(
-  y = base_a$d.media[base_a$ano == 2019],
-  x = base_a$dist_hv_border[base_a$ano == 2018],
-  c = 0,
-  cluster = base_a$seg[base_a$ano == 2018],
-  weights = base_a$obs[base_a$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_a$lat[base_a$ano == 2018],
-    base_a$lon[base_a$ano == 2018],
-    base_a$h13[base_a$ano == 2019],
-    base_a$h12[base_a$ano == 2019],
-    base_a$h11[base_a$ano == 2019]
-  )
-)
-
-
-
-# ---------------------------------------------------------------------------- #
-### Fuso + Temp
-# ---------------------------------------------------------------------------- #
-
-list[[as.character(paste0(2019,"-",2018,"|fuso+temp"))]] <- rdrobust(
-  y = base_a$d.media[base_a$ano == 2019],
-  x = base_a$dist_hv_border[base_a$ano == 2018],
-  c = 0,
-  cluster = base_a$seg[base_a$ano == 2018],
-  weights = base_a$obs[base_a$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_a$lat[base_a$ano == 2018],
-    base_a$lon[base_a$ano == 2018],
-    #Dists
-    base_a$dtempd1[base_a$ano == 2019], #Temperature
-    base_a$dumidd1[base_a$ano == 2019], #Humidity d1
-    base_a$dumidd2[base_a$ano == 2019], #Humidty d2
-    base_a$dtempd2[base_a$ano == 2019], #temp2
-    
-    #Fuso
-    base_a$h13[base_a$ano == 2019],
-    base_a$h12[base_a$ano == 2019],
-    base_a$h11[base_a$ano == 2019]
-  )
-)
-
-
-# ---------------------------------------------------------------------------- #
-### Fuso + Temp + Socio 
-# ---------------------------------------------------------------------------- #
-
-list[[as.character(paste0(2019,"-",2018,"|all"))]] <- rdrobust(
-  y = base_a$d.media[base_a$ano == 2019],
-  x = base_a$dist_hv_border[base_a$ano == 2018],
-  c = 0,
-  p = 1,
-  cluster = base_a$seg[base_a$ano == 2018],
-  weights = base_a$obs[base_a$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_a$lat[base_a$ano == 2018],
-    base_a$lon[base_a$ano == 2018],
-    #Weather
-    base_a$dtempd1[base_a$ano == 2019], #Temperature
-    base_a$dumidd1[base_a$ano == 2019], #Humidity d1
-    base_a$dumidd2[base_a$ano == 2019], #Humidty d2
-    base_a$dtempd2[base_a$ano == 2019], #temp2
-    
-    #Parents and Individuals Characteristics
-    base_a$descm[base_a$ano == 2019], #mother educ
-    base_a$dfem[base_a$ano == 2019], #Female
-    base_a$dppi[base_a$ano == 2019], #PPI
-    base_a$didade[base_a$ano == 2019], #Age
-    base_a$descp[base_a$ano == 2019], #father educ
-    #Timezones
-    base_a$h13[base_a$ano == 2019],
-    base_a$h12[base_a$ano == 2019],
-    base_a$h11[base_a$ano == 2019]
-  )
-)
 
 # ---------------------------------------------------------------------------- #
 ### All
@@ -1202,29 +1198,17 @@ result <- data.frame(
     fmt_npair(t10$n_left[1], t10$n_rght[1]),
     fmt_bw(t10$bw[1])
   ),
-  `(2)` = c( #2019 - 2018
+  `(2)` = c( #2019 - 2018 all
     fmt_est(t10$coef[3], t10$pv[3]),
     fmt_se(t10$se[3]),
     fmt_npair(t10$n_left[3], t10$n_rght[3]),
     fmt_bw(t10$bw[3])
   ),
-  `(3)` = c( #1918 fuso
+  `(3)` = c( #1918 all pol2
     fmt_est(t10$coef[4], t10$pv[4]),
     fmt_se(t10$se[4]),
     fmt_npair(t10$n_left[4], t10$n_rght[4]),
     fmt_bw(t10$bw[4])
-  ),
-  `(4)` = c( #1918 fuso + pol
-    fmt_est(t10$coef[5], t10$pv[5]),
-    fmt_se(t10$se[5]),
-    fmt_npair(t10$n_left[5], t10$n_rght[5]),
-    fmt_bw(t10$bw[5])
-  ),
-  `(5)` = c( #1918 fuso + pol
-    fmt_est(t10$coef[6], t10$pv[6]),
-    fmt_se(t10$se[6]),
-    fmt_npair(t10$n_left[6], t10$n_rght[6]),
-    fmt_bw(t10$bw[6])
   ),
   check.names = FALSE,
   stringsAsFactors = FALSE
@@ -1257,90 +1241,6 @@ ef <- dummy_cols(base_esc$seg_esc[base_esc$ano == 2018])
 ef <- ef %>% select(-1,-2)
 
 
-### Main 
-list[[as.character(paste0(2019,"-",2018,"esc|Res"))]] <- rdrobust(
-  y = base_esc$d.media[base_esc$ano == 2019],
-  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
-  c = 0,
-  cluster = base_esc$seg[base_esc$ano == 2018],
-  weights = base_esc$obs[base_esc$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_esc$lat[base_esc$ano == 2018],
-    base_esc$lon[base_esc$ano == 2018],
-    base_esc$h13[base_esc$ano == 2019],
-    base_esc$h12[base_esc$ano == 2019],
-    base_esc$h11[base_esc$ano == 2019]
-  )
-)
-
-
-
-# ---------------------------------------------------------------------------- #
-### Fuso + Temp
-# ---------------------------------------------------------------------------- #
-
-list[[as.character(paste0(2019,"-",2018,"esc|fuso+temp"))]] <- rdrobust(
-  y = base_esc$d.media[base_esc$ano == 2019],
-  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
-  c = 0,
-  cluster = base_esc$seg[base_esc$ano == 2018],
-  weights = base_esc$obs[base_esc$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_esc$lat[base_esc$ano == 2018],
-    base_esc$lon[base_esc$ano == 2018],
-    #Dists
-    base_esc$dtempd1[base_esc$ano == 2019], #Temperature
-    base_esc$dumidd1[base_esc$ano == 2019], #Humidity d1
-    base_esc$dumidd2[base_esc$ano == 2019], #Humidty d2
-    base_esc$dtempd2[base_esc$ano == 2019], #temp2
-    
-    #Fuso
-    base_esc$h13[base_esc$ano == 2019],
-    base_esc$h12[base_esc$ano == 2019],
-    base_esc$h11[base_esc$ano == 2019]
-  )
-)
-
-
-# ---------------------------------------------------------------------------- #
-### Fuso + Temp + Socio 
-# ---------------------------------------------------------------------------- #
-
-list[[as.character(paste0(2019,"-",2018,"esc|temp+socio"))]] <- rdrobust(
-  y = base_esc$d.media[base_esc$ano == 2019],
-  x = base_esc$dist_hv_esc[base_esc$ano == 2018],
-  c = 0,
-  p = 1,
-  cluster = base_esc$seg[base_esc$ano == 2018],
-  weights = base_esc$obs[base_esc$ano == 2018],
-  vce = "hc0",
-  covs = cbind(
-    ef,
-    base_esc$lat[base_esc$ano == 2018],
-    base_esc$lon[base_esc$ano == 2018],
-    #Weather
-    base_esc$dtempd1[base_esc$ano == 2019], #Temperature
-    base_esc$dumidd1[base_esc$ano == 2019], #Humidity d1
-    base_esc$dumidd2[base_esc$ano == 2019], #Humidty d2
-    base_esc$dtempd2[base_esc$ano == 2019], #temp2
-    
-    #Parents and Individuals Characteristics
-    base_esc$descm[base_esc$ano == 2019], #mother educ
-    base_esc$dfem[base_esc$ano == 2019], #Female
-    base_esc$dppi[base_esc$ano == 2019], #PPI
-    base_esc$didade[base_esc$ano == 2019], #Age
-    base_esc$descp[base_esc$ano == 2019], #father educ
-    #Timezones
-    base_esc$h13[base_esc$ano == 2019],
-    base_esc$h12[base_esc$ano == 2019],
-    base_esc$h11[base_esc$ano == 2019]
-  )
-)
-
 # ---------------------------------------------------------------------------- #
 ### All
 # ---------------------------------------------------------------------------- #
@@ -1350,13 +1250,13 @@ list[[as.character(paste0(2019,"-",2018,"esc|all"))]] <- rdrobust(
   x = base_esc$dist_hv_esc[base_esc$ano == 2018],
   c = 0,
   p = 1,
-  cluster = base_esc$seg[base_esc$ano == 2018],
+  cluster = base_esc$seg_esc[base_esc$ano == 2018],
   weights = base_esc$obs[base_esc$ano == 2018],
   vce = "hc0",
   covs = cbind(
     ef,
-    base_esc$lat[base_esc$ano == 2018],
-    base_esc$lon[base_esc$ano == 2018],
+    base_esc$lat_esc[base_esc$ano == 2018],
+    base_esc$lon_esc[base_esc$ano == 2018],
     #Weather
     base_esc$dtempd1[base_esc$ano == 2019], #Temperature
     base_esc$dumidd1[base_esc$ano == 2019], #Humidity d1
@@ -1402,13 +1302,13 @@ list[[as.character(paste0(2019,"-",2018,"esc|all+pol"))]] <- rdrobust(
   x = base_esc$dist_hv_esc[base_esc$ano == 2018],
   c = 0,
   p = 2,
-  cluster = base_esc$seg[base_esc$ano == 2018],
+  cluster = base_esc$seg_esc[base_esc$ano == 2018],
   weights = base_esc$obs[base_esc$ano == 2018],
   vce = "hc0",
   covs = cbind(
     ef,
-    base_esc$lat[base_esc$ano == 2018],
-    base_esc$lon[base_esc$ano == 2018],
+    base_esc$lat_esc[base_esc$ano == 2018],
+    base_esc$lon_esc[base_esc$ano == 2018],
     #Weather
     base_esc$dtempd1[base_esc$ano == 2019], #Temperature
     base_esc$dumidd1[base_esc$ano == 2019], #Humidity d1
@@ -1478,28 +1378,16 @@ result <- data.frame(
     fmt_bw(t10$bw[2])
   ),
   `(2)` = c(
-    fmt_est(t10$coef[7], t10$pv[7]),
-    fmt_se(t10$se[7]),
-    fmt_npair(t10$n_left[7], t10$n_rght[7]),
-    fmt_bw(t10$bw[7])
+    fmt_est(t10$coef[5], t10$pv[5]),
+    fmt_se(t10$se[5]),
+    fmt_npair(t10$n_left[5], t10$n_rght[5]),
+    fmt_bw(t10$bw[5])
   ),
   `(3)` = c(
-    fmt_est(t10$coef[8], t10$pv[8]),
-    fmt_se(t10$se[8]),
-    fmt_npair(t10$n_left[8], t10$n_rght[8]),
-    fmt_bw(t10$bw[8])
-  ),
-  `(4)` = c(
-    fmt_est(t10$coef[9], t10$pv[9]),
-    fmt_se(t10$se[9]),
-    fmt_npair(t10$n_left[9], t10$n_rght[9]),
-    fmt_bw(t10$bw[9])
-  ),
-  `(5)` = c(
-    fmt_est(t10$coef[10], t10$pv[10]),
-    fmt_se(t10$se[10]),
-    fmt_npair(t10$n_left[10], t10$n_rght[10]),
-    fmt_bw(t10$bw[10])
+    fmt_est(t10$coef[6], t10$pv[6]),
+    fmt_se(t10$se[6]),
+    fmt_npair(t10$n_left[6], t10$n_rght[6]),
+    fmt_bw(t10$bw[6])
   ),
   check.names = FALSE,
   stringsAsFactors = FALSE
@@ -1704,7 +1592,7 @@ list[[as.character(paste0(2018,"-",2017,"|fuso"))]] <- rdrobust(
 ### 1.4.2 Temperature ----
 # ---------------------------------------------------------------------------- #
 
-list[[as.character(paste0(2018,"-",2017,"|temp"))]] <- rdrobust(
+list[[as.character(paste0(2018,"-",2017,"|dem"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2018],
   x = base_res$dist_hv_res[base_res$ano == 2017],
   c = 0,
@@ -1719,6 +1607,13 @@ list[[as.character(paste0(2018,"-",2017,"|temp"))]] <- rdrobust(
     base_res$h12[base_res$ano == 2018],
     base_res$h11[base_res$ano == 2018],
     #Dists
+    #Parents and Individuals Characteristics
+    base_res$descm[base_res$ano == 2018], #mother educ
+    base_res$dfem[base_res$ano == 2018], #Female
+    base_res$dppi[base_res$ano == 2018], #PPI
+    base_res$didade[base_res$ano == 2018], #Age
+    base_res$descp[base_res$ano == 2018], #father educ
+    
     base_res$dtempd1[base_res$ano == 2018], #Temperature
     base_res$dumidd1[base_res$ano == 2018], #Humidity d1
     base_res$dumidd2[base_res$ano == 2018], #Humidty d2
@@ -1730,7 +1625,7 @@ list[[as.character(paste0(2018,"-",2017,"|temp"))]] <- rdrobust(
 ### 1.4.3 Fuso + Temp + Socio ----
 # ---------------------------------------------------------------------------- #
 
-list[[as.character(paste0(2018,"-",2017,"|fuso+temp+socio"))]] <- rdrobust(
+list[[as.character(paste0(2018,"-",2017,"|fuso+temp+house"))]] <- rdrobust(
   y = base_res$d.media[base_res$ano == 2018],
   x = base_res$dist_hv_res[base_res$ano == 2017],
   c = 0,
@@ -1753,6 +1648,17 @@ list[[as.character(paste0(2018,"-",2017,"|fuso+temp+socio"))]] <- rdrobust(
     base_res$dppi[base_res$ano == 2018], #PPI
     base_res$didade[base_res$ano == 2018], #Age
     base_res$descp[base_res$ano == 2018], #father educ
+    #House
+    base_res$dn_ban[base_res$ano == 2018], #bathrooms
+    base_res$dpessoa[base_res$ano == 2018], #people in household
+    base_res$dn_qua[base_res$ano == 2018], #houses
+    base_res$dn_car[base_res$ano == 2018], #cars
+    base_res$dn_gel[base_res$ano == 2018], #geladeira
+    base_res$dn_cel[base_res$ano == 2018], #cel
+    base_res$dpc[base_res$ano == 2018],    #pc
+    base_res$dinternet[base_res$ano == 2018], #internet
+    base_res$dempr_dom[base_res$ano == 2018], #Housekeeping
+    
     #Timezones
     base_res$h13[base_res$ano == 2018],
     base_res$h12[base_res$ano == 2018],
@@ -1776,13 +1682,18 @@ list[[as.character(paste0(2018,"-",2017,"|all"))]] <- rdrobust(
     efr,
     base_res$lat_res[base_res$ano == 2017],
     base_res$lon_res[base_res$ano == 2017],
-    
     #Weather
     base_res$dtempd1[base_res$ano == 2018], #Temperature
     base_res$dumidd1[base_res$ano == 2018], #Humidity d1
     base_res$dumidd2[base_res$ano == 2018], #Humidty d2
     base_res$dtempd2[base_res$ano == 2018], #temp2
     
+    #Parents and Individuals Characteristics
+    base_res$descm[base_res$ano == 2018], #mother educ
+    base_res$dfem[base_res$ano == 2018], #Female
+    base_res$dppi[base_res$ano == 2018], #PPI
+    base_res$didade[base_res$ano == 2018], #Age
+    base_res$descp[base_res$ano == 2018], #father educ
     #House
     base_res$dn_ban[base_res$ano == 2018], #bathrooms
     base_res$dpessoa[base_res$ano == 2018], #people in household
@@ -1794,18 +1705,7 @@ list[[as.character(paste0(2018,"-",2017,"|all"))]] <- rdrobust(
     base_res$dinternet[base_res$ano == 2018], #internet
     base_res$dempr_dom[base_res$ano == 2018], #Housekeeping
     
-    #remaining
-    base_res$descm[base_res$ano == 2018], #mother educ
-    base_res$dfem[base_res$ano == 2018], #Female
-    base_res$dppi[base_res$ano == 2018], #PPI
-    base_res$didade[base_res$ano == 2018], #Age
-    base_res$descp[base_res$ano == 2018], #father educ
-    base_res$drenda1[base_res$ano == 2018], #wage < 1MW
-    base_res$drenda110[base_res$ano == 2018], #wage 1MW - 10MW
-    base_res$drenda10[base_res$ano == 2018], #wage > 10MW
-    base_res$dpibpc[base_res$ano == 2018], #pibpc
-    
-    #Fuso
+    #Timezones
     base_res$h13[base_res$ano == 2018],
     base_res$h12[base_res$ano == 2018],
     base_res$h11[base_res$ano == 2018]
@@ -2687,6 +2587,23 @@ for(j in bins) {
   ef <- dummy_cols(clu$seg_res)
   ef <- ef %>% select(-1,-2)
   
+  #time 
+  time <- temp %>% 
+    filter(ano == 2018) %>% 
+    select(h11, h12, h13)
+  
+  #all
+  all <- temp %>% 
+    filter(ano == 2018) %>% 
+    select(dtempd1, dtempd2, dumidd1, dumidd2,
+           
+           dn_ban, dn_qua, dn_car, dn_gel, dn_cel, dpc, dinternet,
+           
+           dfem, descm, dppi, didade, descp,
+           
+           drenda1, drenda110, drenda10, dpibpc)
+  
+  
   # Estimando parâmetros do gráfico
   plist[[as.character(paste0(j))]] <- rdplot(y = yv$vd,
                                              x = xv$dist_hv_res,
@@ -2699,7 +2616,7 @@ for(j in bins) {
                                              subset = temp$subset == 1,
                                              hide = T,
                                              masspoints= "adjust",
-                                             covs = cbind(ef,latv,lonv),
+                                             covs = cbind(ef,latv,lonv, time, all),
                                              nbins = c(j,j)
   )
   
@@ -4076,16 +3993,9 @@ base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_ab
       .default = NA
     ),
     
-    id18 = ifelse(idade == 18, 1, 0),
-    fem = ifelse(mas == 0, 1, 0),
-    ppi = ifelse(raca %in% c("C","D","F"), 1, 0),
-    
-    
     
     renda_1_10 = ifelse(renda_dom == "C", 1, 0),
     renda_10   = ifelse(renda_dom == "D", 1, 0),
-    renda1 = ifelse(renda_dom %in% c("A","B"),1,0),
-    
     
     over_hv_border = case_when(
       aux_res < 30 & aux_pro >= 30 ~ 1,
@@ -4100,19 +4010,7 @@ base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_ab
   setDT()
 
 
-# PIB
-pib <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/pib.RDS") %>%
-  mutate(codmun = as.integer(codmun)) %>%
-  rename(mun_prova = codmun)
 
-base_abs <- base_abs %>% 
-  left_join(pib, by = c("mun_res" = "mun_prova", "ano")) 
-
-rm(pib)
-
-# --------  #
-# By mun 
-# -------- #
 
 vars_diff <- c(
   "abs",
@@ -4151,6 +4049,7 @@ base_ag_abs <- base_abs[priv0 == 1, .(
   h13 = first(h13),
   h12 = first(h12),
   h11 = first(h11),
+  h10 = first(h10),
   obs = .N
 ), by = .(mun_res, ano)] %>%
   filter(as.numeric(ano) %in% c(2018, 2019)) %>%
@@ -4188,13 +4087,32 @@ for (v in vars_diff) {
 
 temp_cols <- grep("^(v1_|v2_)", names(base_ag_abs), value = TRUE)
 base_ag_abs <- base_ag_abs %>% select(-all_of(temp_cols)) %>% 
-  mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) 
+  mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) %>%  #Turning INF to NA
+  rename(d.media = dmedia)
 
 
 rm(vars_diff, v, v1, v2)
 # ---------------------------------------------------------------------------- #
 ## 7.1 Reg ----
 # ---------------------------------------------------------------------------- #
+
+base_abs <- base_abs %>% 
+  mutate(abs_1d = ifelse(
+    abs_rd == 1 & abs_ch == 1 & abs_lc == 1 , 1, 0),
+    
+    abs_2d = ifelse(
+      abs_cn == 1 & abs_mt == 1, 1, 0)
+  ) %>% 
+  setDT()
+
+
+
+
+base_a <- base_abs[priv0 == 1,.(media_dia1 = mean(abs_1d, na.rm = T),
+                                media_dia2 = mean(abs_2d, na.rm = T),
+                                media_abs = mean(abs, na.rm = T),
+                                obs = .N),
+                   by = .(mun_res,ano)] 
 
 # Base de distâncias
 mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/mun_hv.RDS")
@@ -4220,24 +4138,49 @@ mun_hv <- mun_hv %>%
   select(co_municipio, dist_hv_border, lat, lon, seg) 
 
 #Res. Dist.
-base_a <- base_ag_abs %>% 
+base_a <- base_a %>% 
   left_join(mun_hv %>% rename(dist_hv_res = dist_hv_border) %>% #Coordinates of Residency 
               rename(lat_res = lat, 
                      lon_res = lon,
                      seg_res = seg), 
             by = c("mun_res" = "co_municipio")) 
 
-rm(mun_hv, base_abs)
+rm(mun_hv)
+base_a <- base_a %>%
+  arrange(mun_res,ano) %>%
+  group_by(mun_res) %>%
+  filter(!is.na(media_dia1) & !is.na(media_dia2)) %>% 
+  mutate(
+    dup1 = 1,
+    dup2 = sum(dup1),
+    
+    
+    #dia1_ 2019 REF
+    v1_d1 = ifelse(ano == 2018, media_dia1, NA), 
+    v2_d1 = max(v1_d1, na.rm = T),
+    d.media_d1 = media_dia1 - v2_d1,
+    
+    v1_d2 = ifelse(ano == 2018, media_dia2, NA), #Note que inverte
+    v2_d2 = max(v1_d2, na.rm = T),
+    d.media_d2 = media_dia2 - v2_d2,
+    
+    #ABS
+    v1 = ifelse(ano == 2018, media_abs, NA),
+    v2 = max(v1, na.rm = T),
+    d.media_abs = media_abs - v2
+    
+    
+  ) %>%
+  ungroup() %>%
+  filter(dup2 == 2) %>% 
+  select(-c(v1_d1, v2_d1, v2_d2, v1_d2, v1, v2)) %>% 
+  left_join(base_aux, by = c("mun_res", "ano"))
 
-base_a <- base_a %>% 
-  group_by(mun_res) %>% 
-  filter(!is.na(descm),
-         !is.na(descp)) %>% 
-  ungroup()
+
 
 result <- list()
 
-d_list <- c("dabs")
+d_list <- c("d.media_abs")
 
 
 for (i in d_list){
@@ -4311,14 +4254,40 @@ educ <- readRDS("Z:/Tuffy/Paper - HV/Bases/census_students.RDS")
 
 
 
-base_a <- base_a %>% 
+base_a <- base_abs[priv0 == 1,.(media_abs = mean(abs, na.rm = T),
+                                obs = .N),
+                   by = .(mun_res,ano)] %>% 
+  arrange(mun_res, ano) %>% 
   left_join(educ, by = c("mun_res" = "co_municipio", "ano")) #
 
 
+base_mun <- base %>% 
+  group_by(mun_res, ano) %>% 
+  summarise(
+    lat  = first(lat_res),
+    lon  = first(lon_res),
+    seg  = first(seg_res),
+    dist_hv_border = first(dist_hv_res),
+    .groups = "drop"
+  )
+
+
 base_a <- base_a %>% 
+  left_join(base_mun, by = c("mun_res", "ano")) %>% 
+  
   group_by(mun_res) %>% 
   filter(all(c(2018, 2019) %in% ano)) %>%
   mutate(
+    
+    
+    #dia1_ 2019 REF
+    v1_d1 = ifelse(ano == 2018, obs, NA), 
+    v2_d1 = max(v1_d1, na.rm = T),
+    dobs = obs - v2_d1,
+    
+    v1_d2 = ifelse(ano == 2018, alunos, NA), #Note que inverte
+    v2_d2 = max(v1_d2, na.rm = T),
+    dalunos = alunos - v2_d2,
     
     #ABS
     v1 = ifelse(ano == 2018, alunos-obs, NA),
@@ -4332,7 +4301,9 @@ base_a <- base_a %>%
     dlog_frac = log(frac2019) - log(frac2018)
   ) %>%
   ungroup() %>% 
-  select(-c(v1, v2))
+  select(-c(v1_d1, v1_d2, v1, v2_d1, v2_d2, v2)) %>% 
+  left_join(base_aux, by = c("mun_res", "ano"))
+
 # ---------------------------------------------------------------------------- #
 #### 7.1.1.2 Regression Diff-in-diff ----
 # ---------------------------------------------------------------------------- #
@@ -4348,10 +4319,10 @@ for (i in d_list){
     filter(n_distinct(ano) == 2) %>%
     ungroup() %>% 
     filter(
-      !is.na(seg_res) &
-        !is.na(lat_res) &
-        !is.na(lon_res) &
-        !is.na(dist_hv_res) &
+      !is.na(seg) &
+        !is.na(lat) &
+        !is.na(lon) &
+        !is.na(dist_hv_border) &
         !is.na(obs) &
         !is.na(alunos)
     ) %>% 
@@ -4360,24 +4331,24 @@ for (i in d_list){
   
   #Com Controles
   
-  ef <- dummy_cols(temp$seg_res)
+  ef <- dummy_cols(temp$seg)
   ef <- ef %>% select(-1,-2)
   
   
   result[[as.character(paste0("nc_",i,"|TC"))]] <-
     rdrobust(
       y = temp[[i]][temp$ano == 2019],
-      x = temp$dist_hv_res,
+      x = temp$dist_hv_border,
       c = 0,
       p = 1,
       h = bw_main_r,
       b = bw_bias_r,
-      cluster = temp$seg_res,
+      cluster = temp$seg,
       vce = "hc0",
       covs = cbind(
         ef, 
-        temp$lat_res,
-        temp$lon_res,
+        temp$lat,
+        temp$lon,
         #All
         temp$dtempd1, #Temperature
         temp$descm, #mother educ
@@ -4500,8 +4471,7 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/Abs_Dias_v1.tex")
 #N = 5559
-rm(latex_table, result, dias, d_list, p_list, names, base_abs, educ, temp,
-   base_mun, base_a, base_ag_abs, dv, temp_cols, am_mun_special, inpe_days_1819)
+rm(latex_table, result, dias, d_list, p_list, names, base_abs, educ, temp, base_mun, base_a)
 
 
 # ---------------------------------------------------------------------------- #
@@ -5843,6 +5813,8 @@ for (i in time_list){
     x = b_temp$dist_hv_res[b_temp$ano == 2018],
     c = 0,
     p = 1,
+    h = bw_main_r,
+    b = bw_bias_r,
     cluster = b_temp$seg_res[b_temp$ano == 2018],
     weights = b_temp$obs[b_temp$ano == 2018],
     vce = "hc0",
@@ -7452,12 +7424,11 @@ add_inpe_prova_1819 <- function(base, inpe_path = "Z:/Tuffy/Paper - HV/Bases/inp
 }
 
 # ---------------------------------------------------------------------------- #
-## 15.0 Data raw ----
+# 15.0 Data raw ----
 # ---------------------------------------------------------------------------- #
 
-base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2019.RDS")) %>%
-  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2018.RDS"))) %>%
-  filter(treineiro == 1) %>% 
+base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2019_trei.RDS")) %>%
+  bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_2018_trei.RDS"))) %>%
   create_controls_1819() %>% 
   add_inpe_prova_1819() %>% 
   setDT()
@@ -7471,7 +7442,7 @@ base <- base %>%
             by = c("mun_res" = "co_municipio")) 
 
 
-base_trei <- base %>% #filter(treineiro == 1) %>% 
+base_trei <- base %>% filter(treineiro == 1) %>% 
   mutate(
     
     escm = case_when(
@@ -7503,6 +7474,7 @@ base_trei <- base %>% #filter(treineiro == 1) %>%
 
 gc()
 
+rm(base)
 
 
 summary(base_trei$mun_escola)
@@ -7511,6 +7483,17 @@ summary(base_trei)
 ## 15.1 Data Mock ----
 # ---------------------------------------------------------------------------- #
 
+
+char_vars <- c(
+  "pessoas_dom", "empr_dom", "n_banheiro", "n_quartos",
+  "n_carros", "n_geladeira", "n_celular", "pc", "internet"
+)
+
+base_trei[, (char_vars) := lapply(.SD, function(x) {
+  x <- trimws(x)
+  x[x == ""] <- NA
+  as.numeric(gsub(",", ".", x, fixed = TRUE))
+}), .SDcols = char_vars]
 
 
 vars_diff <- c(
@@ -7523,7 +7506,7 @@ vars_diff <- c(
   "tempd1", "tempd2", "umidd2", "umidd1"
 )
 
-base_trei <- base_trei[priv0 == 1, .(
+base_trei_agg <- base_trei[, .(
   media    = mean(media, na.rm = TRUE),
   escm     = mean(escm, na.rm = TRUE),
   escp     = mean(escp, na.rm = TRUE),
@@ -7550,7 +7533,6 @@ base_trei <- base_trei[priv0 == 1, .(
   h13 = first(h13),
   h12 = first(h12),
   h11 = first(h11),
-  h10 = first(h10),
   obs = .N
 ), by = .(mun_res, ano, dist_hv_res, seg_res, lat_res, lon_res)] %>%
   filter(as.numeric(ano) %in% c(2018, 2019)) %>%
@@ -7560,9 +7542,10 @@ base_trei <- base_trei[priv0 == 1, .(
   ungroup()
 
 
+
 for (v in vars_diff) {
   
-  if (!v %in% names(base_trei)) {
+  if (!v %in% names(base_trei_agg)) {
     warning(paste("Variável não encontrada:", v))
     next
   }
@@ -7571,23 +7554,23 @@ for (v in vars_diff) {
   v2 <- paste0("v2_", v)
   dv <- paste0("d", v)
   
-  base_trei[[v1]] <- ifelse(base_trei$ano == 2018, base_trei[[v]], NA_real_)
+  base_trei_agg[[v1]] <- ifelse(base_trei_agg$ano == 2018, base_trei_agg[[v]], NA_real_)
   
-  base_trei[[v2]] <- ave(
-    base_trei[[v1]], 
-    base_trei$mun_res, 
+  base_trei_agg[[v2]] <- ave(
+    base_trei_agg[[v1]], 
+    base_trei_agg$mun_res, 
     FUN = function(x) {
       if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
     }
   )
   
-  base_trei[[dv]] <- base_trei[[v]] - base_trei[[v2]]
+  base_trei_agg[[dv]] <- base_trei_agg[[v]] - base_trei_agg[[v2]]
   
-  base_trei[[dv]][!is.finite(base_trei[[dv]])] <- NA
+  base_trei_agg[[dv]][!is.finite(base_trei_agg[[dv]])] <- NA
 }
 
-temp_cols <- grep("^(v1_|v2_)", names(base_trei), value = TRUE)
-base_trei <- base_trei %>% select(-all_of(temp_cols)) %>% 
+temp_cols <- grep("^(v1_|v2_)", names(base_trei_agg), value = TRUE)
+base_trei_agg <- base_trei_agg %>% select(-all_of(temp_cols)) %>% 
   mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) %>%  #Turning INF to NA
   rename(d.media = dmedia)
 
@@ -7598,7 +7581,7 @@ base_trei <- base_trei %>% select(-all_of(temp_cols)) %>%
 
 
 
-ef2 <- dummy_cols(base_trei$seg_res[base_trei$ano == 2018])
+ef2 <- dummy_cols(base_trei_agg$seg_res[base_trei_agg$ano == 2018])
 ef2 <- ef2 %>% select(-1,-2)
 
 
@@ -7612,47 +7595,46 @@ list <- list()
 
 
 list[[as.character(paste0(2019,"-",2018,"C|Trei"))]] <- rdrobust(
-  y = base_trei$d.media[base_trei$ano == 2019],
-  x = base_trei$dist_hv_res[base_trei$ano == 2018],
+  y = base_trei_agg$d.media[base_trei_agg$ano == 2019],
+  x = base_trei_agg$dist_hv_res[base_trei_agg$ano == 2018],
   c = 0,
-  cluster = base_trei$seg_res[base_trei$ano == 2018],
-  weights = base_trei$obs[base_trei$ano == 2018],
+  cluster = base_trei_agg$seg_res[base_trei_agg$ano == 2018],
+  weights = base_trei_agg$obs[base_trei_agg$ano == 2018],
   vce = "hc0",
   covs = cbind(
     ef2,
     
-    base_trei$lat_res[base_trei$ano == 2018],
-    base_trei$lon_res[base_trei$ano == 2018],
+    base_trei_agg$lat_res[base_trei_agg$ano == 2018],
+    base_trei_agg$lon_res[base_trei_agg$ano == 2018],
     #All
-    base_trei$dtempd1[base_trei$ano == 2019], #Temperature
-    base_trei$descm[base_trei$ano == 2019], #mother educ
-    base_trei$dn_ban[base_trei$ano == 2019], #bathrooms
-    base_trei$dumidd1[base_trei$ano == 2019], #Humidity d1
-    base_trei$dumidd2[base_trei$ano == 2019], #Humidty d2
-    base_trei$dfem[base_trei$ano == 2019], #Female
-    base_trei$dppi[base_trei$ano == 2019], #PPI
-    base_trei$didade[base_trei$ano == 2019], #Age
-    base_trei$descp[base_trei$ano == 2019], #father educ
+    base_trei_agg$dtempd1[base_trei_agg$ano == 2019], #Temperature
+    base_trei_agg$descm[base_trei_agg$ano == 2019], #mother educ
+    base_trei_agg$dumidd1[base_trei_agg$ano == 2019], #Humidity d1
+    base_trei_agg$dumidd2[base_trei_agg$ano == 2019], #Humidty d2
+    base_trei_agg$dfem[base_trei_agg$ano == 2019], #Female
+    base_trei_agg$dppi[base_trei_agg$ano == 2019], #PPI
+    base_trei_agg$didade[base_trei_agg$ano == 2019], #Age
+    base_trei_agg$descp[base_trei_agg$ano == 2019], #father educ
     
-    base_trei$dpessoa[base_trei$ano == 2019], #people in household
-    base_trei$dn_qua[base_trei$ano == 2019], #houses
-    base_trei$dn_car[base_trei$ano == 2019], #cars
-    base_trei$dn_gel[base_trei$ano == 2019], #geladeira
-    base_trei$dn_cel[base_trei$ano == 2019], #cel
-    base_trei$dpc[base_trei$ano == 2019],    #pc
-    base_trei$dinternet[base_trei$ano == 2019], #internet
+    base_trei_agg$dpessoa[base_trei_agg$ano == 2019], #people in household
+    base_trei_agg$dn_qua[base_trei_agg$ano == 2019], #houses
+    base_trei_agg$dn_car[base_trei_agg$ano == 2019], #cars
+    base_trei_agg$dn_gel[base_trei_agg$ano == 2019], #geladeira
+    base_trei_agg$dn_cel[base_trei_agg$ano == 2019], #cel
+    base_trei_agg$dpc[base_trei_agg$ano == 2019],    #pc
+    base_trei_agg$dinternet[base_trei_agg$ano == 2019], #internet
     
-    base_trei$drenda1[base_trei$ano == 2019], #wage < 1MW
-    base_trei$drenda110[base_trei$ano == 2019], #wage 1MW - 10MW
-    base_trei$drenda10[base_trei$ano == 2019], #wage > 10MW
-    base_trei$dpibpc[base_trei$ano == 2019], #pibpc
+    base_trei_agg$drenda1[base_trei_agg$ano == 2019], #wage < 1MW
+    base_trei_agg$drenda110[base_trei_agg$ano == 2019], #wage 1MW - 10MW
+    base_trei_agg$drenda10[base_trei_agg$ano == 2019], #wage > 10MW
+    base_trei_agg$dpibpc[base_trei_agg$ano == 2019], #pibpc
     
-    base_trei$dtempd2[base_trei$ano == 2019], #temp2
+    base_trei_agg$dtempd2[base_trei_agg$ano == 2019], #temp2
     
     #Fuso
-    base_trei$h13[base_trei$ano == 2019],
-    base_trei$h12[base_trei$ano == 2019],
-    base_trei$h11[base_trei$ano == 2019]
+    base_trei_agg$h13[base_trei_agg$ano == 2019],
+    base_trei_agg$h12[base_trei_agg$ano == 2019],
+    base_trei_agg$h11[base_trei_agg$ano == 2019]
   )
 )
 
