@@ -4813,75 +4813,46 @@ gc()
 #7. Final Database ----
 # ---------------------------------------------------------------------------- #
 
-
+am_mun_special <- c(
+  1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
+  1302306, 1302405, 1303502, 1303908, 1304062
+)
 
 base <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2019.RDS")) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2018.RDS"))) %>%
   bind_rows(readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_nota_2017.RDS"))) %>%
-  setDT() %>% 
-  filter(conclusao == 2)
+  filter(conclusao == 2) %>% 
+  setDT()
 
 #Exam start time dummies
 base <- base %>% 
   mutate(
-    
     aux_res = mun_res %/% 100000,
+    aux_pro = mun_prova %/% 100000,
     
-    h13 = case_when( #Prova iniciando as 13h
-      ano %in% c(2017:2019) &
-        aux_res %in% c(52, 53, 31, 32, 33, 35, 42, 41, 43) ~ 1,
-      #"GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS"
-      
-      ano == 2019 &
-        aux_res %in% c(52, 53, 31, 32, 33, 35, 42, 41, 43,
-                       #"GO", "DF", "MG", "ES", "RJ", "SP", "SC", "PR", "RS",
-                       29, 28, 27, 26, 25, 24, 23, 22, 21, 17, 15, 16 ) ~ 1, 
-      #"BA", "SE", "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP"
-      
-      TRUE ~ 0
+    # Exam start time dummies
+    h13 = ifelse(
+      aux_res %in% c(
+        52, 53, 31, 32, 33, 35, 42, 41, 43,
+        29, 28, 27, 26, 25, 24, 23, 22, 21, 17, 15, 16
+      ),
+      1,0
     ),
     
-    h12 = case_when( #Prova iniciando as 12h
-      ano %in% c(2017, 2018) &
-        aux_res %in% c(29, 28, 27, 26, 25, 24, 23, 22, 21, 17, 15, 16,
-                       #"BA", "SE", "AL", "PE", "PB", "RN", "CE","PI", "MA", "TO", "PA", "AP" "MT",
-                       51, 50) ~ 1,
-      #"MT", "MS",
-      
-      ano == 2019 &
-        aux_res %in% c(51, 50, 11, 14) | aux_res == 13 &
-        !mun_res %in%
-        c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
-          1302306, 1302405, 1303502, 1303908, 1304062) ~ 1,
-      
-      TRUE ~ 0
+    h12 = ifelse(
+      aux_res %in% c(51, 50, 11, 14) |
+        (aux_res == 13 & !mun_res %in% am_mun_special),
+      1, 0
     ),
     
-    h11 = case_when( #Prova iniciando as 12h
-      ano %in% c(2017, 2018) &
-        aux_res %in% c(11, 14) | aux_res == 13 & !mun_res %in% 
-        c(1300201, 1300607, 1300706, 1301407, 1301506, 1301654, 1301803, 1301951,
-          1302306, 1302405, 1303502, 1303908, 1304062) ~ 1,
+    h11 = ifelse(
       
-      ano == 2019 &
-        aux_res == 12 | mun_res %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
-                                       1301654, 1301803, 1301951, 1302306, 1302405,
-                                       1303502, 1303908, 1304062) ~ 1,
-      
-      TRUE ~ 0
-    ),
-    
-    h10 = case_when( #Prova iniciando as 12h
-      ano %in% c(2017, 2018) &
-        aux_res == 12 | mun_res %in% c(1300201, 1300607, 1300706, 1301407, 1301506,
-                                       1301654, 1301803, 1301951, 1302306, 1302405,
-                                       1303502, 1303908, 1304062) ~ 1,
-      
-      TRUE ~ 0
-    ),
-    
-    
-    new_dist = dist_hv_border/100000) 
+      aux_res == 12 |
+        mun_res %in% am_mun_special,
+      1, 0
+    )
+  ) %>% 
+  setDT()
 
 
 summary(base %>% select(idade, conclusao, esc_mae))
@@ -5089,6 +5060,67 @@ base <- base %>%
 rm(mun_hv, pib)
 
 saveRDS(base, "Z:/Tuffy/Paper - HV/Bases/base_final.RDS")
+
+# ---------------------------------------------------------------------------- #
+# Percentile
+# ---------------------------------------------------------------------------- #
+
+media_deciles <- base %>%
+  filter(ano == 2018) %>% 
+  filter(!is.na(media)) %>%
+  mutate(decile = ntile(media, 10)) %>%
+  group_by(decile) %>%
+  summarise(
+    min_media = min(media, na.rm = TRUE),
+    max_media = max(media, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  )
+
+media_deciles
+media_decile_gaps <- media_deciles %>%
+  arrange(desc(decile)) %>%
+  mutate(
+    lower_group = decile,
+    upper_group_min = min_media,
+    next_lower_group = lead(decile),
+    next_lower_group_max = lead(max_media),
+    gap = upper_group_min - next_lower_group_max
+  ) %>%
+  filter(!is.na(next_lower_group))
+
+media_decile_gaps
+
+
+#
+base_2018 <- base %>%
+  filter(ano == 2018, !is.na(media))
+
+grade_cuts <- quantile(
+  base_2018$media,
+  probs = seq(0, 1, 0.1),
+  na.rm = TRUE
+)
+
+ggplot(base_2018, aes(x = media)) +
+  geom_histogram(
+    bins = 60,
+    fill = "gray75",
+    color = "white"
+  ) +
+  geom_vline(
+    xintercept = grade_cuts,
+    linewidth = 0.35,
+    linetype = "dashed",
+    color = "red"
+  ) +
+  labs(
+    x = "Grade",
+    y = "Number of students"
+  ) +
+  theme_bw()
+
+
 
 gc()
 rm(list = ls())

@@ -40,8 +40,7 @@ library(kableExtra)
 # ---------------------------------------------------------------------------- #
 
 
-base <- readRDS("Z:/Tuffy/Paper - HV/Bases/base_final.RDS")
-
+base <- readRDS("Z:/Tuffy/Paper - HV/Bases/base_final.RDS") 
 # ---------------------------------------------------------------------------- #
 ## 1.1 Base agregada ----
 # ---------------------------------------------------------------------------- #
@@ -4002,6 +4001,10 @@ base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/No_age_filt/base_ab
     renda1 = ifelse(renda_dom %in% c("A","B"),1,0),
     renda_1_10 = ifelse(renda_dom == "C", 1, 0),
     renda_10   = ifelse(renda_dom == "D", 1, 0),
+    id18 = ifelse(idade == 18, 1, 0),
+    dom5 = ifelse(pessoas_dom == "C", 1, 0),
+    ppi = ifelse(raca %in% c("C","D","F"), 1, 0),
+    fem = ifelse(mas == 0, 1, 0),
     
     over_hv_border = case_when(
       aux_res < 30 & aux_pro >= 30 ~ 1,
@@ -4132,7 +4135,6 @@ base_ag_abs <- base_abs[priv0 == 1, .(
   h13 = first(h13),
   h12 = first(h12),
   h11 = first(h11),
-  h10 = first(h10),
   obs = .N
 ), by = .(mun_res, ano)] %>%
   filter(as.numeric(ano) %in% c(2018, 2019)) %>%
@@ -4170,8 +4172,7 @@ for (v in vars_diff) {
 
 temp_cols <- grep("^(v1_|v2_)", names(base_ag_abs), value = TRUE)
 base_ag_abs <- base_ag_abs %>% select(-all_of(temp_cols)) %>% 
-  mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) %>%  #Turning INF to NA
-  rename(d.media = dmedia)
+  mutate(across(everything(), ~ replace(.x, is.infinite(.x), NA))) 
 
 
 rm(vars_diff, v, v1, v2)
@@ -4217,7 +4218,7 @@ base_a <- base_a %>%
 
 result <- list()
 
-d_list <- c("d.media_abs")
+d_list <- c("dabs")
 
 
 for (i in d_list){
@@ -4315,10 +4316,10 @@ for (i in d_list){
     filter(n_distinct(ano) == 2) %>%
     ungroup() %>% 
     filter(
-      !is.na(seg) &
-        !is.na(lat) &
-        !is.na(lon) &
-        !is.na(dist_hv_border) &
+      !is.na(seg_res) &
+        !is.na(lat_res) &
+        !is.na(lon_res) &
+        !is.na(dist_hv_res) &
         !is.na(obs) &
         !is.na(alunos)
     ) %>% 
@@ -4327,24 +4328,24 @@ for (i in d_list){
   
   #Com Controles
   
-  ef <- dummy_cols(temp$seg)
+  ef <- dummy_cols(temp$seg_res)
   ef <- ef %>% select(-1,-2)
   
   
   result[[as.character(paste0("nc_",i,"|TC"))]] <-
     rdrobust(
       y = temp[[i]][temp$ano == 2019],
-      x = temp$dist_hv_border,
+      x = temp$dist_hv_res,
       c = 0,
       p = 1,
       h = bw_main_r,
       b = bw_bias_r,
-      cluster = temp$seg,
+      cluster = temp$seg_res,
       vce = "hc0",
       covs = cbind(
         ef, 
-        temp$lat,
-        temp$lon,
+        temp$lat_res,
+        temp$lon_res,
         #All
         temp$dtempd1, #Temperature
         temp$descm, #mother educ
@@ -4416,7 +4417,7 @@ dias <- data.frame(
   totl   = sapply(result, function(x) x$N[1])
 )
 
-
+dias
 
 
 result <- data.frame(
@@ -4467,7 +4468,8 @@ latex_table <- knitr::kable(
 
 writeLines(latex_table, "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/Abs_Dias_v1.tex")
 #N = 5559
-rm(latex_table, result, dias, d_list, p_list, names, base_abs, educ, temp, base_mun, base_a)
+rm(latex_table, result, dias, d_list, p_list, names, base_abs, educ, temp,
+   base_mun, base_a, base_ag_abs)
 
 
 # ---------------------------------------------------------------------------- #
@@ -4547,7 +4549,7 @@ base_ppi <- base_ppi %>%
 rlist <- list()
 
 
-ano_list <- c(2018)
+ano_list <- 2018
 
 for(ano_ref in ano_list) {
   
@@ -4689,17 +4691,6 @@ result <- data.frame(
     " ", " ", " "
   ),
   `(1)` = c(#Low
-    fmt_est(t10cc$coef[1], t10cc$pv[1]),
-    fmt_se(t10cc$se[1]),
-    paste0("N$_L$ = ", fmt_n(t10cc$n_left[1]),", N$_R$ = ", fmt_n(t10cc$n_rght[1])),
-    paste0("BW = ", fmt_bw(t10cc$bw[1])),
-    #High
-    fmt_est(t10cc$coef[3], t10cc$pv[3]),
-    fmt_se(t10cc$se[3]),
-    paste0("N$_L$ = ", fmt_n(t10cc$n_left[3]),", N$_R$ = ", fmt_n(t10cc$n_rght[3])),
-    paste0("BW = ", fmt_bw(t10cc$bw[3]))
-  ),
-  `(2)` = c(#Low
     fmt_est(t10cc$coef[2], t10cc$pv[2]),
     fmt_se(t10cc$se[2]),
     paste0("N$_L$ = ", fmt_n(t10cc$n_left[2]),", N$_R$ = ", fmt_n(t10cc$n_rght[2])),
@@ -4949,17 +4940,6 @@ result <- data.frame(
     " ", " ", " "
   ),
   `(1)` = c(#Low
-    fmt_est(t10cc$coef[1], t10cc$pv[1]),
-    fmt_se(t10cc$se[1]),
-    paste0("N$_L$ = ", fmt_n(t10cc$n_left[1]),", N$_R$ = ", fmt_n(t10cc$n_rght[1])),
-    paste0("BW = ", fmt_bw(t10cc$bw[1])),
-    #High
-    fmt_est(t10cc$coef[3], t10cc$pv[3]),
-    fmt_se(t10cc$se[3]),
-    paste0("N$_L$ = ", fmt_n(t10cc$n_left[3]),", N$_R$ = ", fmt_n(t10cc$n_rght[3])),
-    paste0("BW = ", fmt_bw(t10cc$bw[3]))
-  ),
-  `(2)` = c(#Low
     fmt_est(t10cc$coef[2], t10cc$pv[2]),
     fmt_se(t10cc$se[2]),
     paste0("N$_L$ = ", fmt_n(t10cc$n_left[2]),", N$_R$ = ", fmt_n(t10cc$n_rght[2])),
@@ -5068,7 +5048,7 @@ base_low <- base_low %>%
 rlist <- list()
 
 
-ano_list <- c(2018)
+ano_list <- 2018
 
 for(ano_ref in ano_list) {
   
@@ -5212,17 +5192,6 @@ result <- data.frame(
     " ", " ", " "
   ),
   `(1)` = c(#Low
-    fmt_est(t10cc$coef[1], t10cc$pv[1]),
-    fmt_se(t10cc$se[1]),
-    paste0("N$_L$ = ", fmt_n(t10cc$n_left[1]),", N$_R$ = ", fmt_n(t10cc$n_rght[1])),
-    paste0("BW = ", fmt_bw(t10cc$bw[1])),
-    #High
-    fmt_est(t10cc$coef[3], t10cc$pv[3]),
-    fmt_se(t10cc$se[3]),
-    paste0("N$_L$ = ", fmt_n(t10cc$n_left[3]),", N$_R$ = ", fmt_n(t10cc$n_rght[3])),
-    paste0("BW = ", fmt_bw(t10cc$bw[3]))
-  ),
-  `(2)` = c(#Low
     fmt_est(t10cc$coef[2], t10cc$pv[2]),
     fmt_se(t10cc$se[2]),
     paste0("N$_L$ = ", fmt_n(t10cc$n_left[2]),", N$_R$ = ", fmt_n(t10cc$n_rght[2])),
@@ -5448,17 +5417,6 @@ result <- data.frame(
     " ", " ", " "
   ),
   `(1)` = c(#Low
-    fmt_est(t10cc$coef[1], t10cc$pv[1]),
-    fmt_se(t10cc$se[1]),
-    paste0("N$_L$ = ", fmt_n(t10cc$n_left[1]),", N$_R$ = ", fmt_n(t10cc$n_rght[1])),
-    paste0("BW = ", fmt_bw(t10cc$bw[1])),
-    #High
-    fmt_est(t10cc$coef[3], t10cc$pv[3]),
-    fmt_se(t10cc$se[3]),
-    paste0("N$_L$ = ", fmt_n(t10cc$n_left[3]),", N$_R$ = ", fmt_n(t10cc$n_rght[3])),
-    paste0("BW = ", fmt_bw(t10cc$bw[3]))
-  ),
-  `(2)` = c(#Low
     fmt_est(t10cc$coef[2], t10cc$pv[2]),
     fmt_se(t10cc$se[2]),
     paste0("N$_L$ = ", fmt_n(t10cc$n_left[2]),", N$_R$ = ", fmt_n(t10cc$n_rght[2])),
@@ -7723,152 +7681,10 @@ rm(base_trei)
 
 base <- readRDS("Z:/Tuffy/Paper - HV/Bases/base_final.RDS") %>% 
   filter(ano %in% c(2019,2018)) %>% 
-  mutate(
-    aux_res = mun_res %/% 100000,
-    aux_pro = mun_prova %/% 100000,
-    
-    # Exam start time dummies
-    h13 = ifelse(
-      aux_res %in% c(
-        52, 53, 31, 32, 33, 35, 42, 41, 43,
-        29, 28, 27, 26, 25, 24, 23, 22, 21, 17, 15, 16
-      ),
-      1,0
-    ),
-    
-    h12 = ifelse(
-      aux_res %in% c(51, 50, 11, 14) |
-        (aux_res == 13 & !mun_res %in% am_mun_special),
-      1, 0
-    ),
-    
-    h11 = ifelse(
-      
-      aux_res == 12 |
-        mun_res %in% am_mun_special,
-      1, 0
-    )
-    ) %>% 
   setDT()
 
 
 # ---------------------------------------------------------------------------- #
-####15.3.0.1 INPE ----
-# ---------------------------------------------------------------------------- #
-
-pib <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/pib.RDS") %>%
-  mutate(codmun = as.integer(codmun)) %>%
-  rename(mun_prova = codmun)
-
-base <- base %>% select(-pibpc) %>% 
-  left_join(pib, by = c("mun_res" = "mun_prova", "ano"))
-
-rm(pib)
-
-inpe17 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2017.rds")
-inpe18 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2018.rds")
-inpe19 <- readRDS("Z:/Tuffy/Paper - HV/Bases/inpe/mun/inpe_mun_2019.rds")
-
-base <- base %>% 
-  mutate(
-    temp_d1 = case_when(
-      ano == 2019 ~ inpe19$temp_3[match(mun_prova, inpe19$codmun)],
-      ano == 2018 ~ inpe18$temp_4[match(mun_prova, inpe18$codmun)],
-      ano == 2017 ~ inpe17$temp_5[match(mun_prova, inpe17$codmun)],
-      TRUE ~ NA
-    ),
-    
-    temp_d2 = case_when(
-      ano == 2019 ~ inpe19$temp_10[match(mun_prova, inpe19$codmun)],
-      ano == 2018 ~ inpe18$temp_11[match(mun_prova, inpe18$codmun)],
-      ano == 2017 ~ inpe17$temp_12[match(mun_prova, inpe17$codmun)],
-      TRUE ~ NA
-    ),
-    
-    umid_d1 = case_when(
-      ano == 2019 ~ inpe19$umid_3[match(mun_prova, inpe19$codmun)],
-      ano == 2018 ~ inpe18$umid_4[match(mun_prova, inpe18$codmun)],
-      ano == 2017 ~ inpe17$umid_5[match(mun_prova, inpe17$codmun)],
-      TRUE ~ NA
-    ),
-    
-    umid_d2 = case_when(
-      ano == 2019 ~ inpe19$umid_10[match(mun_prova, inpe19$codmun)],
-      ano == 2018 ~ inpe18$umid_11[match(mun_prova, inpe18$codmun)],
-      ano == 2017 ~ inpe17$umid_12[match(mun_prova, inpe17$codmun)],
-      TRUE ~ NA
-    ),
-    
-    #Residency
-    temp_d1_res = case_when(
-      ano == 2019 ~ inpe19$temp_3[match(mun_res, inpe19$codmun)],
-      ano == 2018 ~ inpe18$temp_4[match(mun_res, inpe18$codmun)],
-      ano == 2017 ~ inpe17$temp_5[match(mun_res, inpe17$codmun)],
-      TRUE ~ NA
-    ),
-    
-    temp_d2_res = case_when(
-      ano == 2019 ~ inpe19$temp_10[match(mun_res, inpe19$codmun)],
-      ano == 2018 ~ inpe18$temp_11[match(mun_res, inpe18$codmun)],
-      ano == 2017 ~ inpe17$temp_12[match(mun_res, inpe17$codmun)],
-      TRUE ~ NA
-    ),
-    
-    umid_d1_res = case_when(
-      ano == 2019 ~ inpe19$umid_3[match(mun_res, inpe19$codmun)],
-      ano == 2018 ~ inpe18$umid_4[match(mun_res, inpe18$codmun)],
-      ano == 2017 ~ inpe17$umid_5[match(mun_res, inpe17$codmun)],
-      TRUE ~ NA
-    ),
-    
-    umid_d2_res = case_when(
-      ano == 2019 ~ inpe19$umid_10[match(mun_res, inpe19$codmun)],
-      ano == 2018 ~ inpe18$umid_11[match(mun_res, inpe18$codmun)],
-      ano == 2017 ~ inpe17$umid_12[match(mun_res, inpe17$codmun)],
-      TRUE ~ NA
-    )
-  )
-
-rm(inpe18, inpe19, inpe17)
-# ---------------------------------------------------------------------------- #
-  
-  base <- base %>% 
-  left_join(mun_hv %>% rename(dist_hv_res = dist_hv_border) %>% #Coordinates of Residency 
-              rename(lat_res = lat, 
-                     lon_res = lon,
-                     seg_res = seg), 
-            by = c("mun_res" = "co_municipio")) %>% 
-  mutate(
-    
-    escm = case_when(
-      esc_mae %in% c("D","E","F") ~ 1, #With high school
-      esc_mae %in% c("A","B","C") ~ 0,
-      .default = NA),
-    
-    escp = case_when(
-      esc_pai %in% c("D","E","F") ~ 1, #With High school
-      esc_pai %in% c("A","B","C") ~ 0,
-      .default = NA
-    ),
-    
-    mae_trab_man = case_when(
-      emp_mae %in% c("A","B","C") ~ 1,
-      emp_mae %in% c("D","E") ~ 0,
-      .default = NA
-    ),
-    
-    pai_trab_man = case_when(
-      emp_pai %in% c("A","B","C") ~ 1,
-      emp_pai %in% c("D","E") ~ 0,
-      .default = NA
-    )
-  ) %>% 
-  mutate(renda_1_10 = ifelse(renda_dom == "C", 1 , 0),
-         renda_10   = ifelse(renda_dom == "D", 1, 0)) %>% 
-  setDT() 
-
-
-
 # ---------------------------------------------------------------------------- #
 #Todos
 # ---------------------------------------------------------------------------- #
