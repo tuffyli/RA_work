@@ -100,7 +100,7 @@ map
 
 
 # Salvando o mapa
-ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_v2.png",plot = map,device = "png",dpi = 300)
+ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_v2.png",plot = map,device = "png",dpi = 300, width = 5.5, height = 4.5)
 #ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_v2.eps",plot = map,device = "eps")
 #ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_v2.pdf",plot = map,device = "pdf")
 
@@ -156,7 +156,7 @@ map_aer <- ggplot() +
 
 map_aer
 
-ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_v3.png",plot = map_aer,device = "png",dpi = 300)
+ggsave(filename = "Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_v3.png",plot = map_aer,device = "png",dpi = 300, width = 5.5, height = 4.5)
 
 
 # ---------------------------------------------------------------------------- #
@@ -486,7 +486,7 @@ map_aer <- ggplot(mun_hv) +
 map_aer
 
 ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_v2.png"),plot = map,device = "png", dpi = 300)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_v3.png"),plot = map_aer,device = "png", dpi = 300)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_v3.png"),plot = map_aer,device = "png", dpi = 300, width = 5.5, height = 4.5)
 
 rm(map_aer)
 
@@ -565,7 +565,7 @@ map_aer <- ggplot(mun_hv) +
 map_aer
 
 ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_res.png"),plot = map,device = "png", dpi = 300)
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_res.png"),plot = map_aer,device = "png", dpi = 300)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_res.png"),plot = map_aer,device = "png", dpi = 300, width = 5.5, height = 4.5)
 
 rm(map_aer)
 
@@ -657,21 +657,21 @@ map <- ggplot(mun_hv %>% arrange(horario_18)) +
     )
   ) +
   theme(
-    axis.text = element_text(size = 20),
-    axis.title = element_text(size = 25, face = "bold"),
+    axis.text = element_text(size = 15),
+    axis.title = element_text(size = 20, face = "bold"),
     legend.position = "bottom",
     legend.box = "horizontal",
     legend.box.just = "center",
     legend.key.width = unit(1.4, "cm"),
     legend.key.height = unit(0.6, "cm"),
     legend.spacing.x = unit(0.6, "cm"),
-    legend.title = element_text(size = 20),
-    legend.text  = element_text(size = 15)
+    legend.title = element_text(size = 15),
+    legend.text  = element_text(size = 9)
   )
 
 print(map)
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h18v2.png"),plot = map,device = "png", dpi = 300)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h18v2.png"),plot = map,device = "png", dpi = 300, width = 5.9, height = 4.5)
 
 
 
@@ -723,7 +723,7 @@ map <- ggplot(mun_hv %>% arrange(horario_18)) +
 
 map
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h18.png"),plot = map,device = "png", dpi = 300)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h18.png"),plot = map,device = "png", dpi = 300, width = 5.5, height = 4.5)
 
 #------------------------------------------------------------------------------#
 ## 5.3 Sem HV ----
@@ -834,7 +834,7 @@ map <- ggplot(mun_hv %>% arrange(horario_19)) +
 
 map
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h19v2.png"),plot = map,device = "png", dpi = 300)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h19v2.png"),plot = map,device = "png", dpi = 300, width = 6.5, height = 5.5)
 
 
 rm(list = ls())
