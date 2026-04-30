@@ -653,130 +653,32 @@ map <- ggplot(mun_hv %>% arrange(horario_18)) +
       direction = "horizontal",
       title.position = "top",
       title.hjust = 0.5,
-      nrow = 1
+      nrow = 2,
+      byrow = TRUE
     )
   ) +
   theme(
     axis.text = element_text(size = 15),
-    axis.title = element_text(size = 20, face = "bold"),
+    axis.title = element_blank(),
     legend.position = "bottom",
     legend.box = "horizontal",
-    legend.box.just = "center",
-    legend.key.width = unit(1.4, "cm"),
-    legend.key.height = unit(0.6, "cm"),
-    legend.spacing.x = unit(0.6, "cm"),
+    legend.key.width = unit(0.8, "cm"),
+    legend.key.height = unit(0.35, "cm"),
+    legend.spacing.x = unit(0.25, "cm"),
     legend.title = element_text(size = 15),
-    legend.text  = element_text(size = 9)
+    legend.text  = element_text(size = 13),
+    plot.margin = margin(4, 4, 4, 4)
   )
 
 print(map)
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h18v2.png"),plot = map,device = "png", dpi = 300, width = 5.9, height = 4.5)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h18v2.png"),plot = map,device = "png", width = 6.5, height = 5.2, units = "in", dpi = 300, bg = "white")
 
 
-
-# Mapa de clusters
-map <- ggplot(mun_hv %>% arrange(horario_18)) +
-  
-  geom_sf(
-    data = mun_hv,
-    fill = NA,
-    color = "transparent",     
-    linewidth = 0.2        
-  ) +
-  
-  scale_fill_manual(
-    name = "Groups",
-    values = c(
-      "10h"  = "#6A3D9A", 
-      "11h"  = "#0072B2",
-      "12h"  = "#E69F00",     
-      "13h"  = "#009E73"      
-    ),
-    drop = FALSE
-  ) +
-  geom_sf(aes(fill = factor(horario_18)) ) +
-  
-  geom_sf(data = line, color = "blue") +
-  theme_bw() +
-  guides(
-    fill = guide_legend(
-      direction = "horizontal",
-      title.position = "top",
-      title.hjust = 0.5,
-      nrow = 1,              # force single row
-      byrow = TRUE
-    )
-  ) +
-  theme(
-    axis.text = element_text(size = 20),
-    axis.title = element_text(size = 25, face = "bold"),
-    legend.position = "bottom",
-    legend.box = "horizontal",
-    legend.box.just = "center",
-    legend.key.width = unit(1.4, "cm"),
-    legend.key.height = unit(0.6, "cm"),
-    legend.spacing.x = unit(0.6, "cm"),
-    legend.title = element_text(size = 20),
-    legend.text  = element_text(size = 15)
-  )
-
-map
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h18.png"),plot = map,device = "png", dpi = 300, width = 5.5, height = 4.5)
 
 #------------------------------------------------------------------------------#
 ## 5.3 Sem HV ----
 # -----------------------------------------------------------------------------#
-
-# Mapa de clusters
-map <- ggplot(mun_hv %>% arrange(horario_19)) +
-  
-  geom_sf(
-    data = mun_hv,
-    fill = NA,
-    color = "transparent",     
-    linewidth = 0.2        
-  ) +
-  
-  scale_fill_manual(
-    name = "Groups",
-    values = c(
-      "11h"  = "#0072B2",
-      "12h"  = "#E69F00",     
-      "13h"  = "#009E73"      
-    ),
-    drop = FALSE
-  ) +
-  geom_sf(aes(fill = factor(horario_19)) ) +
-  
-  geom_sf(data = line, color = "blue") +
-  theme_bw() +
-  guides(
-    fill = guide_legend(
-      direction = "horizontal",
-      title.position = "top",
-      title.hjust = 0.5,
-      nrow = 1,              # force single row
-      byrow = TRUE
-    )
-  ) +
-  theme(
-    axis.text = element_text(size = 20),
-    axis.title = element_text(size = 25, face = "bold"),
-    legend.position = "bottom",
-    legend.box = "horizontal",
-    legend.box.just = "center",
-    legend.key.width = unit(1.4, "cm"),
-    legend.key.height = unit(0.6, "cm"),
-    legend.spacing.x = unit(0.6, "cm"),
-    legend.title = element_text(size = 20),
-    legend.text  = element_text(size = 15)
-  )
-
-map
-
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h19.png"),plot = map,device = "png", dpi = 300)
 
 # Mapa de clusters
 map <- ggplot(mun_hv %>% arrange(horario_19)) +
@@ -818,23 +720,23 @@ map <- ggplot(mun_hv %>% arrange(horario_19)) +
       nrow = 1,              # force single row
       byrow = TRUE
     )
-  ) +
+  )  +
   theme(
-    axis.text = element_text(size = 20),
-    axis.title = element_text(size = 25, face = "bold"),
+    axis.text = element_text(size = 15),
+    axis.title = element_blank(),
     legend.position = "bottom",
     legend.box = "horizontal",
-    legend.box.just = "center",
-    legend.key.width = unit(1.4, "cm"),
-    legend.key.height = unit(0.6, "cm"),
-    legend.spacing.x = unit(0.6, "cm"),
-    legend.title = element_text(size = 20),
-    legend.text  = element_text(size = 15)
+    legend.key.width = unit(0.8, "cm"),
+    legend.key.height = unit(0.35, "cm"),
+    legend.spacing.x = unit(0.25, "cm"),
+    legend.title = element_text(size = 15),
+    legend.text  = element_text(size = 13),
+    plot.margin = margin(4, 4, 4, 4)
   )
 
 map
 
-ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h19v2.png"),plot = map,device = "png", dpi = 300, width = 6.5, height = 5.5)
+ggsave(filename = paste0("Z:/Tuffy/Paper - HV/Resultados/definitive/controls/mapas/map_band_h19v2.png"),plot = map,device = "png", width = 6.5, height = 5.2, units = "in", dpi = 300, bg = "white")
 
 
 rm(list = ls())
