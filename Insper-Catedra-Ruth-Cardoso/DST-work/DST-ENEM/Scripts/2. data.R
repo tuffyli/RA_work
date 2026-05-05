@@ -3740,7 +3740,7 @@ org_data <- function(base,ano,vlist,cnames) {
     relocate(media, .after = rd) %>%
     relocate(ano, .before = idade) %>%
     relocate(mun_escola, .after = mun_prova) %>% 
-    filter(treineiro == 1)
+    filter(conclusao != 2)
   
   return(base)
   
@@ -3826,8 +3826,8 @@ vlist_item_df <- data.frame(
 )
 rm(vlist2009,vlist2010,vlist2011,vlist2012,vlist2013,vlist2015,vlist2016,vnames,dlist)
 
-
-##5.2 inicio -----
+# ---------------------------------------------------------------------------- #
+##Filter type -----
 # Loop no ano da prova
 for (ano in 2009:2019) {
   
@@ -4065,52 +4065,83 @@ flist <- c(
   "Z:/Arquivos IFB/Enem/2019/DADOS/MICRODADOS_ENEM_2019.csv"
 )
 
-for(i in 2018:2019){
+#Type of student
+for(type in c("mock", "older")){
   
-  print(paste0("Ano: ",i))
-  ini <- Sys.time()
-  
-  j <- i - 2017
-  delta <- ifelse(i <= 2014,1,0)
-  vlist <- vlist_df[1:(nrow(vlist_df) - delta),j]
-  cnames <- vlist_df[1:(nrow(vlist_df) - delta),ncol(vlist_df)]
-  rm(delta)
-  
-  if (i <= 2010 | i >= 2016){
+  if(type == "mock") {
     
-    enem <-
-      fread(file = flist[j],
-            sep = ";",
-            select = vlist)
+    #Filter mock applicant
+    filter_type <- function(base) {
+      
+      base <- base %>% 
+        filter(treineiro == 1)
+      }
+  } else if(type == "older"){
     
-  } else if(i >= 2011 & i <= 2015){
-    enem <- read_dta(file = flist[j], col_select = vlist)
+    filter_type <- function(base){
+      
+      #Older applicants
+      base <- base %>% 
+        filter(conclusao != 2,
+               treineiro != 1)
+      
+    }
+    
   }
   
-  print(summary(enem$conclusao))
   
-  enem <-
-    org_data(
-      base = enem,
-      ano = i,
-      vlist = vlist,
-      cnames = cnames
-    )
+  for(i in 2018:2019){
+    
+    print(paste0("Ano: ",i))
+    ini <- Sys.time()
+    
+    j <- i - 2017
+    delta <- ifelse(i <= 2014,1,0)
+    vlist <- vlist_df[1:(nrow(vlist_df) - delta),j]
+    cnames <- vlist_df[1:(nrow(vlist_df) - delta),ncol(vlist_df)]
+    rm(delta)
+    
+    if (i <= 2010 | i >= 2016){
+      
+      enem <-
+        fread(file = flist[j],
+              sep = ";",
+              select = vlist)
+      
+    } else if(i >= 2011 & i <= 2015){
+      enem <- read_dta(file = flist[j], col_select = vlist)
+    }
+    
+    print(summary(enem$conclusao))
+    
+    enem <-
+      org_data(
+        base = enem,
+        ano = i,
+        vlist = vlist,
+        cnames = cnames
+      )
+    
+    enem <- enem %>% 
+      filter_type()
+    
+    print(summary(enem$conclusao))
+    
+    enem_notas <- filtros(base = enem, filtro = "notas")
+    print(summary(enem_notas$conclusao))
+    
+    enem_abs <- filtros(base = enem, filtro = "abs")
+    
+    saveRDS(enem_notas, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_notas_",i,"_",type,".RDS"))
+    saveRDS(enem_abs, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_",i,"_",type,".RDS"))
+    
+    delta_t <- Sys.time() - ini
+    print(delta_t)
+    rm(enem,i,j,cnames,vlist,enem_notas,enem_abs, ini,delta_t)
+  }
   
-  print(summary(enem$conclusao))
   
-  enem_notas <- filtros(base = enem, filtro = "notas")
-  print(summary(enem_notas$conclusao))
-  
-  enem_abs <- filtros(base = enem, filtro = "abs")
-  
-  saveRDS(enem_notas, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_notas_",i,"_v4.RDS"))
-  saveRDS(enem_abs, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_",i,"_v4.RDS"))
-  
-  delta_t <- Sys.time() - ini
-  print(delta_t)
-  rm(enem,i,j,cnames,vlist,enem_notas,enem_abs, ini,delta_t)
-}
+ 
 
 #------------------------------------------------------------------------------#
 # Base de itens do ENEM
@@ -4122,639 +4153,643 @@ dlist <- c("cn","ch","lc","mt")
 # Loop nos anos
 gc()
 for(ano in 2018:2019){
-  
-  print(paste0("Ano: ",ano))
-  ini <- Sys.time()
-  
-  # Base de IDs para selecionar alunos
-  enem <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_notas_",ano,"_v4.RDS")) 
-  id <- enem %>% select(id_enem)
-  rm(enem)
-  
-  # Especificações da base de dados
-  j <- ano - 2017
-  delta <- ifelse(ano == 2009, 1, 0)
-  vlist <- vlist_item_df[1:(nrow(vlist_item_df) - delta),j]
-  cnames <- vlist_item_df[1:(nrow(vlist_item_df) - delta),ncol(vlist_item_df)]
-  
-  # Bases de dados em CSV e em DTA, dependendo do ano
-  print(paste0("Abrindo a base: ",ano))
-  if (ano <= 2010 | ano >= 2016){
-    
-    item <-
-      fread(file = flist[j],
-            sep = ";",
-            select = vlist)
-    
-  } else if(ano >= 2011 & ano <= 2015){
-    item <- read_dta(file = flist[j], col_select = vlist)
-  }
-  
-  delta_t <- Sys.time() - ini
-  print(delta_t)
-  rm(delta_t)
-  gc()
-  
-  # Organização da base de dados
-  item <- item %>% relocate(all_of(vlist))
-  colnames(item) <- cnames
-  rm(vlist,cnames,delta)
-  
-  # Reorganizando a base (reshape)
-  if (ano == 2009){
-    vlist <- "id_enem"
-  } else {
-    vlist <- c("id_enem","lingua")
-  }
-  
-  item <- item %>%
-    right_join(id, by = "id_enem") %>%
-    setDT() %>%
-    melt(
-      id.vars = vlist,
-      measure.vars = list(
-        paste0("tx_respostas_", dlist),
-        paste0("co_prova_", dlist),
-        paste0("tx_gabarito_", dlist)
-      ),
-      value.name = c("tx_respostas", "co_prova", "tx_gabarito")
-    ) %>%
-    mutate(
-      sg_area = case_when(
-        variable == "1" ~ toupper(dlist[1]),
-        variable == "2" ~ toupper(dlist[2]),
-        variable == "3" ~ toupper(dlist[3]),
-        variable == "4" ~ toupper(dlist[4])
-      )
-    )
-  
-  rm(id,vlist)
-  gc()
-  # Loop nas áreas
-  for(i in 1:length(dlist)){
-    
-    print(paste0("Área: ",dlist[i]))
-    delta_t <- Sys.time() - ini
-    print(delta_t)
-    rm(delta_t)
-    
-    # Selecionando área para DF local
-    temp <- item[sg_area == toupper(dlist[i]),]
-    
-    # Excluindo área do DF geral de itens
-    item <- item[sg_area != toupper(dlist[i]),]
-    
-    # Língua estrangeira
-    if(dlist[i] == "lc" & ano >= 2010) {
       
-      if(ano == 2011) {
-        temp <-
-          temp[, 
-               tx_gabarito := substr(tx_gabarito, 6, 45)]
-      } else {
-        temp <-
-          temp[, 
-               tx_gabarito := substr(tx_gabarito, 11, 50)]
+      print(paste0("Ano: ",ano))
+      ini <- Sys.time()
+      
+      # Base de IDs para selecionar alunos
+      enem <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_notas_",ano,"_",type,".RDS")) 
+      id <- enem %>% select(id_enem)
+      rm(enem)
+      
+      # Especificações da base de dados
+      j <- ano - 2017
+      delta <- ifelse(ano == 2009, 1, 0)
+      vlist <- vlist_item_df[1:(nrow(vlist_item_df) - delta),j]
+      cnames <- vlist_item_df[1:(nrow(vlist_item_df) - delta),ncol(vlist_item_df)]
+      
+      # Bases de dados em CSV e em DTA, dependendo do ano
+      print(paste0("Abrindo a base: ",ano))
+      if (ano <= 2010 | ano >= 2016){
+        
+        item <-
+          fread(file = flist[j],
+                sep = ";",
+                select = vlist)
+        
+      } else if(ano >= 2011 & ano <= 2015){
+        item <- read_dta(file = flist[j], col_select = vlist)
       }
       
+      delta_t <- Sys.time() - ini
+      print(delta_t)
+      rm(delta_t)
+      gc()
       
-      temp <-
-        temp[, 
-             tx_respostas := substr(tx_respostas, 6, 45)]
+      # Organização da base de dados
+      item <- item %>% relocate(all_of(vlist))
+      colnames(item) <- cnames
+      rm(vlist,cnames,delta)
       
-      temp <- temp[, lingua := NULL]
-      print("ok")
-    }
-    
-    temp <- temp[, nc := nchar(tx_respostas)]
-    nc <- temp %>% summarise(max = max(nc)) %>% as.numeric()
-    
-    temp <- temp[, paste0("resp", c(1:nc)) := tstrsplit(tx_respostas, "", fixed = TRUE)]
-    temp <- temp[, paste0("gab", c(1:nc)) := tstrsplit(tx_gabarito, "", fixed = TRUE)]
-    temp <- temp[, c("tx_respostas","tx_gabarito") := NULL]
-    
-    # Reorganizando o Df local de itens
-    temp <- temp %>%
-      melt(id.vars = c("id_enem","co_prova","sg_area"),
-           measure.vars = list(
-             paste0("resp", c(1:nc)),
-             paste0("gab", c(1:nc))
-           ),
-           value.name = c("tx_respostas","tx_gabarito")
-      ) %>%
-      mutate(co_posicao = as.numeric(as.character(variable))) %>%
-      select(-variable)
-    
-    rm(nc)
-    
-    # Dummies de acerto, resposta em branco e dupla resposta
-    temp <- temp[, acerto := fifelse(tx_respostas == tx_gabarito, 1, 0)]
-    temp <- temp[, branco := fifelse(tx_respostas == ".", 1, 0)]
-    temp <- temp[, dupla := fifelse(tx_respostas == "*", 1, 0)]
-    
-    # Variável de ano
-    temp <- temp[, ano := ano]
-    
-    print(paste0("Juntando bases de parâmetros"))
-    delta_t <- Sys.time() - ini
-    print(delta_t)
-    rm(delta_t)
-    
-    # Juntando base de itens com base de medianas de parâmetros
-    temp <- temp %>% merge(medians, by = c("sg_area","ano","co_prova"))
-    
-    # Juntando base de itens com base de parâmetros
-    temp <- temp %>% merge(itens_prova, by = c("ano","co_posicao","co_prova","sg_area","tx_gabarito"))
-    #temp %>% setorder(cols = "id_enem","sg_area","co_posicao") %>% slice(1:100) %>% View()
-    
-    # Excluindo itens sem parâmetros
-    #temp <- temp[!is.na(nu_param_a),]
-    
-    # Posições mínima e máxima
-    temp <- temp[, c("pmin","pmax") := 
-                   .(min(co_posicao),
-                     max(co_posicao))]
-    
-    #temp %>% setorder(cols = "id_enem","sg_area") %>% slice(1:100) %>% View()
-    
-    # Construindo dummies de acertos
-    # vnames <- c(paste0("acertos_",rep(c("a","b","c"), each = 2),c("l","h")),
-    #             paste0("acertos_",rep(c("ini","fim"), times = 2),rep(c("5","10"), each = 2)))
-    
-    temp <- temp[, c(paste0("acerto_",rep(c("a","b","c"), each = 2),c("l","h")),
-                     paste0("acerto_",rep(c("ini","fim"), times = 2),rep(c("5","10"), each = 2))) :=
-                   .(
-                     fifelse(nu_param_a < a_md, acerto, NA_real_),
-                     fifelse(nu_param_a >= a_md, acerto, NA_real_),
-                     fifelse(nu_param_b < b_md, acerto, NA_real_),
-                     fifelse(nu_param_b >= b_md, acerto, NA_real_),
-                     fifelse(nu_param_c < c_md, acerto, NA_real_),
-                     fifelse(nu_param_c >= c_md, acerto, NA_real_),
-                     fifelse(co_posicao <= pmin + 4, acerto, NA_real_),
-                     fifelse(co_posicao >= pmax - 4, acerto, NA_real_),
-                     fifelse(co_posicao <= pmin + 9, acerto, NA_real_),
-                     fifelse(co_posicao >= pmax - 9, acerto, NA_real_)
-                   )]
-    # rm(vnames)
-    
-    # Seleção de variáveis
-    idvlist <- c("id_enem","sg_area","co_prova")
-    vlist <- c(
-      "acerto",
-      "acerto_al",
-      "acerto_ah",
-      "acerto_bl",
-      "acerto_bh",
-      "acerto_cl",
-      "acerto_ch",
-      "acerto_ini5",
-      "acerto_fim5",
-      "acerto_ini10",
-      "acerto_fim10",
-      "branco",
-      "dupla"
-    )
-    
-    gc()
-    # temp <- temp[, .SD, .SDcols = c(idvlist,vlist)]
-    # temp <- temp %>% select(idvlist,vlist)
-    
-    # Número de observações
-    # temp_obs <- temp[, lapply(.SD, function(x) sum(!is.na(x))),
-    #              by = .(id_enem, sg_area),
-    #              .SDcols = vlist]
-    
-    # colnames(temp_obs) <- paste0("n_",vlist)
-    
-    print("Agregação")
-    
-    temp <- temp[, lapply(.SD, mean, na.rm = T),
-                 by = .(id_enem, sg_area),
-                 .SDcols = vlist]
-    
-    # temp <- temp %>% merge(temp_obs, by = idvlist)
-    
-    rm(idvlist, vlist)
-    #temp2 %>% setorder(cols = "id_enem","sg_area") %>% slice(1:100) %>% View()
-    
-    
-    # Armazenado base de dados
-    if(i == 1){
-      enem_ace <- temp
-    } else {
-      enem_ace <- enem_ace %>% bind_rows(temp)
-    }
-    rm(i, temp)
-    gc()
-    
-  } # fim do loop nas disciplinas (i)
-  
-  print("Fim do loop nas disciplinas")
-  delta_t <- Sys.time() - ini
-  print(delta_t)
-  saveRDS(enem_ace, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_ace_",ano,"_v4.RDS"))
-  rm(enem_ace, ini,delta_t,item,j)
-  
-  rm(ano)
-  
-} # fim do loop nos anos (ano)
-
-
-
-
-
-# ---------------------------------------------------------------------------- #
-## 5.4 Unindo todas as bases ----
-# ---------------------------------------------------------------------------- #
-
-# PIB
-pib <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/pib.RDS") %>%
-  mutate(codmun = as.integer(codmun)) %>%
-  rename(mun_prova = codmun)
-
-# Base de distâncias
-mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/mun_hv.RDS")
-
-# Coordenadas
-coordenadas <- mun_hv$centroid %>%
-  st_coordinates() %>%
-  as_tibble() %>%
-  rename(
-    lon = X,
-    lat = Y
-  )
-
-mun_hv <- mun_hv %>%
-  bind_cols(coordenadas) %>%
-  st_drop_geometry() %>%
-  select(co_municipio, lon, lat, dist_hv_border, seg)
-rm(coordenadas)
-
-# Bases de dados de todos os anos
-for(ano in 2018:2019){
-  
-  print(ano)
-  
-  temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_notas_",ano,"_v4.RDS")) %>%
-    filtros(filtro = "notas")
-  temp2 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_ace_",ano,"_v4.RDS"))%>%
-    mutate(
-      sg_area = tolower(sg_area)
-    ) %>%
-    dcast(id_enem ~ sg_area,
-          value.var = c(
-            "acerto",
-            paste0(
-              "acerto_",
-              rep(c("a","b","c"), each = 2), rep(c("l","h"), times = 3)
-            ),
-            paste0(
-              "acerto_",
-              rep(c("ini","fim"), each = 2), rep(c("5","10"), times = 2)
-            ),
-            "branco","dupla"
+      # Reorganizando a base (reshape)
+      if (ano == 2009){
+        vlist <- "id_enem"
+      } else {
+        vlist <- c("id_enem","lingua")
+      }
+      
+      item <- item %>%
+        right_join(id, by = "id_enem") %>%
+        setDT() %>%
+        melt(
+          id.vars = vlist,
+          measure.vars = list(
+            paste0("tx_respostas_", dlist),
+            paste0("co_prova_", dlist),
+            paste0("tx_gabarito_", dlist)
+          ),
+          value.name = c("tx_respostas", "co_prova", "tx_gabarito")
+        ) %>%
+        mutate(
+          sg_area = case_when(
+            variable == "1" ~ toupper(dlist[1]),
+            variable == "2" ~ toupper(dlist[2]),
+            variable == "3" ~ toupper(dlist[3]),
+            variable == "4" ~ toupper(dlist[4])
           )
-    )
-  
-  temp <- temp %>% merge(temp2, by = "id_enem", all.y = F,all.x = F)
-  rm(temp2)
-  
-  temp <- temp %>%
-    select(-sexo,-status_rd) %>%
-    left_join(mun_hv,
-              by = c(
-                "mun_prova" = "co_municipio"
-              ))  %>%
-    mutate(
-      dist_hv_border = ifelse(hv == 1, dist_hv_border,-dist_hv_border),
-      dia_1 = case_when(
-        ano >= 2009 & ano <= 2016 ~ (cn + mt) / 2,
-        ano >= 2017 & ano <= 2019 ~ (lc + rd + ch) /3
-      ),
-      dia_2 = case_when(
-        ano >= 2009 & ano <= 2016 ~ (lc + rd + ch) / 3,
-        ano >= 2017 & ano <= 2019 ~ (cn + mt) /2
-      ),
-      uf_prova = mun_prova %/% 10^5,
-      id180 = ifelse(idade != 18 & priv == 0, 1, NA),
-      id181 = ifelse(idade == 18 & priv == 0, 1, NA),
-      dom50 = ifelse(pessoas_dom != "C" & priv == 0, 1, NA),
-      dom51 = ifelse(pessoas_dom == "C" & priv == 0, 1, NA),
-      ppi0 = ifelse(!(raca %in% c("C","D","F")) & priv == 0, 1, NA),
-      ppi1 = ifelse(raca %in% c("C","D","F") & priv == 0, 1, NA),
-      escp0 = case_when(
-        esc_pai %in% c("D","E","F") & priv == 0 ~ 1,
-        esc_pai %in% c("A","B","C") & priv == 0 ~ NA,
-        .default = NA
-      ),
-      escp1 = case_when(
-        esc_pai %in% c("D","E","F") & priv == 0 ~ NA,
-        esc_pai %in% c("A","B","C") & priv == 0 ~ 1,
-        .default = NA
-      ),
-      renda10 = ifelse(!(renda_dom %in% c("A","B")) & priv == 0,1,NA),
-      renda11 = ifelse(renda_dom %in% c("A","B") & priv == 0,1,NA),
-      fem0 = ifelse(mas == 1 & priv == 0, 1, NA),
-      fem1 = ifelse(mas == 0 & priv == 0, 1, NA),
-      priv0 = ifelse(priv == 0, 1, NA),
-      priv1 = ifelse(priv == 1, 1, NA),
-      seg15 = ifelse(seg %in% c(1:5) & priv == 0, 1, NA),
-      seg67 = ifelse(seg %in% c(6:7) & priv == 0, 1, NA),
-      total = 1,
-      nonmig1 = ifelse(
-        !is.na(mun_prova) &
-          !is.na(mun_res) &
-          !is.na(mun_escola) &
-          mun_prova == mun_res & mun_res == mun_escola & priv == 0,
-        1,
-        NA
-      ),
-      nonmig2 = ifelse(
-        !is.na(mun_prova) &
-          !is.na(mun_res) &
-          !is.na(mun_escola) &
-          mun_prova == mun_res & mun_res != mun_escola & priv == 0,
-        1,
-        NA),
-      nonmig3 = ifelse(
-        !is.na(mun_prova) &
-          !is.na(mun_res) &
-          !is.na(mun_escola) &
-          mun_prova != mun_res & mun_res == mun_escola & priv == 0,
-        1,
-        NA),
-      nonmig4 = ifelse(
-        !is.na(mun_prova) &
-          !is.na(mun_res) &
-          !is.na(mun_escola) &
-          mun_prova == mun_escola & mun_res != mun_escola & priv == 0,
-        1,
-        NA),
-      id18 = ifelse(idade == 18, 1, 0),
-      dom5 = ifelse(pessoas_dom == "C", 1, 0),
-      ppi = ifelse(raca %in% c("C","D","F"), 1, 0),
-      escp = case_when(
-        esc_pai %in% c("D","E","F") ~ 0,
-        esc_pai %in% c("A","B","C") ~ 1,
-        .default = NA
-      ),
-      renda1 = ifelse(renda_dom %in% c("A","B"),1,0),
-      renda_1_10 = ifelse(renda_dom == "C", 1 , 0), #1 MW to 10MW
-      renda_10   = ifelse(renda_dom == "D", 1, 0), #More than 10MW
-      fem = ifelse(mas == 0, 1, 0),
-      rd0 = ifelse(rd == 0, 1, 0),
-      rd1 = ifelse(rd0 == 1,NA,rd1),
-      rd2 = ifelse(rd0 == 1,NA,rd2),
-      rd3 = ifelse(rd0 == 1,NA,rd3),
-      rd4 = ifelse(rd0 == 1,NA,rd4),
-      rd5 = ifelse(rd0 == 1,NA,rd5),
-      branco_ch = branco_ch * 100,
-      branco_cn = branco_cn * 100,
-      branco_lc = branco_lc * 100,
-      branco_mt = branco_mt * 100,
-      dupla_ch = dupla_ch * 100,
-      dupla_cn = dupla_cn * 100,
-      dupla_lc = dupla_lc * 100,
-      dupla_mt = dupla_mt * 100,
-      acerto_ch = acerto_ch * 100,
-      acerto_cn = acerto_cn * 100,
-      acerto_lc = acerto_lc * 100,
-      acerto_mt = acerto_mt * 100,
-      acerto_al_ch = acerto_al_ch * 100,
-      acerto_al_cn = acerto_al_cn * 100,
-      acerto_al_lc = acerto_al_lc * 100,
-      acerto_al_mt = acerto_al_mt * 100,
-      acerto_ah_ch = acerto_ah_ch * 100,
-      acerto_ah_cn = acerto_ah_cn * 100,
-      acerto_ah_lc = acerto_ah_lc * 100,
-      acerto_ah_mt = acerto_ah_mt * 100,
-      acerto_bl_ch = acerto_bl_ch * 100,
-      acerto_bl_cn = acerto_bl_cn * 100,
-      acerto_bl_lc = acerto_bl_lc * 100,
-      acerto_bl_mt = acerto_bl_mt * 100,
-      acerto_bh_ch = acerto_bh_ch * 100,
-      acerto_bh_cn = acerto_bh_cn * 100,
-      acerto_bh_lc = acerto_bh_lc * 100,
-      acerto_bh_mt = acerto_bh_mt * 100,
-      acerto_cl_ch = acerto_cl_ch * 100,
-      acerto_cl_cn = acerto_cl_cn * 100,
-      acerto_cl_lc = acerto_cl_lc * 100,
-      acerto_cl_mt = acerto_cl_mt * 100,
-      acerto_ch_ch = acerto_ch_ch * 100,
-      acerto_ch_cn = acerto_ch_cn * 100,
-      acerto_ch_lc = acerto_ch_lc * 100,
-      acerto_ch_mt = acerto_ch_mt * 100,
-      acerto = (acerto_ch + acerto_cn + acerto_lc + acerto_mt) / 4,
-      acerto_pal = (acerto_al_ch + acerto_al_cn + acerto_al_lc + acerto_al_mt) / 4,
-      acerto_pah = (acerto_ah_ch + acerto_ah_cn + acerto_ah_lc + acerto_ah_mt) / 4,
-      acerto_pbl = (acerto_bl_ch + acerto_bl_cn + acerto_bl_lc + acerto_bl_mt) / 4,
-      acerto_pbh = (acerto_bh_ch + acerto_bh_cn + acerto_bh_lc + acerto_bh_mt) / 4,
-      acerto_pcl = (acerto_cl_ch + acerto_cl_cn + acerto_cl_lc + acerto_cl_mt) / 4,
-      acerto_pch = (acerto_ch_ch + acerto_ch_cn + acerto_ch_lc + acerto_ch_mt) / 4,
-      acerto_ini5_cn = acerto_ini5_cn * 100,
-      acerto_ini5_ch = acerto_ini5_ch * 100,
-      acerto_ini5_lc = acerto_ini5_lc * 100,
-      acerto_ini5_mt = acerto_ini5_mt * 100,
-      acerto_ini10_cn = acerto_ini10_cn * 100,
-      acerto_ini10_ch = acerto_ini10_ch * 100,
-      acerto_ini10_lc = acerto_ini10_lc * 100,
-      acerto_ini10_mt = acerto_ini10_mt * 100,
-      acerto_fim5_cn = acerto_fim5_cn * 100,
-      acerto_fim5_ch = acerto_fim5_ch * 100,
-      acerto_fim5_lc = acerto_fim5_lc * 100,
-      acerto_fim5_mt = acerto_fim5_mt * 100,
-      acerto_fim10_cn = acerto_fim10_cn * 100,
-      acerto_fim10_ch = acerto_fim10_ch * 100,
-      acerto_fim10_lc = acerto_fim10_lc * 100,
-      acerto_fim10_mt = acerto_fim10_mt * 100,
-      acerto_ini5_d1 = case_when(
-        ano == 2009 ~ acerto_ini5_cn,
-        ano >= 2010 & ano <= 2016 ~ acerto_ini5_ch,
-        ano >= 2017 & ano <= 2019 ~ acerto_ini5_lc,
-        .default = NA
-      ),
-      acerto_ini10_d1 = case_when(
-        ano == 2009 ~ acerto_ini10_cn,
-        ano >= 2010 & ano <= 2016 ~ acerto_ini10_ch,
-        ano >= 2017 & ano <= 2019 ~ acerto_ini10_lc,
-        .default = NA
-      ),
-      acerto_fim5_d1 = case_when(
-        ano == 2009 ~ acerto_fim5_ch,
-        ano >= 2010 & ano <= 2016 ~ acerto_fim5_cn,
-        ano >= 2017 & ano <= 2019 ~ acerto_fim5_ch,
-        .default = NA
-      ),
-      acerto_fim10_d1 = case_when(
-        ano == 2009 ~ acerto_fim10_ch,
-        ano >= 2010 & ano <= 2016 ~ acerto_fim5_cn,
-        ano >= 2017 & ano <= 2019 ~ acerto_fim5_ch,
-        .default = NA
-      ),
-      acerto_ini5_d2 = case_when(
-        ano == 2009 ~ acerto_ini5_lc,
-        ano >= 2010 & ano <= 2016 ~ acerto_ini5_lc,
-        ano >= 2017 & ano <= 2019 ~ acerto_ini5_cn,
-        .default = NA
-      ),
-      acerto_ini10_d2 = case_when(
-        ano == 2009 ~ acerto_ini10_lc,
-        ano >= 2010 & ano <= 2016 ~ acerto_ini10_lc,
-        ano >= 2017 & ano <= 2019 ~ acerto_ini10_cn,
-        .default = NA
-      ),
-      acerto_fim5_d2 = case_when(
-        ano == 2009 ~ acerto_fim5_mt,
-        ano >= 2010 & ano <= 2016 ~ acerto_fim5_mt,
-        ano >= 2017 & ano <= 2019 ~ acerto_fim5_mt,
-        .default = NA
-      ),
-      acerto_fim10_d2 = case_when(
-        ano == 2009 ~ acerto_fim10_mt,
-        ano >= 2010 & ano <= 2016 ~ acerto_fim10_mt,
-        ano >= 2017 & ano <= 2019 ~ acerto_fim10_mt,
-        .default = NA
-      ),
-      acerto_ini5 = (acerto_ini5_cn + acerto_ini5_ch + acerto_ini5_lc + acerto_ini5_mt)/4,
-      acerto_fim5 = (acerto_fim5_cn + acerto_fim5_ch + acerto_fim5_lc + acerto_fim5_mt)/4,
-      d_acerto_5 = acerto_fim5 - acerto_ini5,
-      d_acerto_5_d1 = acerto_fim5_d1 - acerto_ini5_d1,
-      d_acerto_5_d2 = acerto_fim5_d2 - acerto_ini5_d2,
-      d_acerto_10_d1 = acerto_fim10_d1 - acerto_ini10_d1,
-      d_acerto_10_d2 = acerto_fim10_d2 - acerto_ini10_d2,
-      d_pb_ch = acerto_bl_ch - acerto_bh_ch,
-      d_pb_cn = acerto_bl_cn - acerto_bh_cn,
-      d_pb_lc = acerto_bl_lc - acerto_bh_lc,
-      d_pb_mt = acerto_bl_mt - acerto_bh_mt,
-      d_pb = acerto_pbl - acerto_pbh,
-      d_acerto_5ch = acerto_fim5_ch - acerto_ini5_ch,
-      d_acerto_5cn = acerto_fim5_cn - acerto_ini5_cn,
-      d_acerto_5lc = acerto_fim5_lc - acerto_ini5_lc,
-      d_acerto_5mt = acerto_fim5_mt - acerto_ini5_mt
-    ) %>%
-    merge(pib, by = c("mun_prova", "ano"))
-  
-  setDT(temp)
-  vpad <- temp[, .(
-    media_p = pad(media),
-    cn_p = pad(cn),
-    ch_p = pad(ch),
-    lc_p = pad(lc),
-    mt_p = pad(mt),
-    rd_p = pad(rd),
-    dia_1_p = pad(dia_1),
-    dia_2_p = pad(dia_2),
-    rd1_p = pad(rd1),
-    rd2_p = pad(rd2),
-    rd3_p = pad(rd3),
-    rd4_p = pad(rd4),
-    rd5_p = pad(rd5)
-  )]
-  
-  temp <- temp %>% bind_cols(vpad)
-  rm(vpad)
-  
-  base_nota <- temp %>% setDT()
-  
-  rm(temp)
-  
-  
-  gc()
-  
+        )
+      
+      rm(id,vlist)
+      gc()
+      # Loop nas áreas
+      for(i in 1:length(dlist)){
+        
+        print(paste0("Área: ",dlist[i]))
+        delta_t <- Sys.time() - ini
+        print(delta_t)
+        rm(delta_t)
+        
+        # Selecionando área para DF local
+        temp <- item[sg_area == toupper(dlist[i]),]
+        
+        # Excluindo área do DF geral de itens
+        item <- item[sg_area != toupper(dlist[i]),]
+        
+        # Língua estrangeira
+        if(dlist[i] == "lc" & ano >= 2010) {
+          
+          if(ano == 2011) {
+            temp <-
+              temp[, 
+                   tx_gabarito := substr(tx_gabarito, 6, 45)]
+          } else {
+            temp <-
+              temp[, 
+                   tx_gabarito := substr(tx_gabarito, 11, 50)]
+          }
+          
+          
+          temp <-
+            temp[, 
+                 tx_respostas := substr(tx_respostas, 6, 45)]
+          
+          temp <- temp[, lingua := NULL]
+          print("ok")
+        }
+        
+        temp <- temp[, nc := nchar(tx_respostas)]
+        nc <- temp %>% summarise(max = max(nc)) %>% as.numeric()
+        
+        temp <- temp[, paste0("resp", c(1:nc)) := tstrsplit(tx_respostas, "", fixed = TRUE)]
+        temp <- temp[, paste0("gab", c(1:nc)) := tstrsplit(tx_gabarito, "", fixed = TRUE)]
+        temp <- temp[, c("tx_respostas","tx_gabarito") := NULL]
+        
+        # Reorganizando o Df local de itens
+        temp <- temp %>%
+          melt(id.vars = c("id_enem","co_prova","sg_area"),
+               measure.vars = list(
+                 paste0("resp", c(1:nc)),
+                 paste0("gab", c(1:nc))
+               ),
+               value.name = c("tx_respostas","tx_gabarito")
+          ) %>%
+          mutate(co_posicao = as.numeric(as.character(variable))) %>%
+          select(-variable)
+        
+        rm(nc)
+        
+        # Dummies de acerto, resposta em branco e dupla resposta
+        temp <- temp[, acerto := fifelse(tx_respostas == tx_gabarito, 1, 0)]
+        temp <- temp[, branco := fifelse(tx_respostas == ".", 1, 0)]
+        temp <- temp[, dupla := fifelse(tx_respostas == "*", 1, 0)]
+        
+        # Variável de ano
+        temp <- temp[, ano := ano]
+        
+        print(paste0("Juntando bases de parâmetros"))
+        delta_t <- Sys.time() - ini
+        print(delta_t)
+        rm(delta_t)
+        
+        # Juntando base de itens com base de medianas de parâmetros
+        temp <- temp %>% merge(medians, by = c("sg_area","ano","co_prova"))
+        
+        # Juntando base de itens com base de parâmetros
+        temp <- temp %>% merge(itens_prova, by = c("ano","co_posicao","co_prova","sg_area","tx_gabarito"))
+        #temp %>% setorder(cols = "id_enem","sg_area","co_posicao") %>% slice(1:100) %>% View()
+        
+        # Excluindo itens sem parâmetros
+        #temp <- temp[!is.na(nu_param_a),]
+        
+        # Posições mínima e máxima
+        temp <- temp[, c("pmin","pmax") := 
+                       .(min(co_posicao),
+                         max(co_posicao))]
+        
+        #temp %>% setorder(cols = "id_enem","sg_area") %>% slice(1:100) %>% View()
+        
+        # Construindo dummies de acertos
+        # vnames <- c(paste0("acertos_",rep(c("a","b","c"), each = 2),c("l","h")),
+        #             paste0("acertos_",rep(c("ini","fim"), times = 2),rep(c("5","10"), each = 2)))
+        
+        temp <- temp[, c(paste0("acerto_",rep(c("a","b","c"), each = 2),c("l","h")),
+                         paste0("acerto_",rep(c("ini","fim"), times = 2),rep(c("5","10"), each = 2))) :=
+                       .(
+                         fifelse(nu_param_a < a_md, acerto, NA_real_),
+                         fifelse(nu_param_a >= a_md, acerto, NA_real_),
+                         fifelse(nu_param_b < b_md, acerto, NA_real_),
+                         fifelse(nu_param_b >= b_md, acerto, NA_real_),
+                         fifelse(nu_param_c < c_md, acerto, NA_real_),
+                         fifelse(nu_param_c >= c_md, acerto, NA_real_),
+                         fifelse(co_posicao <= pmin + 4, acerto, NA_real_),
+                         fifelse(co_posicao >= pmax - 4, acerto, NA_real_),
+                         fifelse(co_posicao <= pmin + 9, acerto, NA_real_),
+                         fifelse(co_posicao >= pmax - 9, acerto, NA_real_)
+                       )]
+        # rm(vnames)
+        
+        # Seleção de variáveis
+        idvlist <- c("id_enem","sg_area","co_prova")
+        vlist <- c(
+          "acerto",
+          "acerto_al",
+          "acerto_ah",
+          "acerto_bl",
+          "acerto_bh",
+          "acerto_cl",
+          "acerto_ch",
+          "acerto_ini5",
+          "acerto_fim5",
+          "acerto_ini10",
+          "acerto_fim10",
+          "branco",
+          "dupla"
+        )
+        
+        gc()
+        # temp <- temp[, .SD, .SDcols = c(idvlist,vlist)]
+        # temp <- temp %>% select(idvlist,vlist)
+        
+        # Número de observações
+        # temp_obs <- temp[, lapply(.SD, function(x) sum(!is.na(x))),
+        #              by = .(id_enem, sg_area),
+        #              .SDcols = vlist]
+        
+        # colnames(temp_obs) <- paste0("n_",vlist)
+        
+        print("Agregação")
+        
+        temp <- temp[, lapply(.SD, mean, na.rm = T),
+                     by = .(id_enem, sg_area),
+                     .SDcols = vlist]
+        
+        # temp <- temp %>% merge(temp_obs, by = idvlist)
+        
+        rm(idvlist, vlist)
+        #temp2 %>% setorder(cols = "id_enem","sg_area") %>% slice(1:100) %>% View()
+        
+        
+        # Armazenado base de dados
+        if(i == 1){
+          enem_ace <- temp
+        } else {
+          enem_ace <- enem_ace %>% bind_rows(temp)
+        }
+        rm(i, temp)
+        gc()
+        
+      } # fim do loop nas disciplinas (i)
+      
+      print("Fim do loop nas disciplinas")
+      delta_t <- Sys.time() - ini
+      print(delta_t)
+      saveRDS(enem_ace, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_ace_",ano,"_",type,".RDS"))
+      rm(enem_ace, ini,delta_t,item,j)
+      
+      rm(ano)
+      
+    } # fim do loop nos anos (ano)
+    
+    
+    
+    
+    
+    # ---------------------------------------------------------------------------- #
+    ## 5.4 Unindo todas as bases ----
+    # ---------------------------------------------------------------------------- #
+    
+    # PIB
+    pib <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/pib.RDS") %>%
+      mutate(codmun = as.integer(codmun)) %>%
+      rename(mun_prova = codmun)
+    
+    # Base de distâncias
+    mun_hv <- readRDS(file = "Z:/Arquivos IFB/Paper - Horário de Verão e Educação/V2 Horário de Verão e ENEM/Bases de dados/revisao/mun_hv.RDS")
+    
+    # Coordenadas
+    coordenadas <- mun_hv$centroid %>%
+      st_coordinates() %>%
+      as_tibble() %>%
+      rename(
+        lon = X,
+        lat = Y
+      )
+    
+    mun_hv <- mun_hv %>%
+      bind_cols(coordenadas) %>%
+      st_drop_geometry() %>%
+      select(co_municipio, lon, lat, dist_hv_border, seg)
+    rm(coordenadas)
+    
+    # Bases de dados de todos os anos
+    for(ano in 2018:2019){
+      
+      print(ano)
+      
+      temp <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_notas_",ano,"_",type".RDS")) %>%
+        filtros(filtro = "notas")
+      temp2 <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_ace_",ano,"_",type,".RDS"))%>%
+        mutate(
+          sg_area = tolower(sg_area)
+        ) %>%
+        dcast(id_enem ~ sg_area,
+              value.var = c(
+                "acerto",
+                paste0(
+                  "acerto_",
+                  rep(c("a","b","c"), each = 2), rep(c("l","h"), times = 3)
+                ),
+                paste0(
+                  "acerto_",
+                  rep(c("ini","fim"), each = 2), rep(c("5","10"), times = 2)
+                ),
+                "branco","dupla"
+              )
+        )
+      
+      temp <- temp %>% merge(temp2, by = "id_enem", all.y = F,all.x = F)
+      rm(temp2)
+      
+      temp <- temp %>%
+        select(-sexo,-status_rd) %>%
+        left_join(mun_hv,
+                  by = c(
+                    "mun_prova" = "co_municipio"
+                  ))  %>%
+        mutate(
+          dist_hv_border = ifelse(hv == 1, dist_hv_border,-dist_hv_border),
+          dia_1 = case_when(
+            ano >= 2009 & ano <= 2016 ~ (cn + mt) / 2,
+            ano >= 2017 & ano <= 2019 ~ (lc + rd + ch) /3
+          ),
+          dia_2 = case_when(
+            ano >= 2009 & ano <= 2016 ~ (lc + rd + ch) / 3,
+            ano >= 2017 & ano <= 2019 ~ (cn + mt) /2
+          ),
+          uf_prova = mun_prova %/% 10^5,
+          id180 = ifelse(idade != 18 & priv == 0, 1, NA),
+          id181 = ifelse(idade == 18 & priv == 0, 1, NA),
+          dom50 = ifelse(pessoas_dom != "C" & priv == 0, 1, NA),
+          dom51 = ifelse(pessoas_dom == "C" & priv == 0, 1, NA),
+          ppi0 = ifelse(!(raca %in% c("C","D","F")) & priv == 0, 1, NA),
+          ppi1 = ifelse(raca %in% c("C","D","F") & priv == 0, 1, NA),
+          escp0 = case_when(
+            esc_pai %in% c("D","E","F") & priv == 0 ~ 1,
+            esc_pai %in% c("A","B","C") & priv == 0 ~ NA,
+            .default = NA
+          ),
+          escp1 = case_when(
+            esc_pai %in% c("D","E","F") & priv == 0 ~ NA,
+            esc_pai %in% c("A","B","C") & priv == 0 ~ 1,
+            .default = NA
+          ),
+          renda10 = ifelse(!(renda_dom %in% c("A","B")) & priv == 0,1,NA),
+          renda11 = ifelse(renda_dom %in% c("A","B") & priv == 0,1,NA),
+          fem0 = ifelse(mas == 1 & priv == 0, 1, NA),
+          fem1 = ifelse(mas == 0 & priv == 0, 1, NA),
+          priv0 = ifelse(priv == 0, 1, NA),
+          priv1 = ifelse(priv == 1, 1, NA),
+          seg15 = ifelse(seg %in% c(1:5) & priv == 0, 1, NA),
+          seg67 = ifelse(seg %in% c(6:7) & priv == 0, 1, NA),
+          total = 1,
+          nonmig1 = ifelse(
+            !is.na(mun_prova) &
+              !is.na(mun_res) &
+              !is.na(mun_escola) &
+              mun_prova == mun_res & mun_res == mun_escola & priv == 0,
+            1,
+            NA
+          ),
+          nonmig2 = ifelse(
+            !is.na(mun_prova) &
+              !is.na(mun_res) &
+              !is.na(mun_escola) &
+              mun_prova == mun_res & mun_res != mun_escola & priv == 0,
+            1,
+            NA),
+          nonmig3 = ifelse(
+            !is.na(mun_prova) &
+              !is.na(mun_res) &
+              !is.na(mun_escola) &
+              mun_prova != mun_res & mun_res == mun_escola & priv == 0,
+            1,
+            NA),
+          nonmig4 = ifelse(
+            !is.na(mun_prova) &
+              !is.na(mun_res) &
+              !is.na(mun_escola) &
+              mun_prova == mun_escola & mun_res != mun_escola & priv == 0,
+            1,
+            NA),
+          id18 = ifelse(idade == 18, 1, 0),
+          dom5 = ifelse(pessoas_dom == "C", 1, 0),
+          ppi = ifelse(raca %in% c("C","D","F"), 1, 0),
+          escp = case_when(
+            esc_pai %in% c("D","E","F") ~ 0,
+            esc_pai %in% c("A","B","C") ~ 1,
+            .default = NA
+          ),
+          renda1 = ifelse(renda_dom %in% c("A","B"),1,0),
+          renda_1_10 = ifelse(renda_dom == "C", 1 , 0), #1 MW to 10MW
+          renda_10   = ifelse(renda_dom == "D", 1, 0), #More than 10MW
+          fem = ifelse(mas == 0, 1, 0),
+          rd0 = ifelse(rd == 0, 1, 0),
+          rd1 = ifelse(rd0 == 1,NA,rd1),
+          rd2 = ifelse(rd0 == 1,NA,rd2),
+          rd3 = ifelse(rd0 == 1,NA,rd3),
+          rd4 = ifelse(rd0 == 1,NA,rd4),
+          rd5 = ifelse(rd0 == 1,NA,rd5),
+          branco_ch = branco_ch * 100,
+          branco_cn = branco_cn * 100,
+          branco_lc = branco_lc * 100,
+          branco_mt = branco_mt * 100,
+          dupla_ch = dupla_ch * 100,
+          dupla_cn = dupla_cn * 100,
+          dupla_lc = dupla_lc * 100,
+          dupla_mt = dupla_mt * 100,
+          acerto_ch = acerto_ch * 100,
+          acerto_cn = acerto_cn * 100,
+          acerto_lc = acerto_lc * 100,
+          acerto_mt = acerto_mt * 100,
+          acerto_al_ch = acerto_al_ch * 100,
+          acerto_al_cn = acerto_al_cn * 100,
+          acerto_al_lc = acerto_al_lc * 100,
+          acerto_al_mt = acerto_al_mt * 100,
+          acerto_ah_ch = acerto_ah_ch * 100,
+          acerto_ah_cn = acerto_ah_cn * 100,
+          acerto_ah_lc = acerto_ah_lc * 100,
+          acerto_ah_mt = acerto_ah_mt * 100,
+          acerto_bl_ch = acerto_bl_ch * 100,
+          acerto_bl_cn = acerto_bl_cn * 100,
+          acerto_bl_lc = acerto_bl_lc * 100,
+          acerto_bl_mt = acerto_bl_mt * 100,
+          acerto_bh_ch = acerto_bh_ch * 100,
+          acerto_bh_cn = acerto_bh_cn * 100,
+          acerto_bh_lc = acerto_bh_lc * 100,
+          acerto_bh_mt = acerto_bh_mt * 100,
+          acerto_cl_ch = acerto_cl_ch * 100,
+          acerto_cl_cn = acerto_cl_cn * 100,
+          acerto_cl_lc = acerto_cl_lc * 100,
+          acerto_cl_mt = acerto_cl_mt * 100,
+          acerto_ch_ch = acerto_ch_ch * 100,
+          acerto_ch_cn = acerto_ch_cn * 100,
+          acerto_ch_lc = acerto_ch_lc * 100,
+          acerto_ch_mt = acerto_ch_mt * 100,
+          acerto = (acerto_ch + acerto_cn + acerto_lc + acerto_mt) / 4,
+          acerto_pal = (acerto_al_ch + acerto_al_cn + acerto_al_lc + acerto_al_mt) / 4,
+          acerto_pah = (acerto_ah_ch + acerto_ah_cn + acerto_ah_lc + acerto_ah_mt) / 4,
+          acerto_pbl = (acerto_bl_ch + acerto_bl_cn + acerto_bl_lc + acerto_bl_mt) / 4,
+          acerto_pbh = (acerto_bh_ch + acerto_bh_cn + acerto_bh_lc + acerto_bh_mt) / 4,
+          acerto_pcl = (acerto_cl_ch + acerto_cl_cn + acerto_cl_lc + acerto_cl_mt) / 4,
+          acerto_pch = (acerto_ch_ch + acerto_ch_cn + acerto_ch_lc + acerto_ch_mt) / 4,
+          acerto_ini5_cn = acerto_ini5_cn * 100,
+          acerto_ini5_ch = acerto_ini5_ch * 100,
+          acerto_ini5_lc = acerto_ini5_lc * 100,
+          acerto_ini5_mt = acerto_ini5_mt * 100,
+          acerto_ini10_cn = acerto_ini10_cn * 100,
+          acerto_ini10_ch = acerto_ini10_ch * 100,
+          acerto_ini10_lc = acerto_ini10_lc * 100,
+          acerto_ini10_mt = acerto_ini10_mt * 100,
+          acerto_fim5_cn = acerto_fim5_cn * 100,
+          acerto_fim5_ch = acerto_fim5_ch * 100,
+          acerto_fim5_lc = acerto_fim5_lc * 100,
+          acerto_fim5_mt = acerto_fim5_mt * 100,
+          acerto_fim10_cn = acerto_fim10_cn * 100,
+          acerto_fim10_ch = acerto_fim10_ch * 100,
+          acerto_fim10_lc = acerto_fim10_lc * 100,
+          acerto_fim10_mt = acerto_fim10_mt * 100,
+          acerto_ini5_d1 = case_when(
+            ano == 2009 ~ acerto_ini5_cn,
+            ano >= 2010 & ano <= 2016 ~ acerto_ini5_ch,
+            ano >= 2017 & ano <= 2019 ~ acerto_ini5_lc,
+            .default = NA
+          ),
+          acerto_ini10_d1 = case_when(
+            ano == 2009 ~ acerto_ini10_cn,
+            ano >= 2010 & ano <= 2016 ~ acerto_ini10_ch,
+            ano >= 2017 & ano <= 2019 ~ acerto_ini10_lc,
+            .default = NA
+          ),
+          acerto_fim5_d1 = case_when(
+            ano == 2009 ~ acerto_fim5_ch,
+            ano >= 2010 & ano <= 2016 ~ acerto_fim5_cn,
+            ano >= 2017 & ano <= 2019 ~ acerto_fim5_ch,
+            .default = NA
+          ),
+          acerto_fim10_d1 = case_when(
+            ano == 2009 ~ acerto_fim10_ch,
+            ano >= 2010 & ano <= 2016 ~ acerto_fim5_cn,
+            ano >= 2017 & ano <= 2019 ~ acerto_fim5_ch,
+            .default = NA
+          ),
+          acerto_ini5_d2 = case_when(
+            ano == 2009 ~ acerto_ini5_lc,
+            ano >= 2010 & ano <= 2016 ~ acerto_ini5_lc,
+            ano >= 2017 & ano <= 2019 ~ acerto_ini5_cn,
+            .default = NA
+          ),
+          acerto_ini10_d2 = case_when(
+            ano == 2009 ~ acerto_ini10_lc,
+            ano >= 2010 & ano <= 2016 ~ acerto_ini10_lc,
+            ano >= 2017 & ano <= 2019 ~ acerto_ini10_cn,
+            .default = NA
+          ),
+          acerto_fim5_d2 = case_when(
+            ano == 2009 ~ acerto_fim5_mt,
+            ano >= 2010 & ano <= 2016 ~ acerto_fim5_mt,
+            ano >= 2017 & ano <= 2019 ~ acerto_fim5_mt,
+            .default = NA
+          ),
+          acerto_fim10_d2 = case_when(
+            ano == 2009 ~ acerto_fim10_mt,
+            ano >= 2010 & ano <= 2016 ~ acerto_fim10_mt,
+            ano >= 2017 & ano <= 2019 ~ acerto_fim10_mt,
+            .default = NA
+          ),
+          acerto_ini5 = (acerto_ini5_cn + acerto_ini5_ch + acerto_ini5_lc + acerto_ini5_mt)/4,
+          acerto_fim5 = (acerto_fim5_cn + acerto_fim5_ch + acerto_fim5_lc + acerto_fim5_mt)/4,
+          d_acerto_5 = acerto_fim5 - acerto_ini5,
+          d_acerto_5_d1 = acerto_fim5_d1 - acerto_ini5_d1,
+          d_acerto_5_d2 = acerto_fim5_d2 - acerto_ini5_d2,
+          d_acerto_10_d1 = acerto_fim10_d1 - acerto_ini10_d1,
+          d_acerto_10_d2 = acerto_fim10_d2 - acerto_ini10_d2,
+          d_pb_ch = acerto_bl_ch - acerto_bh_ch,
+          d_pb_cn = acerto_bl_cn - acerto_bh_cn,
+          d_pb_lc = acerto_bl_lc - acerto_bh_lc,
+          d_pb_mt = acerto_bl_mt - acerto_bh_mt,
+          d_pb = acerto_pbl - acerto_pbh,
+          d_acerto_5ch = acerto_fim5_ch - acerto_ini5_ch,
+          d_acerto_5cn = acerto_fim5_cn - acerto_ini5_cn,
+          d_acerto_5lc = acerto_fim5_lc - acerto_ini5_lc,
+          d_acerto_5mt = acerto_fim5_mt - acerto_ini5_mt
+        ) %>%
+        merge(pib, by = c("mun_prova", "ano"))
+      
+      setDT(temp)
+      vpad <- temp[, .(
+        media_p = pad(media),
+        cn_p = pad(cn),
+        ch_p = pad(ch),
+        lc_p = pad(lc),
+        mt_p = pad(mt),
+        rd_p = pad(rd),
+        dia_1_p = pad(dia_1),
+        dia_2_p = pad(dia_2),
+        rd1_p = pad(rd1),
+        rd2_p = pad(rd2),
+        rd3_p = pad(rd3),
+        rd4_p = pad(rd4),
+        rd5_p = pad(rd5)
+      )]
+      
+      temp <- temp %>% bind_cols(vpad)
+      rm(vpad)
+      
+      base_nota <- temp %>% setDT()
+      
+      rm(temp)
+      
+      
+      gc()
+      
+    
+      saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_",ano,"_",type".RDS"))
+      rm(base_nota)
+      # 
+      # # Base de abstenções
+      # base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_",ano,"_v4.RDS")) %>%
+      #   select(-sexo,-status_rd) %>%
+      #   left_join(mun_hv,
+      #             by = c(
+      #               "mun_prova" = "co_municipio"
+      #             )) %>%
+      #   mutate(
+      #     priv = ifelse(dep_adm == 4, 1, 0),
+      #     priv0 = ifelse(priv == 0, 1, NA)
+      #   ) %>%
+      #   select(
+      #     -conclusao,
+      #     -cn,
+      #     -ch,
+      #     -lc,
+      #     -mt,
+      #     -rd,
+      #     -media,
+      #     -rd1,
+      #     -rd2,
+      #     -rd3,
+      #     -rd4,
+      #     -rd5,
+      #     -co_cn,
+      #     -co_ch,
+      #     -co_lc,
+      #     -co_mt,
+      #     -pres_cn,
+      #     -pres_ch,
+      #     -pres_lc,
+      #     -pres_mt
+      #     ,
+      #     -dep_adm
+      #   ) %>%
+      #   mutate(
+      #     abs = ifelse(
+      #       abs_rd == 1 &
+      #         abs_cn == 1 &
+      #         abs_ch == 1 &
+      #         abs_lc == 1 &
+      #         abs_mt == 1,
+      #       1,
+      #       0),
+      #     uf_prova = mun_prova %/% 10^5,
+      #     dist_hv_border = ifelse(hv == 1, dist_hv_border,-dist_hv_border)
+      #   )
+      # 
+      # 
+      # 
+      # 
+      # base_abs <- base_abs %>% 
+      #   
+      #   filter(
+      #     !is.na(abs_rd) & !is.na(abs_mt) & !is.na(abs_lc) & !is.na(abs_cn) & !is.na(abs_ch)
+      #   ) %>% 
+      #   
+      #   mutate(
+      #     
+      #     in_d1 = ifelse(abs_rd == 0 & abs_ch == 0 & abs_lc == 0, 1, 0),
+      #     
+      #     in_d2 = ifelse(abs_mt == 0 & abs_cn == 0, 1, 0)
+      #   ) %>% 
+      #   mutate(
+      #     first_n_last = ifelse(in_d1 == 1 & in_d2 == 0, 1, 0),
+      #     last_n_first = ifelse(in_d1 == 0 & in_d2 == 1, 1, 0)
+      #   )
+      # 
+      # 
+      # base_ab <- base_abs[,.(media_abs = mean(abs, na.rm = T),
+      #                        in_d1_nd2 = mean(first_n_last, na.rm = T),
+      #                        in_d2_nd1 = mean(last_n_first, na.rm = T),
+      #                        obs = .N),
+      #                     by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
+      #   filter(as.numeric(ano) %in% c(2018,2019)) %>% 
+      #   arrange(mun_prova,ano)
+      # 
+      # 
+      # 
+      # 
+      # 
+      # 
+      # saveRDS(base_ab, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_abs_mun_",ano,".RDS"))
+      # rm(base_abs)
+      rm(ano)
+      
+    }
+    
+    rm(mun_hv,pib)
 
-  saveRDS(base_nota, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_nota_",ano,"_trei.RDS"))
-  rm(base_nota)
-  # 
-  # # Base de abstenções
-  # base_abs <- readRDS(file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/enem_abs_",ano,"_v4.RDS")) %>%
-  #   select(-sexo,-status_rd) %>%
-  #   left_join(mun_hv,
-  #             by = c(
-  #               "mun_prova" = "co_municipio"
-  #             )) %>%
-  #   mutate(
-  #     priv = ifelse(dep_adm == 4, 1, 0),
-  #     priv0 = ifelse(priv == 0, 1, NA)
-  #   ) %>%
-  #   select(
-  #     -conclusao,
-  #     -cn,
-  #     -ch,
-  #     -lc,
-  #     -mt,
-  #     -rd,
-  #     -media,
-  #     -rd1,
-  #     -rd2,
-  #     -rd3,
-  #     -rd4,
-  #     -rd5,
-  #     -co_cn,
-  #     -co_ch,
-  #     -co_lc,
-  #     -co_mt,
-  #     -pres_cn,
-  #     -pres_ch,
-  #     -pres_lc,
-  #     -pres_mt
-  #     ,
-  #     -dep_adm
-  #   ) %>%
-  #   mutate(
-  #     abs = ifelse(
-  #       abs_rd == 1 &
-  #         abs_cn == 1 &
-  #         abs_ch == 1 &
-  #         abs_lc == 1 &
-  #         abs_mt == 1,
-  #       1,
-  #       0),
-  #     uf_prova = mun_prova %/% 10^5,
-  #     dist_hv_border = ifelse(hv == 1, dist_hv_border,-dist_hv_border)
-  #   )
-  # 
-  # 
-  # 
-  # 
-  # base_abs <- base_abs %>% 
-  #   
-  #   filter(
-  #     !is.na(abs_rd) & !is.na(abs_mt) & !is.na(abs_lc) & !is.na(abs_cn) & !is.na(abs_ch)
-  #   ) %>% 
-  #   
-  #   mutate(
-  #     
-  #     in_d1 = ifelse(abs_rd == 0 & abs_ch == 0 & abs_lc == 0, 1, 0),
-  #     
-  #     in_d2 = ifelse(abs_mt == 0 & abs_cn == 0, 1, 0)
-  #   ) %>% 
-  #   mutate(
-  #     first_n_last = ifelse(in_d1 == 1 & in_d2 == 0, 1, 0),
-  #     last_n_first = ifelse(in_d1 == 0 & in_d2 == 1, 1, 0)
-  #   )
-  # 
-  # 
-  # base_ab <- base_abs[,.(media_abs = mean(abs, na.rm = T),
-  #                        in_d1_nd2 = mean(first_n_last, na.rm = T),
-  #                        in_d2_nd1 = mean(last_n_first, na.rm = T),
-  #                        obs = .N),
-  #                     by = .(mun_prova,ano,dist_hv_border,seg,lat,lon)] %>% 
-  #   filter(as.numeric(ano) %in% c(2018,2019)) %>% 
-  #   arrange(mun_prova,ano)
-  # 
-  # 
-  # 
-  # 
-  # 
-  # 
-  # saveRDS(base_ab, file = paste0("Z:/Tuffy/Paper - HV/Bases/TODOS/base_abs_mun_",ano,".RDS"))
-  # rm(base_abs)
-  rm(ano)
-  
+message("Finished for type:", type)
+rm(type, filter_type)
+
 }
-
-rm(mun_hv,pib)
-
 # ---------------------------------------------------------------------------- #
 # 6. Census Data ----
 # ---------------------------------------------------------------------------- #
