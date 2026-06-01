@@ -54,21 +54,25 @@ finbra_06 <- read_excel("Z:/Tuffy/Paper - Educ/Dados/FINBRA/2006_Receita.xlsx")
 
 new_df <- finbra_06 %>% 
   select(CD_UF, CD_MUN, UF, MUNICIPIO, #Municipality and state id
-         `Transf Multigov FUNDEF Comp`, `Transf Multigov FUNDEF`, #Amount received with Fundef
+         `Transf Multigovernamentais`, #Total Fundef Value
+         `Transf Multigov FUNDEF Comp`, `Transf Multigov FUNDEF`, `Outras Transf Multigov`,  #Amount received with Fundef
          `Deduções Rec Corrente`) #Deduction to build the fund
 
 test <- new_df %>% 
   group_by(CD_UF, UF) %>% 
   summarise(
+    total      = sum(`Transf Multigovernamentais`, na.rm = T),
     gov_transf = sum(`Transf Multigov FUNDEF Comp`, na.rm = T),
     tot_fundef = sum(`Transf Multigov FUNDEF`, na.rm = T),
+    other_fundef = sum(`Outras Transf Multigov`, na.rm = T),
     tot_cost   = sum(`Deduções Rec Corrente`, na.rm = T),
     
     .groups = "drop"
   ) %>% 
   mutate(
+    tot_fundef = gov_transf + fundef,
     state_cont = tot_fundef - tot_cost
-    )
+  )
 
 
 
@@ -115,15 +119,16 @@ test1 <- siope_06 %>%
     values_fill = 0         # preenche NA por 0 (útil em receitas)
   ) %>%
   clean_names() %>% 
+  filter(nom_colu == "Receitas Realizadas") %>% 
   mutate(
-    cost = rowSums(across(131:133), na.rm = TRUE) + rowSums(across(9:13), na.rm = TRUE)
+    cost = rowSums(across(143:145), na.rm = TRUE) + rowSums(across(9:13), na.rm = TRUE)
   )
 
 
 sum(test1$transferencias_de_recursos_do_fundef) - sum(test1$deducoes_da_receita_corrente) #- sum(test1$fundeg)
 
 
-
+sum(test1$transferencias_de_recursos_do_fundef) - sum(test1$cost)
 
 
 
