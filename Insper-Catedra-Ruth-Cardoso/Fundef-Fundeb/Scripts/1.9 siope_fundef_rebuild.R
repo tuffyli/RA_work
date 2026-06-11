@@ -347,6 +347,9 @@ mat_ac <- mat_ac %>%
     fnd_tot = urb_ini_rs + urb_fim_rs + rur_ini_rs + rur_fim_esp_rs
   )
 
+#' Found a 0.24% difference between the estipulated value and the actually received
+
+
 # ---------------------------------------------------------------------------- #
 # Start ----
 # ---------------------------------------------------------------------------- #
@@ -355,8 +358,10 @@ mat_ac <- mat_ac %>%
 # UFs
 # ------------------------------------------------------------------------- #
 
+#Df será feito separadamente
+
 ufs <- c(
-  "AC","AL","AP","AM","BA","CE","DF","ES","GO",
+  "AC","AL","AP","AM","BA","CE","ES","GO",
   "MA","MT","MS","MG","PA","PB","PR","PE","PI",
   "RJ","RN","RS","RO","RR","SC","SP","SE","TO"
 )
@@ -490,3 +495,44 @@ View(fundef_2006_uf)
 
 fundef_2006_uf %>%
   arrange(desc(abs(federal_complement)))
+
+
+# -------------------------------------------------------------------------
+# 1) School census: municipality level
+# -------------------------------------------------------------------------
+
+mat_2005_munic <- mat_2005 %>%
+  group_by(CODMUNIC) %>%
+  summarise(
+    nome = first(MUNIC),
+    no_uf = first(UF),
+    uf = first(SIGLA),
+    
+    urb_ini = sum(if_else(LOC == "Urbana", reg_in, 0), na.rm = TRUE),
+    urb_fim = sum(if_else(LOC == "Urbana", reg_fin, 0), na.rm = TRUE),
+    rur_ini = sum(if_else(LOC == "Rural", reg_in, 0), na.rm = TRUE),
+    rur_fim_esp = sum(if_else(LOC == "Rural", reg_fin + esp_total_final, 0), na.rm = TRUE),
+    
+    .groups = "drop"
+  )
+
+# -------------------------------------------------------------------------
+# 2) School census: UF level
+# -------------------------------------------------------------------------
+
+mat_uf <- mat_2005_munic %>%
+  group_by(uf) %>%
+  summarise(
+    urb_ini = sum(urb_ini, na.rm = TRUE),
+    urb_fim = sum(urb_fim, na.rm = TRUE),
+    rur_ini = sum(rur_ini, na.rm = TRUE),
+    rur_fim_esp = sum(rur_fim_esp, na.rm = TRUE),
+    .groups = "drop"
+  ) 
+
+# -------------------------------------------------------------------------
+# 3) Join census to FUNDEF UF dataframe
+# -------------------------------------------------------------------------
+
+fundef_uf_final <- fundef_2006_uf %>%
+  left_join(mat_uf, by = c("sig_uf" = "uf"))
