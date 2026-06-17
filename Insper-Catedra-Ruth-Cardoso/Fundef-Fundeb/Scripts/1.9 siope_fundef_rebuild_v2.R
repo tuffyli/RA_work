@@ -642,6 +642,8 @@ process_siope_uf <- function(uf, base_path) {
     collapse = "|"
   )
   
+  core_pattern <- "^transferencias_multigovernamentais$"
+  
   # ----------------------------------------------------------------------- #
   # Municipal layer
   # ----------------------------------------------------------------------- #
@@ -650,12 +652,14 @@ process_siope_uf <- function(uf, base_path) {
     filter(tipo == "Municipal") %>%
     mutate(
       mun_contribution = safe_sum_cols(pick(everything()), mun_contrib_cols),
-      mun_received     = sum_matching_cols(pick(everything()), receipt_pattern)
+      mun_received     = sum_matching_cols(pick(everything()), receipt_pattern),
+      mun_fundef_total = sum_matching_cols(pick(everything()), core_pattern)
     ) %>%
     select(
       cod_uf, sig_uf, cod_muni, nom_muni,
       mun_received,
-      mun_contribution
+      mun_contribution,
+      mun_fundef_total
     )
   
   mun_uf <- municipios %>%
@@ -663,6 +667,7 @@ process_siope_uf <- function(uf, base_path) {
     summarise(
       mun_received     = sum(mun_received, na.rm = TRUE),
       mun_contribution = sum(mun_contribution, na.rm = TRUE),
+      mun_fundef       = sum(mun_fundef_total, na.rm = TRUE),
       .groups = "drop"
     )
   
@@ -674,12 +679,14 @@ process_siope_uf <- function(uf, base_path) {
     filter(tipo == "Estadual") %>%
     mutate(
       state_contribution = safe_sum_cols(pick(everything()), state_contrib_cols),
-      state_received     = sum_matching_cols(pick(everything()), receipt_pattern)
+      state_received     = sum_matching_cols(pick(everything()), receipt_pattern),
+      state_fundef_total = sum_matching_cols(pick(everything()), core_pattern)
     ) %>%
     group_by(cod_uf, sig_uf) %>%
     summarise(
       state_contribution = sum(state_contribution, na.rm = TRUE),
       state_received     = sum(state_received, na.rm = TRUE),
+      state_fundef       = sum(state_fundef_total, na.rm = TRUE),
       .groups = "drop"
     )
   
@@ -691,9 +698,13 @@ process_siope_uf <- function(uf, base_path) {
     left_join(estado, by = c("cod_uf", "sig_uf")) %>%
     mutate(
       total_received     = mun_received + state_received,
+      real_fundef        = mun_fundef + state_fundef,
       total_contribution = mun_contribution + state_contribution,
       federal_complement_inferred = total_received - total_contribution,
+      federal_complement_fundef   = real_fundef - total_contribution,
+      federal_compl_fundef_problem = real_fundef < total_contribution,
       federal_complement_problem = total_received < total_contribution,
+      prop_error_fundef       = federal_complement_fundef/real_fundef,
       uf = sig_uf
     ) %>%
     arrange(sig_uf)
@@ -1242,12 +1253,616 @@ fundef_2006_uf <- fundef_2006_uf %>%
 
 fundef_2006_uf <- fundef_2006_uf %>% 
   select(sig_uf, cod_uf, everything(), -uf) %>% 
-  mutate(prop_received = total)
+  mutate(prop_received = federal_complement_with_remun/total_received_with_remun)
 
 rm(fundef_2006_column_diagnostics, fundef_2006_component_diagnostics, fundef_2006_diagnostics,
    fundef_2006_final_diagnostics, fundef_2006_period_diagnostics, fundef_2006_problem_columns,
    fundef_2006_problem_municipal_balance, fundef_2006_reconstruction_check, fundef_2006_summary)
 
+
+# ---------------------------------------------------------------------------- #
+# 4. Per-Student Adjustment ----
+# ---------------------------------------------------------------------------- #
+## 4.1 Per-Student (2006) ----
+# ---------------------------------------------------------------------------- #
+
+fundef_2006 <- fundef_2006_uf %>% 
+  left_join(mat_uf, by = c("sig_uf" = "uf"))
+
+
+fundef_2006 <- fundef_2006 %>% 
+  group_by(sig_uf) %>% 
+  mutate(
+    urb_per_stu = 
+      real_fundef /
+      (urb_ini + 1.02*rur_ini + 1.05*urb_fim + 1.05*1.019*rur_fim_esp)
+  )
+
+# ---------------------------------------------------------------------------- #
+## 4.2 Per-Student (2005) ----
+# ---------------------------------------------------------------------------- #
+### 4.2.1 Censo (2004) ----
+# ---------------------------------------------------------------------------- #
+
+censo <- read_delim("Z:/Arquivos IFB/Censo Escolar/Bases Agregadas/2004/microdados_educação_básica_2004/DADOS/CENSOESC_2004.CSV", delim = "|",
+                    col_types = cols(.default = col_double(),
+                                     CODFUNC = col_character(),
+                                     MASCARA = col_character(),
+                                     DEP     = col_character(),
+                                     LOC = col_character(),
+                                     UF = col_character(),
+                                     SIGLA = col_character(),
+                                     MUNIC = col_character(),
+                                     ED_INDIG = col_character(),
+                                     MAT_ETNI = col_character(),
+                                     NIVELCRE = col_character(),
+                                     NIVELPRE = col_character(),
+                                     NIV_F1A4_8 = col_character(),
+                                     NIV_F5A8_8 = col_character(),
+                                     NIV_F9INI = col_character(),
+                                     NIV_F9FIM = col_character(),
+                                     NIVELMED = col_character(),
+                                     SUPL_AVA = col_character(),
+                                     SUPL_SAVA = col_character(),
+                                     EDPROFIS = col_character(),
+                                     ESP_EXCL = col_character(),
+                                     ESP_T_ES = col_character(),
+                                     AREA_QUIL = col_character(),
+                                     ESP_S_RE = col_character(),
+                                     ESP_A_IN = col_character(),
+                                     ED_INDIG = col_character(),
+                                     ED_IN_LM = col_character(),
+                                     COD_ID_IND = col_character(),
+                                     ED_IN_LP = col_character(),
+                                     MAT_ETNI = col_character(),
+                                     ESC_T_IN = col_character(),
+                                     PRED_ESC = col_character(),
+                                     TEMPLO = col_character(),
+                                     DEF11C = col_double(),
+                                     DEF11D = col_double(),
+                                     DEF11E = col_double(),
+                                     DEF11F = col_double(),
+                                     NEF11C = col_double(),
+                                     NEF11D = col_double(),
+                                     NEF11E = col_double(),
+                                     NEF11F = col_double(),
+                                     DEF11G = col_double(),
+                                     DEF11H = col_double(),
+                                     DEF11I = col_double(),
+                                     DEF11J = col_double(),
+                                     NEF11G = col_double(),
+                                     NEF11H = col_double(),
+                                     NEF11I = col_double(),
+                                     NEF11J = col_double()))
+
+
+
+mat_2004 <- censo %>%
+  select(c(1:9,
+           
+           CODFUNC,
+           ED_INDIG,
+           #MAT_QUIL,
+           AREA_QUIL,
+           #ESC_ASSE,
+           ED_IN_LM,
+           ED_IN_LP,
+           #MAT_ETNI,
+           ESC_T_IN,
+           
+           DEF11C:DEF11F, NEF11C:NEF11F, # EF iniciais (8 anos)
+           DE9F11C:DE9F11G, NE9F11C:NE9F11G, # EF iniciais (9 anos)
+           DEF11G:DEF11J, NEF11G:NEF11J, # EF finais (8 anos)
+           DE9F11H:DE9F11N, NE9F11H:NE9F11N, # EF finais (9 anos)
+
+           #ED especial por série:
+           VEE1611:VEE1691, VEE1711:VEE1791, VEE1811:VEE1891, VEE1911:VEE1991, # 1ºEF
+           
+           VEE1612:VEE1692, VEE1712:VEE1792, VEE1812:VEE1892, VEE1912:VEE1992, # 2ºEF,
+           VEE1613:VEE1693, VEE1713:VEE1793, VEE1813:VEE1893, VEE1913:VEE1993, # 3ºEF
+           VEE1614:VEE1694, VEE1714:VEE1794, VEE1814:VEE1894, VEE1914:VEE1994, # 4ºEF
+           VEE1615:VEE1695, VEE1715:VEE1795, VEE1815:VEE1895, VEE1915:VEE1995, # 5ºEF
+           VEE1616:VEE1696, VEE1716:VEE1796, VEE1816:VEE1896, VEE1916:VEE1996, # 6ºEF
+           VEE1617:VEE1697, VEE1717:VEE1797, VEE1817:VEE1897, VEE1917:VEE1997, # 7ºEF
+           VEE1618:VEE1698, VEE1718:VEE1798, VEE1818:VEE1898, VEE1918:VEE1998 # 8ºEF
+  )) %>%
+  
+  mutate(COD_UF = as.numeric(str_sub(as.character(CODMUNIC, 1, 2)))) %>%
+  mutate(reg_in = rowSums(across(c(DEF11C:NE9F11G)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
+         reg_fin = rowSums(across(c(DEF11G:NE9F11N)), na.rm = TRUE),
+         esp_iniciais = rowSums(across(c(VEE1611:VEE1994)), na.rm = TRUE),
+         esp_finais = rowSums(across(c(VEE1615:VEE1998)), na.rm = TRUE),
+         esp_soma = esp_iniciais + esp_finais
+         ) %>%  # pega o maior valor entre a soma das deficiencias por série,
+  # e da desagregação pelo ano de nascimento
+  filter(!(DEP %in% c("Particular", "Federal")), # tira escolas federais e particulares
+         CODFUNC == "Ativo") %>%  # tira escolas que não estão ativas
+  mutate(CODMUNIC = as.numeric(str_c( #concatena
+    str_sub(as.character(CODMUNIC), 1, 2), #pega os dois primeiros
+    str_sub(as.character(CODMUNIC), -5) #pega os últimos 5
+  )))
+
+
+# ---------------------------------------------------------------------------- #
+#### 4.2.1.1 Saving -----
+# ---------------------------------------------------------------------------- #
+
+# DF do censo já agregada por escola (é muito pesada para rodar toda vez):
+write.csv2(mat_2004, file = "Z:/Tuffy/Paper - Educ/Dados/censo_2004_filtrado.csv")
+
+mat_2004 <- read.csv2("Z:/Tuffy/Paper - Educ/Dados/censo_2004_filtrado.csv")
+
+
+# ---------------------------------------------------------------------------- #
+#### 4.2.1.2 Students per Mun. ----
+# ---------------------------------------------------------------------------- #
+
+mat_2004_munic <- mat_2004 %>%
+  group_by(CODMUNIC) %>%
+  summarise(
+    nome = first(MUNIC),
+    no_uf = first(UF),
+    uf = first(SIGLA),
+    
+    urb_ini = sum(if_else(LOC == "Urbana", reg_in, 0), na.rm = TRUE),
+    urb_fim = sum(if_else(LOC == "Urbana", reg_fin, 0), na.rm = TRUE),
+    rur_ini = sum(if_else(LOC == "Rural",  reg_in, 0), na.rm = TRUE),
+    rur_fim_esp = sum(if_else(LOC == "Rural", reg_fin + esp_soma, 0), na.rm = TRUE),
+    
+    .groups = "drop"
+  )
+
+
+# ---------------------------------------------------------------------------- #
+#### 4.2.1.3 Students UF (categories) ----
+# ---------------------------------------------------------------------------- #
+
+mat_uf_2004 <- mat_2004_munic %>% 
+  group_by(uf) %>% 
+  summarise(
+    urb_ini = sum(urb_ini, na.rm = T),
+    urb_fim = sum(urb_fim, na.rm = T),
+    rur_ini = sum(rur_ini, na.rm = T),
+    rur_fim_esp = sum(rur_fim_esp, na.rm = T)
+  ) %>% 
+  mutate(total = urb_ini + urb_fim + rur_ini + rur_fim_esp) %>% 
+  ungroup()
+
+
+
+rm(mat_2004, mat_uf, mat_2004_munic, censo)
+
+
+# ---------------------------------------------------------------------------- #
+### 4.2.2 SIOPE (2005) ----
+# ---------------------------------------------------------------------------- #
+#
+# OBJECTIVE
+# --------- #
+# Extract the total FUNDEF resources available per UF in 2005.
+# This gives us the "per-student investment in 2005" baseline, which is
+# compared to the 2006 value to compute a growth rate. That growth rate is
+# then replicated into the 2007 counterfactual.
+#
+# WHAT "TOTAL FUND VALUE" MEANS HERE
+# ----------------------------------- #
+# FUNDEF is a state-level redistributive fund. The full value of the fund in
+# each UF is composed of three parts:
+#
+#   (1) Redistribution of municipal contributions:
+#       Each municipality deducts 15% of FPM, ICMS quota, IPI-export quota,
+#       and LC 87/96. These flow into the state-level fund and are
+#       redistributed back by enrollment share.
+#       In SIOPE: municipal rows report "transferencias_de_recursos_do_fundef"
+#       as the amount RECEIVED back from the fund.
+#
+#   (2) Redistribution of state contributions:
+#       The state deducts 15% of FPE, gross ICMS, IPI-export, and LC 87/96.
+#       These also flow into the fund. The state row in SIOPE reports
+#       "transferencias_de_recursos_do_fundef" as what the STATE received
+#       back from the fund.
+#
+#   (3) Federal complement (complementação da União):
+#       If the per-student value in a UF falls below the national minimum,
+#       the federal government tops it up. This is a separate transfer,
+#       reported as "transferencias_da_complementacao_da_uniao_ao_fundef".
+#       Only a handful of poor UFs received this in 2005.
+#
+#   (4) Bank interest (remuneração bancária):
+#       The FUNDEF account earns interest while resources sit in the bank.
+#       Reported as "rec_de_remuneracao_de_depositos_bancarios_fundef".
+#       This is part of resources actually available for education spending.
+#
+#  The total FUNDEF value is given by the transferencias_multigovernmantais variable.
+#  As I only need this value to recreate the per-student value I will only stract it.
+# ---------------------------------------------------------------------------- #
+
+# ── STEP 1: Define FUNDEF receipt column candidates for 2005 ─────────────────
+#
+# SIOPE column names can vary slightly across years. We list all known variants
+# for each concept. The function will pick whichever one is actually present in
+# the 2005 file, and warn clearly if none are found.
+
+fundef_receipt_candidates_2005 <- list(
+  
+  # Core value of Fundef
+  core = c(
+    "transferencias_multigovernamentais"
+  ) 
+  
+  
+  )
+# ── STEP 3: Helper to safely pull a column value, returning 0 if absent ──────
+#
+# This avoids crashes when a column was not reported for a given UF/year.
+safe_col_2005 <- function(df, col_name) {
+  if (col_name %in% names(df)) df[[col_name]] else rep(0, nrow(df))
+}
+
+# ── STEP 4: Main function to read and process one UF's 2005 SIOPE file ───────
+#
+# Returns one row per UF with:
+#   - mun_received_2005:   total received by ALL municipalities in the UF
+#   - state_received_2005: total received by the state government in the UF
+#   - total_received_2005: mun + state (= full fund distributed, before complement/interest)
+#   - complement_2005:     federal top-up (only positive for poor UFs)
+#   - remun_2005:          bank interest
+#   - total_fund_2005:     COMPLETE fund value = all four components
+#   - mun_contribution_2005, state_contribution_2005: deduction-side for verification
+
+read_siope_2005 <- function(uf, base_path) {
+  
+  file_path <- file.path(base_path, paste0("siope_", uf, "_2005_P1.csv"))
+  
+  # ── File existence check ──────────────────────────────────────────────────
+  # Warn and return NULL (instead of crashing) so map_dfr() can continue
+  # with the remaining UFs even if one file is missing.
+  if (!file.exists(file_path)) {
+    warning("File not found: ", file_path)
+    return(NULL)
+  }
+  
+  siope <- read.csv(file_path)
+  
+  # ── Structural check: confirm standard SIOPE column layout ───────────────
+  # All SIOPE files 2003-2008 should have these columns. If any is missing,
+  # the file format changed or the wrong file was opened.
+  required_raw_cols <- c("TIPO", "NOM_MUNI", "NOM_ITEM", "VAL_DECL", "NOM_COLU",
+                         "COD_UF", "SIG_UF", "COD_MUNI", "NUM_ANO", "NUM_PERI")
+  missing_raw <- setdiff(required_raw_cols, names(siope))
+  if (length(missing_raw) > 0) {
+    stop(
+      "SIOPE 2005 file for ", uf, " is missing expected columns: ",
+      paste(missing_raw, collapse = ", "),
+      "\nActual columns: ", paste(names(siope), collapse = ", ")
+    )
+  }
+  
+  # ── Pivot from long to wide format ───────────────────────────────────────
+  # Raw SIOPE files are in long format: one row per (entity × budget item).
+  # pivot_wider() turns each NOM_ITEM (budget item label) into its own column,
+  # with VAL_DECL (declared value) as the cell value.
+  #
+  # id_cols keeps the entity identifiers: TIPO (Municipal/Estadual),
+  # period info, UF/municipality codes, and the budget column type (NOM_COLU).
+  #
+  # values_fn = sum handles cases where a (entity × item) pair appears more
+  # than once (e.g., multiple bimester rows); sum collapses them correctly.
+  # values_fill = 0 ensures missing items become 0 rather than NA.
+  #
+  # NOTE: 2005 files likely do NOT have IDN_CLAS (that column appeared in
+  # 2007). We therefore do NOT apply a filter on IDN_CLAS here.
+  siope_rr <- siope %>%
+    mutate(
+      # Replace the raw "null" string used for the state entity with a
+      # readable label. This is how SIOPE marks the state government row.
+      NOM_MUNI = ifelse(NOM_MUNI == "null", "Estadual", NOM_MUNI)
+    ) %>%
+    pivot_wider(
+      id_cols     = c(TIPO, NUM_ANO, NUM_PERI, COD_UF, SIG_UF,
+                      COD_MUNI, NOM_MUNI, NOM_COLU),
+      names_from  = NOM_ITEM,    # each budget item label becomes a column name
+      values_from = VAL_DECL,    # filled with the declared monetary value
+      values_fn   = sum,         # aggregate duplicates by summing
+      values_fill = 0            # absent items → 0 (not NA)
+    ) %>%
+    clean_names() %>%            # standardise column names: lowercase, no spaces
+    filter(nom_colu == "Receitas Realizadas")
+  # We keep only "Receitas Realizadas" (executed revenues).
+  # Other NOM_COLU values are budget projections (Receitas Previstas),
+  # which we do not want: we need the actual executed values.
+  
+  # ── Zero-row guard ────────────────────────────────────────────────────────
+  # If no rows survive the filter, the file used a different NOM_COLU label.
+  # Report the actual labels present so we know how to fix the filter.
+  if (nrow(siope_rr) == 0) {
+    warning(
+      uf, ": pivot produced 0 rows after filtering nom_colu == 'Receitas Realizadas'. ",
+      "Unique nom_colu values in file: ",
+      paste(unique(siope$NOM_COLU), collapse = " | ")
+    )
+    return(NULL)
+  }
+  
+  # ── Receipt column detection ──────────────────────────────────────────────
+  # Check which FUNDEF receipt columns are actually present in this UF's file.
+  # Versions of the item label can differ across states and years.
+  core_col       <- intersect(fundef_receipt_candidates_2005$core,       names(siope_rr))
+  
+  # Hard stop if the main redistribution column is completely absent.
+  # Without it, we cannot compute any meaningful total.
+  if (length(core_col) == 0) {
+    warning(
+      uf, ": FUNDEF core receipt column not found. ",
+      "All fundef-related columns present: ",
+      paste(names(siope_rr)[str_detect(names(siope_rr), "fundef")], collapse = " | ")
+    )
+    return(NULL)
+  }
+  
+  
+  # ── Build monetary variables per row (entity level) ──────────────────────
+  # At this point siope_rr has one row per (TIPO × municipality × period).
+  # We add columns for each FUNDEF concept using safe_col_2005(), which
+  # returns the column if it exists or a zero vector if it does not.
+  #
+  # KEY POINT: we do NOT group by TIPO yet. We compute the variables at the
+  # entity level first, then aggregate in two separate groupings:
+  #   (a) group by TIPO → gives us mun vs state split (for verification)
+  #   (b) group by UF   → gives us total fund value (for the per-student calc)
+  siope_entity <- siope_rr %>%
+    mutate(
+      # Amount received FROM the fund (redistribution based on enrollment share)
+      fundef_received_core    = safe_col_2005(., core_col[1])
+    )
+  
+  # ── (a) Aggregate by TIPO: municipal vs state split ──────────────────────
+  # This is the VERIFICATION step. We want to confirm that the total fund
+  # includes BOTH the municipal side AND the state side.
+  #
+  # Expected pattern:
+  #   - Municipal rows: many rows (one per municipality), each reporting
+  #     what they RECEIVED from the fund. Sum across all = total mun received.
+  #   - Estadual row: one row, reporting what the STATE received from the fund.
+  #
+  # If state_received_2005 is 0 or very small compared to mun_received_2005,
+  # it means the state row is missing or misclassified, and we are
+  # UNDERCOUNTING the fund.
+  tipo_split <- siope_entity %>%
+    group_by(tipo) %>%
+    summarise(
+      n_entities           = n(),
+      fundef_received_core = sum(fundef_received_core, na.rm = TRUE)
+    ) %>%
+    mutate(uf = uf)
+  
+  # Print the split so you can inspect it interactively.
+  # For a correct result, you should see TWO rows per UF:
+  #   tipo = "Municipal" → mun received (many entities)
+  #   tipo = "Estadual"  → state received (one entity)
+  # Both should have non-zero fundef_total.
+  message("\n--- TIPO split for ", uf, " ---")
+  print(tipo_split)
+  
+  # ── (b) Aggregate by UF: complete fund value ──────────────────────────────
+  # This sums across BOTH tipo = "Municipal" AND tipo = "Estadual", giving the
+  # total resources in the fund for that UF in 2005.
+  #
+  # Structure of total_fund_2005:
+  #   = mun_received (redistribution to municipalities)
+  #   + state_received (redistribution to state)
+  #   + complement_uniao (federal top-up, if any)
+  #   + remun_bancaria (bank interest)
+  uf_total <- siope_entity %>%
+    group_by(cod_uf, sig_uf) %>%
+    summarise(
+      # ── Contribution side (how the fund was FORMED) ──────────────────────
+      # Split into mun and state so we can cross-check with the receipt side.
+    
+      
+      # ── Receipt side: split by entity type (THE KEY VERIFICATION) ────────
+      # mun_received_2005 = sum of what all municipalities received back from fund
+      mun_received_2005   = sum(fundef_received_core[tipo == "Municipal"],   na.rm = TRUE),
+      # state_received_2005 = what the state government received back from fund
+      state_received_2005 = sum(fundef_received_core[tipo == "Estadual"],   na.rm = TRUE),
+      # total_received_core_2005 = mun + state (the fund pool redistributed,
+      #   not counting complement or interest yet)
+      total_received_core_2005 = mun_received_2005 + state_received_2005,
+      
+  
+      # ── COMPLETE FUND VALUE ───────────────────────────────────────────────
+      # This is the number to use in the per-student calculation.
+      # It includes all resources available within the UF-level FUNDEF account:
+      #   redistribution to mun + redistribution to state + complement + interest.
+      total_fund_2005 = total_received_core_2005,
+      
+      
+      .groups = "drop"
+    ) %>%
+    mutate(uf = sig_uf)
+  
+  # Return the UF-level totals (one row per UF).
+  # The tipo_split is printed above for interactive inspection but not returned,
+  # to keep the output of map_dfr() clean (one row per UF).
+  uf_total
+}
+
+# ── STEP 5: Run the function across all 27 UFs ───────────────────────────────
+#
+# map_dfr() applies read_siope_2005() to each UF and row-binds the results.
+# NULLs (from missing files) are automatically dropped.
+
+ufs_2005 <- c(
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO",
+  "MA","MT","MS","MG","PA","PB","PR","PE","PI",
+  "RJ","RN","RS","RO","RR","SC","SP","SE","TO"
+)
+
+base_path_2005 <- "Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/SIOPE"
+
+fundef_2005_uf <- map_dfr(
+  ufs_2005,
+  read_siope_2005,
+  base_path = base_path_2005
+)
+
+# ── STEP 6: Verification printout ────────────────────────────────────────────
+#
+# This table tells you immediately whether BOTH the municipal side AND the
+# state side are being captured in the total:
+#
+#   - mun_received_2005 should be large (many municipalities receiving)
+#   - state_received_2005 should also be non-zero (the state receives its
+#     proportional share based on state-school enrollment)
+#   - total_fund_2005 = mun + state + complement + interest
+#
+# RED FLAGS to look for:
+#   (a) state_received_2005 == 0 for ALL UFs → state rows not being read
+#   (b) mun_received_2005 >> total_contribution_2005 by >10% → double-counting
+#   (c) total_fund_2005 << total_contribution_2005 → some component missing
+#   (d) residual_pct_2005 outside [-0.10, +0.20] → data issue worth investigating
+#       (positive residuals up to ~20% are expected for UFs receiving complement)
+
+cat("\n========== FUNDEF 2005: Fund composition by UF ==========\n")
+fundef_2005_uf %>%
+  select(
+    sig_uf,
+    mun_received_2005,
+    state_received_2005,
+    total_received_core_2005,
+    total_fund_2005
+  ) %>%
+  arrange(sig_uf) %>%
+  print(n = Inf)
+
+# ── STEP 7: If state_received_2005 is 0 everywhere, apply the fix below ──────
+#
+# This would happen if the state row in 2005 SIOPE uses TIPO == "Estadual" but
+# NOM_MUNI was already recoded to "Estadual" in a way that conflicts with the
+# pivot id_cols, causing state rows to be dropped or merged incorrectly.
+#
+# Diagnostic: check how many distinct (tipo, nom_muni) combinations exist
+# in a sample UF file BEFORE pivoting:
+
+# -- UNCOMMENT IF state_received_2005 == 0 everywhere --
+# siope_raw_check <- read.csv(
+#   file.path(base_path_2005, "siope_AC_2005_P1.csv")
+# )
+# siope_raw_check %>%
+#   count(TIPO, NOM_MUNI) %>%
+#   print(n = Inf)
+#
+# If the output shows TIPO == "Estadual" exists with NOM_MUNI == "null"
+# (before recoding), the function already handles this correctly via:
+#   mutate(NOM_MUNI = ifelse(NOM_MUNI == "null", "Estadual", NOM_MUNI))
+#
+# If TIPO == "Estadual" does not appear at all, the state entity uses a
+# different TIPO label in 2005 (e.g., "Governos Estaduais"). In that case,
+# replace the filter in tipo_split with:
+#   tipo %in% c("Estadual", "Governos Estaduais")
+# and the state_contribution line with:
+#   sum(state_contribution[tipo %in% c("Estadual", "Governos Estaduais")], ...)
+
+# ---------------------------------------------------------------------------- #
+### 4.2.3 Per-student investment 2005 and 2006, and growth rate ----
+# ---------------------------------------------------------------------------- #
+#
+# FUNDEF's legal mechanism: the per-student value in year Y is set using
+# enrollment from year Y-1 (census). The fund is then distributed in year Y
+# proportionally to that lagged enrollment.
+#
+# Therefore:
+#   per_student_2005 = total_fund_2005 / weighted_students_2004
+#   per_student_2006 = total_fund_2006 / weighted_students_2005
+#
+# Weighting factors (official Portaria Interministerial 2005-2006):
+#   urban initial-grade EF:         1.000 (baseline)
+#   rural initial-grade EF:         1.020
+#   urban final-grade EF:           1.050
+#   rural final-grade EF + special: 1.050 × 1.019
+
+w_urb_ini     <- 1.000
+w_rur_ini     <- 1.020
+w_urb_fim     <- 1.050
+w_rur_fim_esp <- 1.050 * 1.019   # = 1.069950
+
+# Weighted enrollment 2004 (denominator for 2005 per-student value)
+mat_uf_2004_weighted <- mat_uf_2004 %>%
+  mutate(
+    weighted_2004 =
+      w_urb_ini     * urb_ini     +
+      w_rur_ini     * rur_ini     +
+      w_urb_fim     * urb_fim     +
+      w_rur_fim_esp * rur_fim_esp
+  )
+
+
+# Per-student FUNDEF investment in 2005 (nominal R$ 2005)
+fundef_2005 <- fundef_2005_uf %>%
+  left_join(mat_uf_2004, by = c("sig_uf" = "uf")) %>% 
+  left_join(
+    mat_uf_2004_weighted %>% select(uf, weighted_2004),
+    by = c("sig_uf" = "uf")
+  ) %>%
+  mutate(
+    # Nominal per-student value: total fund divided by weighted prior-year enrollment
+    per_student_2005_nom = total_fund_2005 / weighted_2004,
+    
+    # Real per-student value: deflated to 2006 R$ using IPCA
+    # df_ipca$indice is already indexed so that indice[ano==2006] == 1.
+    # Dividing by indice[ano==2005] converts 2005 nominal to 2006 real.
+    per_student_2005_real = per_student_2005_nom / df_ipca$indice[df_ipca$ano == 2005]
+  )
+
+
+
+rm(fundef_2005_uf, fundef_2006_uf, fundef_receipt_candidates_2005, mat_2005, mat_2005_munic,
+   mat_uf_2004, mat_uf_2004_weighted, mat_uf_2005_weighted, municipal_basket_candidates,
+   state_basket_candidates)
+# ---------------------------------------------------------------------------- #
+# 5. Combined growth ----
+# ---------------------------------------------------------------------------- #
+## 5.1 Dataframe ----
+# ---------------------------------------------------------------------------- #
+
+df_combined <- fundef_2006 %>% 
+  select(cod_uf, sig_uf, real_fundef, urb_ini, urb_fim, rur_ini, rur_fim_esp,
+         total, urb_per_stu) %>% 
+  rename(
+    urb_ini_f06 = urb_ini,
+    urb_fim_f06 = urb_fim,
+    rur_ini_f06 = rur_ini,
+    rur_fim_esp_f06 = rur_fim_esp,
+    total_f06 = total,
+    real_fundef_2006 = real_fundef,
+    urb_per_student_2006_real = urb_per_stu
+  ) %>% 
+  #Joining with Fundef 2005 data
+  left_join(
+    fundef_2005 %>% select(cod_uf, sig_uf, total_fund_2005, urb_ini, urb_fim,
+                           rur_ini, rur_fim_esp, total, per_student_2005_real,
+                           total_fund_2005) %>% 
+      rename(
+        urb_ini_f05 = urb_ini,
+        urb_fim_f05 = urb_fim,
+        rur_ini_f05 = rur_ini,
+        rur_fim_esp_f05 = rur_fim_esp,
+        total_f05 = total,
+        real_fundef_2005 = total_fund_2005,
+        urb_per_student_2005_real = per_student_2005_real
+      )
+  )
+
+# Growth per student
+df_combined <- df_combined %>% 
+  mutate(
+    growth_per_student = urb_per_student_2006_real/urb_per_student_2005_real,
+    
+    expected_2007_urb_per_stu = urb_per_student_2006_real*growth_per_student
+  )
+
+
+saveRDS(df_combined, "Z:/Tuffy/Paper - Educ/Dados/per_student_fundef_2005_2006")
 
 # ---------------------------------------------------------------------------- #
 # 3. SIOPE (2007): counterfactual FUNDEF using FUNDEB revenue data ----
@@ -1496,7 +2111,7 @@ process_siope_uf_2007 <- function(uf, base_path) {
 }
 # Opening all ufs
 
-res_2007 <- map(ufs_2007, ~ process_siope_uf_2007(.x, base_path))
+res_2007 <- map(ufs_2006, ~ process_siope_uf_2007(.x, base_path))
 
 fundef_2007_municipal_cf <- map_dfr(res_2007, "municipal")
 fundef_2007_state_cf     <- map_dfr(res_2007, "state")
@@ -1535,462 +2150,3 @@ fundef_2007_uf_cf %>%
 
 
 # ---------------------------------------------------------------------------- #
-# 4. Per-Student Adjustment ----
-# ---------------------------------------------------------------------------- #
-## 4.1 Per-Student (2006) ----
-# ---------------------------------------------------------------------------- #
-
-fundef_2006 <- fundef_2006_uf %>% 
-  left_join(mat_uf, by = c("sig_uf" = "uf"))
-
-
-fundef_2006 <- fundef_2006 %>% 
-  group_by(sig_uf) %>% 
-  mutate(
-    urb_per_stu = 
-      total_received_with_remun /
-      (urb_ini + 1.02*rur_ini + 1.05*urb_fim + 1.05*1.019*rur_fim_esp)
-  )
-
-# ---------------------------------------------------------------------------- #
-## 4.2 Per-Student (2005) ----
-# ---------------------------------------------------------------------------- #
-### 4.2.1 Censo (2004) ----
-# ---------------------------------------------------------------------------- #
-
-censo <- read_delim("Z:/Arquivos IFB/Censo Escolar/Bases Agregadas/2004/microdados_educação_básica_2004/DADOS/CENSOESC_2004.CSV", delim = "|",
-                    col_types = cols(.default = col_double(),
-                                     CODFUNC = col_character(),
-                                     MASCARA = col_character(),
-                                     DEP     = col_character(),
-                                     LOC = col_character(),
-                                     UF = col_character(),
-                                     SIGLA = col_character(),
-                                     MUNIC = col_character(),
-                                     ED_INDIG = col_character(),
-                                     MAT_ETNI = col_character(),
-                                     NIVELCRE = col_character(),
-                                     NIVELPRE = col_character(),
-                                     NIV_F1A4_8 = col_character(),
-                                     NIV_F5A8_8 = col_character(),
-                                     NIV_F9INI = col_character(),
-                                     NIV_F9FIM = col_character(),
-                                     NIVELMED = col_character(),
-                                     SUPL_AVA = col_character(),
-                                     SUPL_SAVA = col_character(),
-                                     EDPROFIS = col_character(),
-                                     ESP_EXCL = col_character(),
-                                     ESP_T_ES = col_character(),
-                                     AREA_QUIL = col_character(),
-                                     ESP_S_RE = col_character(),
-                                     ESP_A_IN = col_character(),
-                                     ED_INDIG = col_character(),
-                                     ED_IN_LM = col_character(),
-                                     COD_ID_IND = col_character(),
-                                     ED_IN_LP = col_character(),
-                                     MAT_ETNI = col_character(),
-                                     ESC_T_IN = col_character(),
-                                     PRED_ESC = col_character(),
-                                     TEMPLO = col_character(),
-                                     DEF11C = col_double(),
-                                     DEF11D = col_double(),
-                                     DEF11E = col_double(),
-                                     DEF11F = col_double(),
-                                     NEF11C = col_double(),
-                                     NEF11D = col_double(),
-                                     NEF11E = col_double(),
-                                     NEF11F = col_double(),
-                                     DEF11G = col_double(),
-                                     DEF11H = col_double(),
-                                     DEF11I = col_double(),
-                                     DEF11J = col_double(),
-                                     NEF11G = col_double(),
-                                     NEF11H = col_double(),
-                                     NEF11I = col_double(),
-                                     NEF11J = col_double()))
-
-
-
-mat_2004 <- censo %>%
-  select(c(1:9,
-           
-           CODFUNC,
-           ED_INDIG,
-           #MAT_QUIL,
-           AREA_QUIL,
-           #ESC_ASSE,
-           ED_IN_LM,
-           ED_IN_LP,
-           #MAT_ETNI,
-           ESC_T_IN,
-           
-           DEF11C:DEF11F, NEF11C:NEF11F, # EF iniciais (8 anos)
-           DE9F11C:DE9F11G, NE9F11C:NE9F11G, # EF iniciais (9 anos)
-           DEF11G:DEF11J, NEF11G:NEF11J, # EF finais (8 anos)
-           DE9F11H:DE9F11N, NE9F11H:NE9F11N, # EF finais (9 anos)
-
-           #ED especial por série:
-           VEE1611:VEE1691, VEE1711:VEE1791, VEE1811:VEE1891, VEE1911:VEE1991, # 1ºEF
-           
-           VEE1612:VEE1692, VEE1712:VEE1792, VEE1812:VEE1892, VEE1912:VEE1992, # 2ºEF,
-           VEE1613:VEE1693, VEE1713:VEE1793, VEE1813:VEE1893, VEE1913:VEE1993, # 3ºEF
-           VEE1614:VEE1694, VEE1714:VEE1794, VEE1814:VEE1894, VEE1914:VEE1994, # 4ºEF
-           VEE1615:VEE1695, VEE1715:VEE1795, VEE1815:VEE1895, VEE1915:VEE1995, # 5ºEF
-           VEE1616:VEE1696, VEE1716:VEE1796, VEE1816:VEE1896, VEE1916:VEE1996, # 6ºEF
-           VEE1617:VEE1697, VEE1717:VEE1797, VEE1817:VEE1897, VEE1917:VEE1997, # 7ºEF
-           VEE1618:VEE1698, VEE1718:VEE1798, VEE1818:VEE1898, VEE1918:VEE1998 # 8ºEF
-  )) %>%
-  
-  mutate(COD_UF = as.numeric(str_sub(as.character(CODMUNIC, 1, 2)))) %>%
-  mutate(reg_in = rowSums(across(c(DEF11C:NE9F11G)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
-         reg_fin = rowSums(across(c(DEF11G:NE9F11N)), na.rm = TRUE),
-         esp_iniciais = rowSums(across(c(VEE1611:VEE1994)), na.rm = TRUE),
-         esp_finais = rowSums(across(c(VEE1615:VEE1998)), na.rm = TRUE),
-         esp_soma = esp_iniciais + esp_finais
-         ) %>%  # pega o maior valor entre a soma das deficiencias por série,
-  # e da desagregação pelo ano de nascimento
-  filter(!(DEP %in% c("Particular", "Federal")), # tira escolas federais e particulares
-         CODFUNC == "Ativo") %>%  # tira escolas que não estão ativas
-  mutate(CODMUNIC = as.numeric(str_c( #concatena
-    str_sub(as.character(CODMUNIC), 1, 2), #pega os dois primeiros
-    str_sub(as.character(CODMUNIC), -5) #pega os últimos 5
-  )))
-
-
-# ---------------------------------------------------------------------------- #
-#### 4.2.1.1 Saving -----
-# ---------------------------------------------------------------------------- #
-
-# DF do censo já agregada por escola (é muito pesada para rodar toda vez):
-write.csv2(mat_2004, file = "Z:/Tuffy/Paper - Educ/Dados/censo_2004_filtrado.csv")
-
-mat_2004 <- read.csv2("Z:/Tuffy/Paper - Educ/Dados/censo_2004_filtrado.csv")
-
-
-# ---------------------------------------------------------------------------- #
-#### 4.2.1.2 Students per Mun. ----
-# ---------------------------------------------------------------------------- #
-
-mat_2004_munic <- mat_2004 %>%
-  group_by(CODMUNIC) %>%
-  summarise(
-    nome = first(MUNIC),
-    no_uf = first(UF),
-    uf = first(SIGLA),
-    
-    urb_ini = sum(if_else(LOC == "Urbana", reg_in, 0), na.rm = TRUE),
-    urb_fim = sum(if_else(LOC == "Urbana", reg_fin, 0), na.rm = TRUE),
-    rur_ini = sum(if_else(LOC == "Rural",  reg_in, 0), na.rm = TRUE),
-    rur_fim_esp = sum(if_else(LOC == "Rural", reg_fin + esp_soma, 0), na.rm = TRUE),
-    
-    .groups = "drop"
-  )
-
-
-# ---------------------------------------------------------------------------- #
-#### 4.2.1.3 Students UF (categories) ----
-# ---------------------------------------------------------------------------- #
-
-mat_uf_2004 <- mat_2004_munic %>% 
-  group_by(uf) %>% 
-  summarise(
-    urb_ini = sum(urb_ini, na.rm = T),
-    urb_fim = sum(urb_fim, na.rm = T),
-    rur_ini = sum(rur_ini, na.rm = T),
-    rur_fim_esp = sum(rur_fim_esp, na.rm = T)
-  ) %>% 
-  mutate(total = urb_ini + urb_fim + rur_ini + rur_fim_esp) %>% 
-  ungroup()
-
-
-
-rm(mat_2004, mat_uf, mat_2004_munic, censo)
-
-
-# ---------------------------------------------------------------------------- #
-### 4.2.2 SIOPE (2005) ----
-# ---------------------------------------------------------------------------- #
-#
-# Goal: extract total FUNDEF received per UF in 2005 to compute
-#       per-student investment and replicate the 2005->2006 growth
-#       rate into the 2006->2007 counterfactual.
-#
-# FUNDEF receipt candidates (2005 files may use slightly different labels):
-#   - "transferencias_de_recursos_do_fundef"      (core redistribution)
-#   - "transferencias_da_complementacao_da_uniao_ao_fundef" (federal complement)
-#   - "rec_de_remuneracao_de_depositos_bancarios_fundef"    (bank interest)
-#
-# The function is self-detecting: it checks which receipt columns exist
-# and warns on any unexpected structure, so you get a clear error message
-# rather than a silent zero if the 2005 label differs.
-
-# Receipt column candidates (ordered by specificity)
-fundef_receipt_candidates_2005 <- c(
-  "transferencias_de_recursos_do_fundef",
-  "transferencias_da_complementacao_da_uniao_ao_fundef",
-  "rec_de_remuneracao_de_depositos_bancarios_fundef"
-)
-
-read_siope_2005 <- function(uf, base_path) {
-  
-  file_path <- file.path(base_path, paste0("siope_", uf, "_2005_P1.csv"))
-  
-  if (!file.exists(file_path)) {
-    warning("File not found: ", file_path)
-    return(NULL)
-  }
-  
-  siope <- read.csv(file_path)
-  
-  # ── Structural check: does this look like a standard SIOPE file? ──────────
-  required_raw_cols <- c("TIPO", "NOM_MUNI", "NOM_ITEM", "VAL_DECL", "NOM_COLU")
-  missing_raw <- setdiff(required_raw_cols, names(siope))
-  if (length(missing_raw) > 0) {
-    stop(
-      "SIOPE 2005 file for ", uf, " is missing expected columns: ",
-      paste(missing_raw, collapse = ", "),
-      "\nActual columns: ", paste(names(siope), collapse = ", ")
-    )
-  }
-  
-  # ── Pivot (no IDN_CLAS filter: 2005 files likely don't have this field) ──
-  siope_rr <- siope %>%
-    mutate(NOM_MUNI = ifelse(NOM_MUNI == "null", "Estadual", NOM_MUNI)) %>%
-    pivot_wider(
-      id_cols     = c(TIPO, NUM_ANO, NUM_PERI, COD_UF, SIG_UF,
-                      COD_MUNI, NOM_MUNI, NOM_COLU),
-      names_from  = NOM_ITEM,
-      values_from = VAL_DECL,
-      values_fn   = sum,
-      values_fill = 0
-    ) %>%
-    clean_names() %>%
-    filter(nom_colu == "Receitas Realizadas")
-  
-  if (nrow(siope_rr) == 0) {
-    warning(
-      uf, ": pivot produced 0 rows after filtering nom_colu == 'Receitas Realizadas'. ",
-      "Unique nom_colu values in raw file: ",
-      paste(unique(siope$NOM_COLU), collapse = ", ")
-    )
-    return(NULL)
-  }
-  
-  # ── Report which FUNDEF receipt columns are actually present ──────────────
-  receipt_cols_found <- intersect(fundef_receipt_candidates_2005, names(siope_rr))
-  receipt_cols_missing <- setdiff(fundef_receipt_candidates_2005, names(siope_rr))
-  
-  if (length(receipt_cols_found) == 0) {
-    warning(
-      uf, ": NO FUNDEF receipt columns found. Tried: ",
-      paste(fundef_receipt_candidates_2005, collapse = ", "),
-      "\nAll fundef-related columns in file: ",
-      paste(names(siope_rr)[str_detect(names(siope_rr), "fundef")], collapse = ", ")
-    )
-    return(NULL)
-  }
-  
-  if (length(receipt_cols_missing) > 0) {
-    message(
-      uf, ": some receipt columns absent (will be treated as 0): ",
-      paste(receipt_cols_missing, collapse = ", ")
-    )
-  }
-  
-  # ── Sum FUNDEF received per entity (mun + state), then aggregate to UF ────
-  siope_rr %>%
-    mutate(
-      fundef_received_core    = if ("transferencias_de_recursos_do_fundef"
-                                    %in% names(.)) transferencias_de_recursos_do_fundef else 0,
-      fundef_complement_uniao = if ("transferencias_da_complementacao_da_uniao_ao_fundef"
-                                    %in% names(.)) transferencias_da_complementacao_da_uniao_ao_fundef else 0,
-      fundef_remun_bancaria   = if ("rec_de_remuneracao_de_depositos_bancarios_fundef"
-                                    %in% names(.)) rec_de_remuneracao_de_depositos_bancarios_fundef else 0,
-      fundef_received_total   = fundef_received_core + fundef_complement_uniao + fundef_remun_bancaria
-    ) %>%
-    group_by(cod_uf, sig_uf) %>%
-    summarise(
-      fundef_received_core_2005    = sum(fundef_received_core,    na.rm = TRUE),
-      fundef_complement_uniao_2005 = sum(fundef_complement_uniao, na.rm = TRUE),
-      fundef_remun_bancaria_2005   = sum(fundef_remun_bancaria,   na.rm = TRUE),
-      fundef_received_total_2005   = sum(fundef_received_total,   na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    mutate(uf = sig_uf)
-}
-
-# ── Run across all UFs ────────────────────────────────────────────────────────
-ufs_2005 <- c(
-  "AC","AL","AP","AM","BA","CE","DF","ES","GO",
-  "MA","MT","MS","MG","PA","PB","PR","PE","PI",
-  "RJ","RN","RS","RO","RR","SC","SP","SE","TO"
-)
-
-base_path_2005 <- "Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/SIOPE"
-# Adjust if 2005 files live in a different subfolder
-
-fundef_2005_uf <- map_dfr(
-  ufs_2005,
-  read_siope_2005,
-  base_path = base_path_2005
-)
-
-fundef_2005_uf %>% arrange(sig_uf) %>% print(n = Inf)
-
-fundef_2005_uf <- fundef_2005_uf %>%
-  group_by(cod_uf, sig_uf) %>%
-  summarise(
-    mun_contribution   = sum(mun_contribution, na.rm = TRUE),
-    state_contribution = sum(state_contribution, na.rm = TRUE),
-    total_contribution  = mun_contribution + state_contribution,
-    
-    mun_received        = sum(mun_received, na.rm = TRUE),
-    state_received      = sum(state_received, na.rm = TRUE),
-    total_received      = mun_received + state_received,
-    
-    complement_uniao    = sum(fundef_complement_uniao_2005, na.rm = TRUE),
-    remun_bancaria      = sum(fundef_remun_bancaria_2005, na.rm = TRUE),
-    
-    total_fund_resources = total_received + complement_uniao + remun_bancaria,
-    balance_vs_contrib   = total_fund_resources - total_contribution,
-    
-    .groups = "drop"
-  ) %>%
-  arrange(sig_uf)
-
-
-# ---------------------------------------------------------------------------- #
-### 4.2.3 Combined ----
-# ---------------------------------------------------------------------------- #
-
-
-fundef_2005 <- fundef_2005_uf %>% 
-  left_join(mat_uf_2004, by = c("sig_uf" = "uf")) %>% 
-  select(-uf)
-
-fundef_2005 <- fundef_2005 %>% 
-  group_by(sig_uf) %>% 
-  mutate(
-    urb_per_stu = 
-      fundef_received_total_2005 /
-      (urb_ini + 1.02*rur_ini + 1.05*urb_fim + 1.05*1.019*rur_fim_esp),
-    
-    #deflate
-    urb_per_stu_def = urb_per_stu/df_ipca$indice[df_ipca$ano == 2005]
-  ) 
-
-
-# ---------------------------------------------------------------------------- #
-## 4.3 Combining the rates -----
-# ---------------------------------------------------------------------------- #
-
-fundef_2006 <- fundef_2006 %>% 
-  left_join(fundef_2005 %>% select(urb_per_stu_def, sig_uf, cod_uf) %>%
-              rename(urb_per_stu_2005 = urb_per_stu_def),
-            by = c("sig_uf","cod_uf"))
-
-
-rm(fundef_2005, fundef_2005_uf)
-# ---------------------------------------------------------------------------- #
-# 4. Combine 2006 FUNDEF and 2007 counterfactual FUNDEF ----
-# ---------------------------------------------------------------------------- #
-
-fundef_2006_summary <- fundef_2006_uf %>%
-  transmute(
-    cod_uf,
-    sig_uf,
-    uf = sig_uf,
-    mun_contrib_2006 = mun_contribution,
-    state_contrib_2006 = state_contribution,
-    total_contrib_2006 = total_contribution,
-    federal_transfer_2006_inferred = federal_complement_inferred,
-    federal_transfer_2006_problem = federal_complement_problem,
-    total_received_2006 = total_received,
-    total_fundef_2006_distribution_side = total_received,
-    total_fundef_2006_contribution_side = total_contribution
-  )
-
-fundef_cf_2006_2007 <- fundef_2007_uf_cf %>%
-  transmute(
-    cod_uf,
-    sig_uf,
-    uf,
-    mun_contrib_2007_cf = mun_contrib_cf,
-    state_contrib_2007_cf = state_contrib_cf,
-    total_contrib_2007_cf = total_contrib_cf
-  ) %>%
-  left_join(fundef_2006_summary, by = c("cod_uf", "sig_uf", "uf")) %>%
-  mutate(
-    contrib_gap_2007_minus_2006 = total_contrib_2007_cf - total_contrib_2006,
-    federal_transfer_2007_signed_gap = total_contrib_2006 - total_contrib_2007_cf,
-    federal_transfer_2007_assumed = pmax(federal_transfer_2007_signed_gap, 0),
-    total_fundef_2007_assumed = total_contrib_2007_cf + federal_transfer_2007_assumed
-  ) %>%
-  arrange(sig_uf)
-
-
-# ---------------------------------------------------------------------------- #
-# 5. Student-denominator calculations ----
-# ---------------------------------------------------------------------------- #
-
-students_2005_uf <- mat_uf %>%
-  transmute(
-    uf,
-    fundef_students_2005 = total
-  )
-
-fundef_cf_2007_students <- fundef_cf_2006_2007 %>%
-  left_join(students_2005_uf, by = "uf") %>%
-  mutate(
-    fundef_2007_per_student_using_2005_students =
-      total_fundef_2007_assumed / fundef_students_2005
-  )
-
-# Optional next step: after building the true 2006 student denominator, create
-# mat_uf_2006 with columns uf and total, then this block will add the adjusted
-# total implied by 2006 enrollment.
-if (exists("mat_uf_2006")) {
-  students_2006_uf <- mat_uf_2006 %>%
-    transmute(
-      uf,
-      fundef_students_2006 = total
-    )
-  
-  fundef_cf_2007_students <- fundef_cf_2007_students %>%
-    left_join(students_2006_uf, by = "uf") %>%
-    mutate(
-      fundef_2007_total_using_2006_students =
-        fundef_2007_per_student_using_2005_students * fundef_students_2006,
-      student_count_change_2006_vs_2005 =
-        fundef_students_2006 / fundef_students_2005 - 1
-    )
-}
-
-# ---------------------------------------------------------------------------- #
-# 6. Deflation placeholder ----
-# ---------------------------------------------------------------------------- #
-
-# After adding the inflation data frame, join it here and deflate all monetary
-# columns consistently. Expected minimum columns:
-#   year, deflator_to_base_year
-# where real_value = nominal_value * deflator_to_base_year.
-
-if (exists("inflation_df")) {
-  monetary_cols <- names(fundef_cf_2007_students)[
-    str_detect(
-      names(fundef_cf_2007_students),
-      "contrib|transfer|fundef|per_student"
-    )
-  ]
-  
-  fundef_cf_2007_students_real <- fundef_cf_2007_students %>%
-    mutate(year = 2007) %>%
-    left_join(inflation_df, by = "year") %>%
-    mutate(
-      across(
-        all_of(monetary_cols),
-        ~ .x * deflator_to_base_year,
-        .names = "{.col}_real"
-      )
-    )
-}
