@@ -2,7 +2,7 @@
 # Data Description
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 21/01/2025
+# Date: 18/06/2026
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -1197,10 +1197,24 @@ df_fundo <- df %>%
   add_label("total_fundo_real", "Valor efetivo do Fundo da UF (2007), considerando compl.")
 
 
+#Opening the estimated value if FUNDEF continued in 2007:
+df_simulation_2007 <- readRDS("Z:/Tuffy/Paper - Educ/Dados/expected_2007_fundef_value.RDS")
+
+#Joining both databases
+df_fundo <- df_fundo %>% 
+  left_join(df_simulation_2007 %>% select(
+    sig_uf, expected_fundef_2007_real),
+    by = c("uf" = "sig_uf"))
+
+
+
 simulacao <- simulacao %>%
   left_join(df_fundo, by = "uf") %>%
   relocate(chave, .after = "uf") %>%
-  mutate(receita_simulada = coef_simulado * total_fundo_real,
+  mutate(receita_simulada_old = coef_simulado * total_fundo_real,
+         
+         # --- FUNDEF 2007 --- #
+         receita_simulada   = coef_simulado * expected_fundef_2007_real,
          
          dif_coef_pp = 100 * (coef_est_fnde - coef_simulado), # já que o coef_simulado é a porcentagem (em decimal) do fundo estadual que a rede pega.
          
@@ -1224,11 +1238,13 @@ simulacao <- simulacao %>%
 
          ) %>% 
   
-  select(c(nome, uf, codigo_ibge, chave, total_fundo_real, coef_est_fnde, coef_simulado, receita_est_fnde, receita_simulada, everything())) %>% 
-  add_label("dif_coef_pp", "Dif. (p.p.) do Coef. com o FUNDEB vs FUNDEF (2007)") %>% 
+  select(c(nome, uf, codigo_ibge, chave, total_fundo_real, coef_est_fnde, coef_simulado,
+           receita_est_fnde, receita_simulada, expected_fundef_2007_real, everything())) %>% 
+  add_label("dif_coef_pp", "Dif. (p.p.) do Coef. com o FUNDEB vs FUNDEF (2007)") %>%
+  add_label("receita_simulada", "Expected FUNDEF value with simulated coeficient 2007 (main)") %>% 
   add_label("dif_per_coef", "Dif. (%) do Coef. com o FUNDEB vs FUNDEF (2007)") %>% 
   add_label("shr_inf_em", "Share de estudantes Infantil + EM (2006)") %>% 
-  add_label("receita_simulada", "Receita simulada caso a regra do FUNDEF se mantivesse (considerando compl.)") %>% 
+  add_label("receita_simulada_old", "Receita simulada caso a regra do FUNDEF se mantivesse (considerando compl.)") %>% 
   add_label("coef_simulado", "Coef. de Distrib. caso a regra do FUNDEF se mantivesse (considerando compl.)") %>% 
   add_label("shr_inf", "Share de estudantes Ensino Infantil (2006)") %>% 
   add_label("tot_matri", "Total de matriculados (2006)")
@@ -1263,7 +1279,9 @@ simulacao <- simulacao %>%
   rename(receita_real = "total_politica") %>%
   select(c(codigo_ibge,
            # chave,
-           nome, uf, coef_est_fnde, coef_simulado, dif_per_coef, dif_coef_pp, receita_est_fnde, receita_simulada, receita_real, shr_inf_em, shr_inf, everything())) %>% 
+           nome, uf, coef_est_fnde, coef_simulado, dif_per_coef, dif_coef_pp,
+           receita_est_fnde, receita_simulada, expected_fundef_2007_real, receita_real,
+           shr_inf_em, shr_inf, everything())) %>% 
   add_label("receita_real", "Receita recebida pelo FUNDEB (2007)")
 
 
@@ -1550,11 +1568,11 @@ df_reg <- temp %>%
   
   dosage = (receita_real - receita_simulada)/receita_real,            #Prefered
   
-  old_dosage = (receita_real - receita_simulada)/real_des_edu[ano == 2006] )
+  old_dosage = (receita_real - receita_simulada)/real_des_edu[ano == 2006], 
   
   #dosage_perc = del_spending_dos *100,
   
-  #aluno_dosage = (receita_real - receita_simulada)/total_alunos_2006) #Prefered
+  aluno_dosage = (receita_real - receita_simulada)/total_alunos_2006) #Prefered
 
 
 

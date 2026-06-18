@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions - Version 3
 # Last edited by: Tuffy Licciardi Issa
-# Date: 16/01/2025
+# Date: 18/06/2025
 # ---------------------------------------------------------------------------- #
 
 #' ** ----------------------------------------------------------------------- **
@@ -350,7 +350,7 @@ etable(mod_edu, mod_inf, #mod_fund, mod_med,
        headers = list(":_:" = list("Total" = 1,
                                    #"Fundamental" = 1, "Médio" = 1,
                                    "Infantil" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/reg_dif_aluno_dosage.tex",
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/reg_dif_aluno_dosage.tex",
        replace = TRUE)
 
 
@@ -418,7 +418,7 @@ for (model_name in names(models_list)){
   ggsave(
     filename = paste0("grafico_", model_name, "dosage_alun_des_edu.png"), # Nome baseado no modelo
     plot = p,
-    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Dosage_aluno",
+    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Simulacao_Fundef",
     width = 600/96, height = 420/96, dpi = 110
   )
   
@@ -551,7 +551,7 @@ for (model_name in names(models_list)) {
   ggsave(
     filename = paste0("grafico_", model_name, "_Dos_aluno_AB.png"),
     plot = p,
-    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Dosage_aluno",
+    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Simulacao_Fundef",
     width = 600/96, height = 420/96, dpi = 110
   )
   rm(temp_edu)
@@ -699,7 +699,7 @@ for (model_name in names(models_list)){
   ggsave(
     filename = paste0("grafico_", model_name, "_desp_pa.png"), # Nome baseado no modelo
     plot = p,
-    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Dosage_aluno",
+    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Simulacao_Fundef",
     width = 600/96, height = 420/96, dpi = 110
   )
   
@@ -830,7 +830,7 @@ for (model_name in names(models_list)) {
   ggsave(
     filename = paste0("grafico_", model_name, "_desp_pa_winlose.png"),
     plot = p,
-    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Dosage_aluno",
+    path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Simulacao_Fundef",
     width = 600/96, height = 420/96, dpi = 110
   )
   rm(temp_edu)
@@ -1079,7 +1079,7 @@ final
 ggsave( #Saving image
   filename = paste0("school_structure_aluno_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/",
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Simulado_Fundef/",
   width = 1100/96, height = 620/96, dpi = 300
 )
 
@@ -1150,7 +1150,7 @@ final
 ggsave( #Saving image
   filename = paste0("school_course_aluno_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/",
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Simulado_Fundef/",
   width = 800/96, height = 620/96, dpi = 300
 )
 
@@ -1304,7 +1304,7 @@ final
 ggsave( #Saving image
   filename = paste0("winlose_school_structure_aluno_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/", #Saving directly to the report
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Simulado_Fundef/", #Saving directly to the report
   width = 1300/96, height = 620/96, dpi = 300
 )
 
@@ -1372,7 +1372,7 @@ final
 ggsave( #Saving image
   filename = paste0("winlose_school_course_aluno_dosage.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/", #Saving directly to the report
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Simulado_Fundef/", #Saving directly to the report
   width = 800/96, height = 620/96, dpi = 300
 )
 
@@ -1414,7 +1414,7 @@ etable(est_day_nw_ad)
 etable(est_day_nw_ad,
        vcov = "hetero",
        headers = list(":_:" = list("(1)" = 1)),
-       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/daycare_numbers_ad.tex"), replace = TRUE)
+       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/daycare_numbers_ad.tex"), replace = TRUE)
 
 
 
@@ -1439,7 +1439,7 @@ etable(est_pre_nw_ad )
 etable(est_pre_nw_ad,
        vcov = "hetero",
        headers = list(":_:" = list("(1)" = 1)),
-       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/preschool_numbers_ad.tex"), replace = TRUE)
+       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/preschool_numbers_ad.tex"), replace = TRUE)
 
 
 # ----------------------------------------- #
@@ -1466,7 +1466,7 @@ etable(est_dayen_nw_ad)
 etable(est_dayen_nw_ad,
        vcov = "hetero",
        headers = list(":_:" = list("(1)" = 1)),
-       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/daycare_enroll_ad.tex"), replace = TRUE)
+       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/daycare_enroll_ad.tex"), replace = TRUE)
 
 
 
@@ -1493,7 +1493,7 @@ etable(est_preen_nw_ad)
 etable(est_preen_nw_ad,
        vcov = "hetero",
        headers = list(":_:" = list("(1)" = 1)),
-       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/preschool_enroll_ad.tex"), replace = TRUE)
+       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/preschool_enroll_ad.tex"), replace = TRUE)
 
 # ------------- #
 ###4.3.3 Graph ----
@@ -1559,7 +1559,7 @@ print(final)
 ggsave(                                                #Saving image
   filename = paste0("aluno_dosage_pesos.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/",
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Simulado_Fundef/",
   width = 1300/96, height = 620/96, dpi = 300
 )
 
@@ -1598,7 +1598,7 @@ etable(est_day_nw_ad)
 etable(est_day_nw_ad, 
        vcov = "hetero",
        headers = list(":_:" = list("(1)" = 1)),
-       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/daycare_numbers_abv.tex"), replace = TRUE)
+       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/daycare_numbers_abv.tex"), replace = TRUE)
 
 # ----------------------------------------- #
 ## 5.2 Preschool ----
@@ -1618,7 +1618,7 @@ etable(est_pre_nw_ad)
 etable(est_pre_nw_ad,
        vcov = "hetero",
        headers = list(":_:" = list("(1)" = 1)),
-       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/preschool_numbers_abv.tex"), replace = TRUE)
+       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/preschool_numbers_abv.tex"), replace = TRUE)
 
 
 # ----------------------------------------- #
@@ -1643,7 +1643,7 @@ etable(est_dayen_nw_ad)
 etable(est_dayen_nw_ad,
        vcov = "hetero",
        headers = list(":_:" = list("(1)" = 1)),
-       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/daycare_enroll_abv.tex"), replace = TRUE)
+       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/daycare_enroll_abv.tex"), replace = TRUE)
 
 
 
@@ -1670,7 +1670,7 @@ etable(est_preen_nw_ad)
 etable(est_preen_nw_ad, 
        vcov = "hetero",
        headers = list(":_:" = list("(1)" = 1)),
-       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/preschool_enroll_abv.tex"), replace = TRUE)
+       file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/preschool_enroll_abv.tex"), replace = TRUE)
 
 # ------------- #
 ###5.3.3 Graph ----
@@ -1760,7 +1760,7 @@ print(final)
 ggsave(                                                #Saving image
   filename = paste0("aluno_dosage_pesos_abv.png"),
   plot = final,
-  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Robust/",
+  path = "Z:/Tuffy/Paper - Educ/Resultados/v3/Figuras/ES/Simulado_Fundef/",
   width = 1300/96, height = 620/96, dpi = 300
 )
 
@@ -2001,7 +2001,7 @@ etable(main_mat, main_pot
 etable(main_mat, main_pot,
        vcov = "hetero",
        headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/time_to_treat.tex", replace = TRUE)
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/time_to_treat.tex", replace = TRUE)
 
 
 
@@ -2084,7 +2084,7 @@ etable(main_mat, main_pot
 etable(main_mat, main_pot,
        vcov = "hetero",
        headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/main_nvl_individuo_idade_exp.tex", replace = TRUE)
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/main_nvl_individuo_idade_exp.tex", replace = TRUE)
 
 
 #Removing the dataframes
@@ -2535,7 +2535,7 @@ rm(df_simples, df2_w5, df2_w9)
 #   etable(mat_5, por_5,
 #          vcov = "hetero",
 #          headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
-#          file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Dosage_aluno/region/region_",
+#          file = paste0("Z:/Tuffy/Paper - Educ/Resultados/v2/Tabelas/Simulacao_Fundef/region/region_",
 #                        tolower(area),"_individuo_anos_exp.tex"), replace = TRUE)
 #   
 #   
@@ -2587,7 +2587,7 @@ etable(main_dist, sec_dist)
 etable(main_dist, sec_dist,
        vcov = "hetero",
        headers = list(":_:" = list("5°Ano" = 1,"9°Ano" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/dist_individuo_anos_exp.tex", replace = TRUE)
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/dist_individuo_anos_exp.tex", replace = TRUE)
 
 
 
@@ -2637,7 +2637,7 @@ etable(main_dist, sec_dist)
 etable(main_dist, sec_dist,
        vcov = "hetero",
        headers = list(":_:" = list("5° Ano" = 1,"9° Ano" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/dist_age_abbe_aluno_dosage.tex", replace = TRUE)
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/dist_age_abbe_aluno_dosage.tex", replace = TRUE)
 
 
 
@@ -2812,7 +2812,7 @@ etable(main_mat, main_pot
 etable(main_mat, main_pot,
        vcov = "hetero",
        headers = list(":_:" = list("Matemática" = 1,"Português" = 1)),
-       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Dosage_aluno/wl_nvl_individuo_idade_exp.tex", replace = TRUE)
+       file = "Z:/Tuffy/Paper - Educ/Resultados/v3/Tabelas/Simulacao_Fundef/wl_nvl_individuo_idade_exp.tex", replace = TRUE)
 
 
 rm(main_mat, main_pot, sec_mat, sec_pot)
