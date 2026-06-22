@@ -70,6 +70,7 @@ path <- "Z:/Tuffy/Paper - Educ/Resultados/v4/"
 path_additional <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Appendix/"
 path_tables <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Tables/"
 path_figures <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Figures/"
+path_descp <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Descp/"
 
 # ---- Functions ---- #
 
@@ -178,6 +179,8 @@ event_plot_compare <- function(est_1, est_2,
                                ref_year = 2006,
                                title = NULL,
                                y_label = "Coefficient",
+                               b_size = 20,
+                               t_size = 18,
                                x_label = "Year",
                                ylim = NULL) {
   
@@ -192,7 +195,7 @@ event_plot_compare <- function(est_1, est_2,
     geom_errorbar(
       aes(ymin = ymin_plot, ymax = ymax_plot),
       position = position_dodge(width = 0.25),
-      width = 0.15,
+      width = 0.38,
       size = 0.8,
       na.rm = TRUE
     ) +
@@ -209,13 +212,13 @@ event_plot_compare <- function(est_1, est_2,
       title = title,
       color = NULL
     ) +
-    theme_minimal(base_size = 20) +
+    theme_minimal(base_size = b_size) +
     theme(
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       axis.line = element_line(),
-      axis.text.y = element_text(size = 18),
-      axis.text.x = element_text(size = 18, angle = 0, hjust = 0.5),
+      axis.text.y = element_text(size = t_size),
+      axis.text.x = element_text(size = t_size, angle = 0, hjust = 0.5),
       legend.position = "bottom"
     ) +
     scale_x_continuous(
@@ -966,3 +969,151 @@ for (i in seq_along(y_vars)) {
     )
   )
 }
+
+# ---------------------------------------------------------------------------- #
+### 5.2.1 Plot ----
+# ---------------------------------------------------------------------------- #
+
+titles <- c(
+  "Students per Classroom",
+  "Exp. Teacher's Room",
+  "Exp. Lab",
+  "Exp. Library",
+  "Exp. Play Area",
+  "Exp. Lunch",
+  "Students per Employee",
+  "Total Employees"
+)
+
+plots <- vector("list", length(titles))
+
+for(i in seq_along(titles)) {
+  
+  est_most  <- get(paste0("est_most", i))
+  est_least <- get(paste0("est_least", i))
+  
+  plots[[i]] <- event_plot_compare(
+    est_most,
+    est_least,
+    name_1 = "Most Dosage",
+    name_2 = "Least Dosage",
+    ref_year = 2006,
+    treat_year = 2007,
+    b_size = 16,
+    t_size = 13,
+    x_label = "Time to Treatment",
+    y_label = "Coefficient",
+    title = titles[i]
+  )
+}
+
+names(plots) <- paste0("p", seq_along(plots))
+
+# ---- Saving Plot ---- #
+
+# Joining the plots into a single one
+final_plot <- 
+  (plots[[2]] | plots[[3]] | plots[[4]]) /
+  (plots[[5]] | plots[[6]] | plot_spacer()) /
+  (plots[[1]] | plots[[7]] | plots[[8]]) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_figures, "least_vs_most_school_characteristics.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
+   est_least6, est_least7, est_least8,
+   est_most, est_most1, est_most2, est_most3, est_most4, est_most5, est_most6,
+   est_most7, est_most8,
+   plots, final_plot, i, fml, y, y_vars)
+
+# ---------------------------------------------------------------------------- #
+# 6. SAEB ----
+# ---------------------------------------------------------------------------- #
+## 6.1 Data ----
+# ---------------------------------------------------------------------------- #
+
+# Opening Saeb dataframe
+df_saeb <- readRDS( "Z:/Tuffy/Paper - Educ/Dados/saeb_nvl_aluno.rds") %>%
+  mutate(codmun = ifelse(ano >= 2007, as.numeric(codmun) %/% 10, codmun),
+         codmun = as.character(codmun)) %>%   #Arranging for the older municipal codes
+  filter(codmun < 600000)
+
+df <- df_saeb %>% 
+  left_join(df_main %>%
+              mutate(codigo_ibge = as.character(codigo_ibge)),
+            by = c("codmun" = "codigo_ibge", "ano" = "ano")) %>% 
+  mutate(
+    sexo = as.numeric(sexo),
+    raca = as.numeric(raca),
+    mae_educ = as.numeric(mae_educ)
+  )
+
+
+# ---------------------------------------------------------------------------- #
+### 6.1.1 Desc. (Mean Grade) -----
+# ---------------------------------------------------------------------------- #
+
+
+
+df_mean <- df %>% group_by(ano) %>% 
+  summarise(nota_mat = mean(as.numeric(profic_mat), na.rm = T),
+            nota_pot = mean(as.numeric(profic_port), na.rm = T))
+
+
+
+plot <- ggplot(df_mean, aes(x = ano)) +
+  # Mathematics
+  geom_line(aes(y = nota_mat, color = "Matemática"), size = 1.2) +
+  geom_point(aes(y = nota_mat, color = "Matemática"), size = 2.5) +
+  geom_text(
+    aes(y = nota_mat, label = round(nota_mat, 1), color = "Matemática"),
+    vjust = -1.2, size = 4, show.legend = FALSE
+  ) +
+  
+  # Portuguese
+  geom_line(aes(y = nota_pot, color = "Português"), size = 1.2) +
+  geom_point(aes(y = nota_pot, color = "Português"), size = 2.5) +
+  geom_text(
+    aes(y = nota_pot, label = round(nota_pot, 1), color = "Português"),
+    vjust = 1.5, size = 4, show.legend = FALSE
+  ) +
+  # X-axis formatting
+  scale_x_continuous(
+    breaks = seq(min(df_mean$ano), max(df_mean$ano), by = 2),
+    labels = function(x) formatC(x, digits = 0, format = "f")
+  ) +
+  
+  scale_color_manual(
+    values = c("Matemática" = "#0072B2", "Português" = "#D55E00")
+  ) +
+  
+  labs(
+    x = "Ano",
+    y = "Nota Média ",
+    color = ""
+  ) +
+  ylim(180, 240) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+
+plot
+
+
+ggsave(
+  filename = ("saeb_metia.png"), # Nome baseado no modelo
+  plot = plot,                           # [English: Name based model]
+  path = path_descp,
+  width = 600/96, height = 420/96, dpi = 110)
+
+rm(plot, df_mean)
+
