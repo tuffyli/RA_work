@@ -330,6 +330,7 @@ for (i in seq_along(outcomes)) {
     data = df_main,
     outcome_var = outcomes[i],
     plot_title = titles[i],
+    y_label = "Enrollment Lvl.",
     y_limits = ylims[[i]]
   )
 }
@@ -351,10 +352,129 @@ ggsave(plot = plot_final,
        filename = file.path(path_descp, "/Figures/enrollment_lvl.pdf"),
        device = "pdf", height = 8, width = 15)
 
+# ---------------------------------------------------------------------------- #
+## 2.3 MS of 8 and 9 years -----
+# ---------------------------------------------------------------------------- #
+outcomes <- c(
+  "mat_fun9",
+  "mat_fun8",
+  "mat_ini9",
+  "mat_ini8"
+)
 
+titles <- c(
+  "M. School (9 years)",
+  "M. School (8 years)",
+  "M. School First Years (9 years)",
+  "M. School First Years (8 years)"
+)
+
+# Optional y-limits for each plot
+ylims <- list(
+  NULL,
+  NULL,
+  NULL,
+  NULL
+)
+
+
+
+
+# ------------------------------------------------------------------- #
+# Create all four plots
+# ------------------------------------------------------------------- #
+plots <- vector("list", length(outcomes))
+
+for (i in seq_along(outcomes)) {
+  plots[[i]] <- make_tercile_plot(
+    data = df_main,
+    outcome_var = outcomes[i],
+    plot_title = titles[i],
+    y_label = "Enrollment Lvl.",
+    y_limits = ylims[[i]]
+  )
+}
+
+
+# ------------------------------------------------------------------- #
+# Combine plots into a final panel
+# ------------------------------------------------------------------- #
+plot_final <- wrap_plots(plots, ncol = 2) +
+  plot_layout(guides = "collect") &
+  theme(
+    legend.position = "bottom"
+  )
+
+plot_final
+
+ggsave(plot = plot_final,
+       filename = file.path(path_descp, "/Figures/enrollment_lvl_8and9.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+# ---------------------------------------------------------------------------- #
+### 2.3.2 Diff ---- 
+# ---------------------------------------------------------------------------- #
+
+df_main <- df_main %>% 
+  mutate(
+    fun_dif = mat_fun9 - mat_fun8,
+    ini_dif = mat_ini9 - mat_ini8
+  )
+
+outcomes <- c(
+  "fun_dif",
+  "ini_dif"
+)
+
+titles <- c(
+  "M. School Diff.",
+  "M. School First Years Diff."
+)
+
+# Optional y-limits for each plot
+ylims <- list(
+  NULL,
+  NULL
+)
+
+
+
+
+# ------------------------------------------------------------------- #
+# Create all four plots
+# ------------------------------------------------------------------- #
+plots <- vector("list", length(outcomes))
+
+for (i in seq_along(outcomes)) {
+  plots[[i]] <- make_tercile_plot(
+    data = df_main,
+    outcome_var = outcomes[i],
+    plot_title = titles[i],
+    y_label = "Enrollment Lvl. Diff.",
+    y_limits = ylims[[i]]
+  )
+}
+
+
+# ------------------------------------------------------------------- #
+# Combine plots into a final panel
+# ------------------------------------------------------------------- #
+plot_final <- wrap_plots(plots, ncol = 1) +
+  plot_layout(guides = "collect") &
+  theme(
+    legend.position = "bottom"
+  )
+
+plot_final
+
+ggsave(plot = plot_final,
+       filename = file.path(path_descp, "/Figures/enrollment_lvl_8and9_diff.pdf"),
+       device = "pdf", height = 8, width = 15)
 
 # ---------------------------------------------------------------------------- #
 # 3. Spending ----
+# ---------------------------------------------------------------------------- #
+## 3.1 Lvl. ----
 # ---------------------------------------------------------------------------- #
 
 outcomes <- c(
@@ -391,6 +511,7 @@ for (i in seq_along(outcomes)) {
     data = df_main,
     outcome_var = outcomes[i],
     plot_title = titles[i],
+    y_label = "Spending (R$)",
     y_limits = ylims[[i]]
   )
 }
@@ -412,4 +533,148 @@ ggsave(plot = plot_final,
        filename = file.path(path_descp, "/Figures/spending_education.pdf"),
        device = "pdf", height = 8, width = 15)
 
+# ---------------------------------------------------------------------------- #
+## 3.2 Per Student ----
+# ---------------------------------------------------------------------------- #
 
+outcomes <- c(
+  "real_des_edu_pa",
+  "real_des_inf_pa",
+  "real_des_fun_pa",
+  "real_des_med_pa"
+)
+
+titles <- c(
+  "Total Education Spending",
+  "Pre-School Spending",
+  "Middle School Spending",
+  "High School Spending"
+)
+
+
+# Optional y-limits for each plot
+ylims <- list(
+  NULL,
+  NULL,
+  NULL,
+  NULL
+)
+
+
+# ------------------------------------------------------------------- #
+# Create all four plots
+# ------------------------------------------------------------------- #
+plots <- vector("list", length(outcomes))
+
+for (i in seq_along(outcomes)) {
+  plots[[i]] <- make_tercile_plot(
+    data = df_main,
+    outcome_var = outcomes[i],
+    plot_title = titles[i],
+    y_label = "Spending (R$)",
+    y_limits = ylims[[i]]
+  )
+}
+
+
+# ------------------------------------------------------------------- #
+# Combine plots into a final panel
+# ------------------------------------------------------------------- #
+plot_final <- wrap_plots(plots, ncol = 2) +
+  plot_layout(guides = "collect") &
+  theme(
+    legend.position = "bottom"
+  )
+
+plot_final
+
+
+ggsave(plot = plot_final,
+       filename = file.path(path_descp, "/Figures/spending_education_pa.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+# ---------------------------------------------------------------------------- #
+# 4. Running variable density ----
+# ---------------------------------------------------------------------------- #
+
+library(rddensity)
+
+# Test at the zero threshold (net loser vs. net gainer)
+df_2006 <- df_main %>% filter(ano == 2006)
+
+rdd_test <- rddensity(X = df_2006$aluno_dosage, c = 0)
+summary(rdd_test)
+
+# Visual
+rdplotdensity(rdd_test, df_2006$aluno_dosage,
+              title = "Density of Aluno Dosage around Zero Threshold",
+              xlabel = "Aluno Dosage (R$/student)",
+              ylabel = "Density")
+
+# ---------------------------------------------------------------------------- #
+# 5 Enrollment jump ----
+# ---------------------------------------------------------------------------- #
+
+# Step 1: compute municipality-level growth history using ONLY pre-2007 data
+df_pre <- df_main %>%
+  filter(ano < 2007) %>%
+  arrange(codigo_ibge, ano) %>%
+  group_by(codigo_ibge) %>%
+  mutate(
+    growth_mat = (mat_total - lag(mat_total)) / lag(mat_total) * 100
+  ) %>%
+  ungroup()
+
+# Step 2: for each municipality, compute mean and SD of growth
+#         EXCLUDING 2006 itself — so the baseline isn't contaminated
+df_baseline <- df_pre %>%
+  filter(ano == 2006) %>%
+  group_by(codigo_ibge) %>%
+  summarise(
+    mean_growth_pre = mean(growth_mat, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Step 3: isolate 2006 growth and compute how anomalous it is
+df_2006_growth <- df_pre %>%
+  filter(ano == 2006) %>%
+  select(codigo_ibge, dosage_tercile, growth_mat_2006 = growth_mat) %>%
+  left_join(df_baseline, by = "codigo_ibge") 
+# Step 4: is anomalous 2006 growth concentrated in tercile 3?
+df_2006_growth %>%
+  group_by(dosage_tercile) %>%
+  summarise(
+    mean_growth  = mean(growth_mat_2006, na.rm = TRUE),
+    n            = n(),
+    .groups = "drop"
+  )
+
+# Formal test
+chisq.test(table(df_2006_growth$dosage_tercile,
+                 df_2006_growth$anomaly_2006))
+
+# ---------------------------------------------------------------------------- #
+
+# ---------------------------------------------------------------------------- #
+# Manipulation Analysis
+# Focus: Pre-school retention manipulation in 2006 (Fundeb base year)
+#        Confounded by 8->9 year school reform
+#        Placebo transfer comparison within terciles
+# ---------------------------------------------------------------------------- #
+
+library(tidyverse)
+library(fixest)
+library(rdrobust)
+library(rddensity)
+library(cobalt)
+library(patchwork)
+library(knitr)
+library(kableExtra)
+
+options(scipen = 999)
+
+# ---- Paths ---- #
+path_figures  <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Figures/Manipulation/"
+path_tables   <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Tables/Manipulation/"
+
+#

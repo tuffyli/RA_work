@@ -931,12 +931,22 @@ mat_2006_munic <- mat_2006 %>%
     mat_tot_em = sum(em_tot, na.rm = TRUE),
     mat_tot_inf = sum(ed_inf_tot, na.rm = TRUE),
     mat_tot_eja = sum(eja_tot, na.rm = TRUE),
+    
+    mat_reg_in_8 = sum(reg_in_8, na.rm = TRUE),
+    mat_reg_in_9 = sum(reg_in_9, na.rm = TRUE),
+    
+    mat_reg_fin_8 = sum(reg_fin_8, na.rm = TRUE),
+    mat_reg_fin_9 = sum(reg_fin_9, na.rm = TRUE),
+    
     .groups = "drop"
   )
 
 colnames(mat_2006_munic)
 glimpse(mat_2006_munic %>% select(CODMUNIC, mat_reg_in, mat_reg_fin, mat_tot_esp,
-                                  mat_tot_em, mat_tot_inf, mat_tot_eja))
+                                  mat_tot_em, mat_tot_inf, mat_tot_eja,
+                                  
+                                  mat_reg_in_8, mat_reg_in_9, mat_reg_fin_8, 
+                                  mat_reg_fin_9))
 
 
 saveRDS(mat_2006_munic, file = "Z:/Tuffy/Paper - Educ/Dados/censo_2006_filtrado_mun.rds")
@@ -1677,6 +1687,10 @@ rm(pib2)
 mat_mun_2006 <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_2006_filtrado_mun.rds") %>% 
   filter(DEP == "Municipal") %>% 
   mutate(mat_reg_fund = mat_reg_in + mat_reg_fin,
+         
+         mat_reg_fun9 = mat_reg_in_9 + mat_reg_fin_9,
+         mat_reg_fun8 = mat_reg_in_8 + mat_reg_fin_8,
+         
          codigo_ibge = as.numeric(CODMUNIC) %/% 10) %>% #Transforming to the old code
   group_by(codigo_ibge) %>% 
   summarise(
@@ -1684,7 +1698,16 @@ mat_mun_2006 <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_2006_filtrado_mun.rds
     mat_inf = sum(mat_tot_inf, na.rm = T),
     mat_med = sum(mat_tot_em, na.rm = T),
     mat_esp = sum(mat_tot_esp, na.rm = T),
-    mat_eja = sum(mat_tot_eja, na.rm = T)
+    mat_eja = sum(mat_tot_eja, na.rm = T),
+    
+    mat_fun9 = sum(mat_reg_fun9, na.rm = T),
+    mat_fun8 = sum(mat_reg_fun8, na.rm = T),
+    
+    mat_ini9 = sum(mat_reg_in_9, na.rm = T),
+    mat_ini8 = sum(mat_reg_in_8, na.rm = T),
+    
+    mat_fin9 = sum(mat_reg_fin_9, na.rm = T),
+    mat_fin8 = sum(mat_reg_fin_8, na.rm = T)
   ) %>% 
   mutate( total_alunos_2006 = mat_fun + mat_inf + mat_med + mat_esp + mat_eja) %>% 
   ungroup()
@@ -1706,7 +1729,7 @@ df_reg <- temp %>%
   
   dosage = (receita_real - receita_simulada)/receita_real,            #Prefered
   
-  old_dosage = (receita_real - receita_simulada)/real_des_edu[ano == 2006], 
+  #old_dosage = (receita_real - receita_simulada)/real_des_edu[ano == 2006], 
   
   #dosage_perc = del_spending_dos *100,
   
@@ -1863,7 +1886,7 @@ data <- data %>%
 summary(data %>% select(flag_enroll15, flag_enroll20, flag_enroll25, flag_enroll30,
                         flag_spend15, flag_spend20, flag_spend25, flag_spend30, 
                         flag_spend40, flag_spend50, flag_spend60, flag_spend70,
-                        flag_spend80, old_dosage))
+                        flag_spend80))
 
 test2 <- data %>% filter(flag_enroll15 == 0 & flag_enrollm15 == 0 & ano == 2007)
 
