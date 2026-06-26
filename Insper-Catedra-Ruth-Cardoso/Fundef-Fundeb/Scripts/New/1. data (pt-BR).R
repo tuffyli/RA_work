@@ -879,13 +879,7 @@ mat_2006 <- censo %>%
 
   mutate(COD_UF = as.numeric(str_sub(as.character(CODMUNIC, 1, 2)))) %>%
   mutate(reg_in = rowSums(across(c(DEF11C:NE9F11G)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
-         reg_in_9 = rowSums(across(c(DE9F11C:DE9F11G, NE9F11C:NE9F11G)), na.rm = TRUE), #in 9 anos
-         reg_in_8 = rowSums(across(c(DEF11C:DEF11F, NEF11C:NEF11F)), na.rm = TRUE),# in 8 anos
-         
          reg_fin = rowSums(across(c(DEF11G:NE9F11N)), na.rm = TRUE),
-         reg_fin_9 = rowSums(across(c(DE9F11H:DE9F11N, NE9F11H:NE9F11N)), na.rm = TRUE), #fin 9 anos
-         reg_fin_8 = rowSums(across(c(DEF11G:DEF11J, NEF11G:NEF11J)), na.rm = TRUE),# in 8 anos
-         
          esp_iniciais = rowSums(across(c(VEE1619:VEE1994)), na.rm = TRUE),
          esp_finais = rowSums(across(c(VEE1615:VEE1998)), na.rm = TRUE),
          esp_soma = esp_iniciais + esp_finais,
@@ -932,21 +926,12 @@ mat_2006_munic <- mat_2006 %>%
     mat_tot_inf = sum(ed_inf_tot, na.rm = TRUE),
     mat_tot_eja = sum(eja_tot, na.rm = TRUE),
     
-    mat_reg_in_8 = sum(reg_in_8, na.rm = TRUE),
-    mat_reg_in_9 = sum(reg_in_9, na.rm = TRUE),
-    
-    mat_reg_fin_8 = sum(reg_fin_8, na.rm = TRUE),
-    mat_reg_fin_9 = sum(reg_fin_9, na.rm = TRUE),
-    
     .groups = "drop"
   )
 
 colnames(mat_2006_munic)
 glimpse(mat_2006_munic %>% select(CODMUNIC, mat_reg_in, mat_reg_fin, mat_tot_esp,
-                                  mat_tot_em, mat_tot_inf, mat_tot_eja,
-                                  
-                                  mat_reg_in_8, mat_reg_in_9, mat_reg_fin_8, 
-                                  mat_reg_fin_9))
+                                  mat_tot_em, mat_tot_inf, mat_tot_eja))
 
 
 saveRDS(mat_2006_munic, file = "Z:/Tuffy/Paper - Educ/Dados/censo_2006_filtrado_mun.rds")
@@ -1687,10 +1672,6 @@ rm(pib2)
 mat_mun_2006 <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_2006_filtrado_mun.rds") %>% 
   filter(DEP == "Municipal") %>% 
   mutate(mat_reg_fund = mat_reg_in + mat_reg_fin,
-         
-         mat_reg_fun9 = mat_reg_in_9 + mat_reg_fin_9,
-         mat_reg_fun8 = mat_reg_in_8 + mat_reg_fin_8,
-         
          codigo_ibge = as.numeric(CODMUNIC) %/% 10) %>% #Transforming to the old code
   group_by(codigo_ibge) %>% 
   summarise(
@@ -1698,16 +1679,7 @@ mat_mun_2006 <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_2006_filtrado_mun.rds
     mat_inf = sum(mat_tot_inf, na.rm = T),
     mat_med = sum(mat_tot_em, na.rm = T),
     mat_esp = sum(mat_tot_esp, na.rm = T),
-    mat_eja = sum(mat_tot_eja, na.rm = T),
-    
-    mat_fun9 = sum(mat_reg_fun9, na.rm = T),
-    mat_fun8 = sum(mat_reg_fun8, na.rm = T),
-    
-    mat_ini9 = sum(mat_reg_in_9, na.rm = T),
-    mat_ini8 = sum(mat_reg_in_8, na.rm = T),
-    
-    mat_fin9 = sum(mat_reg_fin_9, na.rm = T),
-    mat_fin8 = sum(mat_reg_fin_8, na.rm = T)
+    mat_eja = sum(mat_tot_eja, na.rm = T)
   ) %>% 
   mutate( total_alunos_2006 = mat_fun + mat_inf + mat_med + mat_esp + mat_eja) %>% 
   ungroup()
@@ -1774,6 +1746,10 @@ data <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>%
 #Total enrollments
 df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
   group_by(codmun, ano) %>% 
+  mutate( 
+    mat_reg_fun9 = mat_reg_in_9 + mat_reg_fin_9,
+    mat_reg_fun8 = mat_reg_in_8 + mat_reg_fin_8,
+    ) %>% 
   summarise(
     mat_fun = sum(ef_tot, na.rm = T),
     mat_med = sum(em_tot, na.rm = T),
@@ -1781,8 +1757,20 @@ df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>
     mat_esp = sum(esp_tot, na.rm = T),
     mat_eja = sum(eja_tot, na.rm = T),
     mat_total = mat_fun + mat_med + mat_inf + mat_eja + mat_esp,
+    
+    #Both years
+    mat_fun9 = sum(mat_reg_fun9, na.rm = T),
+    mat_fun8 = sum(mat_reg_fun8, na.rm = T),
+    
+    mat_ini9 = sum(mat_reg_in_9, na.rm = T),
+    mat_ini8 = sum(mat_reg_in_8, na.rm = T),
+    
+    mat_fin9 = sum(mat_reg_fin_9, na.rm = T),
+    mat_fin8 = sum(mat_reg_fin_8, na.rm = T),
+    
     .groups = "drop") %>% 
-  mutate(codmun = codmun %/% 10) %>% 
+  mutate(codmun = codmun %/% 10
+         ) %>% 
   rename(codigo_ibge = codmun) #%>% 
   #filter(ano != 2006)
 
