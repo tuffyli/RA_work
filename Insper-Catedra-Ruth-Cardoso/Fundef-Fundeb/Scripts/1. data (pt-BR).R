@@ -779,7 +779,139 @@ for (ano in 2005:2024) {
 # 5. Simulação ----
 ## 5.1. Agreg Mun ----
 
-mat_2006 <- read.csv2("Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/censo_2006_filtrado.csv")
+### 5.1) Censo Escolar de 2006 (deixar comentado):----
+
+censo <- read_delim("Z:/Arquivos IFB/Censo Escolar/Bases Agregadas/2006/microdados_educação_básica_2006/DADOS/CENSOESC_2006.CSV", delim = "|",
+                             col_types = cols(.default = col_double(),
+                                              CODFUNC = col_character(),
+                                              MASCARA = col_character(),
+                                              DEP     = col_character(),
+                                              LOC = col_character(),
+                                              UF = col_character(),
+                                              SIGLA = col_character(),
+                                              MUNIC = col_character(),
+                                              ED_INDIG = col_character(),
+                                              MAT_QUIL = col_character(),
+                                              MAT_ETNI = col_character(),
+                                              NIVELCRE = col_character(),
+                                              NIVELPRE = col_character(),
+                                              NIV_F1A4_8 = col_character(),
+                                              NIV_F5A8_8 = col_character(),
+                                              NIV_F9INI = col_character(),
+                                              NIV_F9FIM = col_character(),
+                                              NIVELMED = col_character(),
+                                              NIVM_INT = col_character(),
+                                              SUPL_AVA = col_character(),
+                                              SUPL_SAVA = col_character(),
+                                              EDPROFIS = col_character(),
+                                              ESP_EXCL = col_character(),
+                                              ESP_T_ES = col_character(),
+                                              ENS_INCL = col_character(),
+                                              ESC_ASSE = col_character(),
+                                              AREA_QUIL = col_character(),
+                                              ESP_S_RE = col_character(),
+                                              ESP_A_IN = col_character(),
+                                              ED_INDIG = col_character(),
+                                              ED_IN_LM = col_character(),
+                                              COD_ID_IND = col_character(),
+                                              ED_IN_LP = col_character(),
+                                              MAT_ETNI = col_character(),
+                                              MAT_QUIL = col_character(),
+                                              ESC_T_IN = col_character(),
+                                              PRED_ESC = col_character(),
+                                              TEMPLO = col_character(),
+                                              DEF11C = col_double(),
+                                              DEF11D = col_double(),
+                                              DEF11E = col_double(),
+                                              DEF11F = col_double(),
+                                              NEF11C = col_double(),
+                                              NEF11D = col_double(),
+                                              NEF11E = col_double(),
+                                              NEF11F = col_double(),
+                                              DEF11G = col_double(),
+                                              DEF11H = col_double(),
+                                              DEF11I = col_double(),
+                                              DEF11J = col_double(),
+                                              NEF11G = col_double(),
+                                              NEF11H = col_double(),
+                                              NEF11I = col_double(),
+                                              NEF11J = col_double()))
+
+### 3.1.1) Agregação das matrículas de cada ciclo por ESCOLA: ----
+mat_2006 <- censo %>%
+  select(c(1:9,
+
+           CODFUNC,
+           ED_INDIG,
+           MAT_QUIL,
+           AREA_QUIL,
+           ESC_ASSE,
+           ED_IN_LM,
+           ED_IN_LP,
+           MAT_ETNI,
+           ESC_T_IN,
+
+           DEF11C:DEF11F, NEF11C:NEF11F, # EF iniciais (8 anos)
+           DE9F11C:DE9F11G, NE9F11C:NE9F11G, # EF iniciais (9 anos)
+           DEF11G:DEF11J, NEF11G:NEF11J, # EF finais (8 anos)
+           DE9F11H:DE9F11N, NE9F11H:NE9F11N, # EF finais (9 anos)
+           VEE1431:VEE1437, # Alunos de educação especial do EF por ano de nascimento
+
+           #ED especial por série:
+           VEE1619:VEE1691, VEE1719:VEE1791, VEE1819:VEE1891, VEE1919:VEE1991, # 1ºEF
+
+           VEE1612:VEE1692, VEE1712:VEE1792, VEE1812:VEE1892, VEE1912:VEE1992, # 2ºEF,
+           VEE1613:VEE1693, VEE1713:VEE1793, VEE1813:VEE1893, VEE1913:VEE1993, # 3ºEF
+           VEE1614:VEE1694, VEE1714:VEE1794, VEE1814:VEE1894, VEE1914:VEE1994, # 4ºEF
+           VEE1615:VEE1695, VEE1715:VEE1795, VEE1815:VEE1895, VEE1915:VEE1995, # 5ºEF
+           VEE1616:VEE1696, VEE1716:VEE1796, VEE1816:VEE1896, VEE1916:VEE1996, # 6ºEF
+           VEE1617:VEE1697, VEE1717:VEE1797, VEE1817:VEE1897, VEE1917:VEE1997, # 7ºEF
+           VEE1618:VEE1698, VEE1718:VEE1798, VEE1818:VEE1898, VEE1918:VEE1998, # 8ºEF
+
+           DEM118, DEM119, DEM11A, DEM11B, DEM11C, # Alunos do EM
+           NEM118, NEM119, NEM11A, NEM11B, NEM11C,
+
+           DPE119, NPE119, # Alunos de Creche
+           DPE11D, NPE11D, # Alunos de Pré-Escola
+
+           DES101F:DES101A, NES101F:NES101A # Alunos do EJA
+  )) %>%
+
+  mutate(COD_UF = as.numeric(str_sub(as.character(CODMUNIC, 1, 2)))) %>%
+  mutate(reg_in = rowSums(across(c(DEF11C:NE9F11G)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
+         reg_fin = rowSums(across(c(DEF11G:NE9F11N)), na.rm = TRUE),
+         esp_iniciais = rowSums(across(c(VEE1619:VEE1994)), na.rm = TRUE),
+         esp_finais = rowSums(across(c(VEE1615:VEE1998)), na.rm = TRUE),
+         esp_soma = esp_iniciais + esp_finais,
+         esp_tot = rowSums(across(c(VEE1431:VEE1437)), na.rm = TRUE),
+         em_tot = rowSums(across(c(DEM118:NEM11C)), na.rm = TRUE),
+         creche = rowSums(across(c(DPE119, NPE119)), na.rm = TRUE),
+         pre_escola = rowSums(across(c(DPE11D, NPE11D)), na.rm = TRUE),
+         ed_inf_tot = rowSums(across(c(DPE119:NPE11D)), na.rm = TRUE),
+         eja_tot = rowSums(across(c(DES101F:NES101A)), na.rm = TRUE),
+         dif = esp_iniciais + esp_finais - esp_tot,
+         esp_total_final = pmax(esp_soma, esp_tot)) %>%  # pega o maior valor entre a soma das deficiencias por série,
+  # e da desagregação pelo ano de nascimento
+  filter(!(DEP %in% c("Particular", "Federal")), # tira escolas federais e particulares
+         CODFUNC == "Ativo") %>%  # tira escolas que não estão ativas
+  mutate(CODMUNIC = as.numeric(str_c( #concatena
+    str_sub(as.character(CODMUNIC), 1, 2), #pega os dois primeiros
+    str_sub(as.character(CODMUNIC), -5) #pega os últimos 5
+  ))) %>%
+  mutate(ind_quil = ifelse(
+    (coalesce(ED_INDIG, "n") == "s" |
+       coalesce(MAT_QUIL, "n") == "s" |
+       coalesce(AREA_QUIL, "n") == "s" |
+       coalesce(ED_IN_LM, "n") == "s" |
+       coalesce(ED_IN_LP, "n") == "s"),
+    1, 0
+  ))
+
+# DF do censo já agregada por escola (é muito pesada para rodar toda vez):
+saveRDS(mat_2006, file = "Z:/Tuffy/Paper - Educ/Dados/censo_2006_filtrado.rds")
+
+
+mat_2006 <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_2006_filtrado.rds")
 
 mat_2006_munic <- mat_2006 %>%
   group_by(CODMUNIC, DEP, ind_quil) %>%
@@ -793,6 +925,7 @@ mat_2006_munic <- mat_2006 %>%
     mat_tot_em = sum(em_tot, na.rm = TRUE),
     mat_tot_inf = sum(ed_inf_tot, na.rm = TRUE),
     mat_tot_eja = sum(eja_tot, na.rm = TRUE),
+    
     .groups = "drop"
   )
 
@@ -1568,7 +1701,7 @@ df_reg <- temp %>%
   
   dosage = (receita_real - receita_simulada)/receita_real,            #Prefered
   
-  old_dosage = (receita_real - receita_simulada)/real_des_edu[ano == 2006], 
+  #old_dosage = (receita_real - receita_simulada)/real_des_edu[ano == 2006], 
   
   #dosage_perc = del_spending_dos *100,
   
@@ -1613,6 +1746,10 @@ data <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>%
 #Total enrollments
 df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
   group_by(codmun, ano) %>% 
+  mutate( 
+    mat_reg_fun9 = reg_in_9 + reg_fin_9,
+    mat_reg_fun8 = reg_in_8 + reg_fin_8,
+    ) %>% 
   summarise(
     mat_fun = sum(ef_tot, na.rm = T),
     mat_med = sum(em_tot, na.rm = T),
@@ -1620,8 +1757,20 @@ df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>
     mat_esp = sum(esp_tot, na.rm = T),
     mat_eja = sum(eja_tot, na.rm = T),
     mat_total = mat_fun + mat_med + mat_inf + mat_eja + mat_esp,
+    
+    #Both years
+    mat_fun9 = sum(reg_fun9, na.rm = T),
+    mat_fun8 = sum(reg_fun8, na.rm = T),
+    
+    mat_ini9 = sum(reg_in_9, na.rm = T),
+    mat_ini8 = sum(reg_in_8, na.rm = T),
+    
+    mat_fin9 = sum(reg_fin_9, na.rm = T),
+    mat_fin8 = sum(reg_fin_8, na.rm = T),
+    
     .groups = "drop") %>% 
-  mutate(codmun = codmun %/% 10) %>% 
+  mutate(codmun = codmun %/% 10
+         ) %>% 
   rename(codigo_ibge = codmun) #%>% 
   #filter(ano != 2006)
 
@@ -1725,7 +1874,7 @@ data <- data %>%
 summary(data %>% select(flag_enroll15, flag_enroll20, flag_enroll25, flag_enroll30,
                         flag_spend15, flag_spend20, flag_spend25, flag_spend30, 
                         flag_spend40, flag_spend50, flag_spend60, flag_spend70,
-                        flag_spend80, old_dosage))
+                        flag_spend80))
 
 test2 <- data %>% filter(flag_enroll15 == 0 & flag_enrollm15 == 0 & ano == 2007)
 
