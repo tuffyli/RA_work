@@ -385,7 +385,7 @@ p_pre_trends <- df_pre_trends %>%
   scale_x_continuous(breaks = c(2005, 2006)) +
   labs(
     title    = "Pre-Treatment Spending per Student by Dosage Tercile",
-    subtitle = "Parallel slopes in 2005-2006 support parallel trends assumption",
+    #subtitle = "Parallel slopes in 2005-2006 support parallel trends assumption",
     x = "Year", y = "Mean Spending per Student (R$)", color = NULL
   ) +
   theme_classic(base_size = 13) +
@@ -407,6 +407,7 @@ p_pre_trends
 balance_vars <- c(
   "mat_total",       # total enrollment
   "mat_inf",         # pre-school enrollment
+  "inf_share",       # pre-school share of total — key manipulation test
   "mat_fun",         # middle school enrollment
   "mat_med",         # high school enrollment
   "real_des_edu_pa", # spending per student
@@ -418,6 +419,7 @@ balance_vars <- c(
 balance_labels <- c(
   "Total Enrollment",
   "Pre-School Enrollment",
+  "Pre-School Share of Total Enrollment",   # share — not affected by scale differences
   "Middle School Enrollment",
   "High School Enrollment",
   "Educ. Spending per Student",
@@ -428,6 +430,7 @@ balance_labels <- c(
 
 df_balance <- df_main %>%
   filter(ano == 2006) %>%   # baseline year
+  mutate(inf_share = mat_inf / mat_total) %>%
   select(codigo_ibge, dosage_tercile, tercile_label, all_of(balance_vars))
 
 # Summary table: mean and SD by tercile
@@ -468,16 +471,25 @@ ttest_results <- map2_dfr(balance_vars, balance_labels, function(var, label) {
 print(ttest_results)
 
 # Save as LaTeX
-ttest_results %>%
+tex_table <- ttest_results %>%
   kable(
-    format   = "latex",
+    format = "latex",
     booktabs = TRUE,
-    caption  = "Balance Table: Tercile 1 vs. Tercile 3 (Baseline 2006)",
-    label    = "tab:balance",
-    align    = c("l","r","r","r","r","r","r","c")
+    caption = "Balance Table: Tercile 1 vs. Tercile 3 (Baseline 2006)",
+    label = "tab:balance",
+    align = c("l","r","r","r","r","r","r","c")
   ) %>%
-  kable_styling(latex_options = c("hold_position","striped"), font_size = 9) %>%
-  writeLines(paste0(path_tables, "balance_terciles.tex"))
+  kable_styling(
+    latex_options = c("hold_position", "striped"),
+    font_size = 9
+  ) %>%
+  add_footnote(
+    "Pre-School Share = mat\\_inf / mat\\_total. Shares compare composition, not scale.",
+    notation = "none"
+  )
+
+writeLines(as.character(tex_table),
+           paste0(path_tables, "balance_terciles.tex"))
 
 
 ## 3.2 Love Plot (cobalt) ----
@@ -537,7 +549,10 @@ p_love
 smd_by_year <- map_dfr(c(2005, 2006), function(yr) {
   df_yr <- df_main %>%
     filter(ano == yr, dosage_tercile != 2) %>%
-    mutate(treat_binary = ifelse(dosage_tercile == 3, 1, 0))
+    mutate(
+      inf_share    = mat_inf / mat_total,   # compute share for each year
+      treat_binary = ifelse(dosage_tercile == 3, 1, 0)
+    )
   
   map2_dfr(balance_vars, balance_labels, function(var, label) {
     d1      <- df_yr[[var]][df_yr$treat_binary == 0]
@@ -567,8 +582,6 @@ p_smd_years <- smd_by_year %>%
   scale_shape_manual(values = c("2005" = 16, "2006" = 17), name = "Year") +
   labs(
     title    = "SMD by Year: Did Imbalance Emerge in 2006?",
-    subtitle = paste0("If pre-school SMD grows from 2005 to 2006 in tercile comparison,\n",
-                      "it suggests manipulation of the Fundeb base year"),
     x = "Standardized Mean Difference (Tercile 3 vs. Tercile 1)",
     y = NULL
   ) +
@@ -633,7 +646,7 @@ p_rd_smooth <- rd_smooth %>%
                      name = NULL) +
   labs(
     title    = "Covariate Smoothness at the Zero Dosage Threshold (2006)",
-    subtitle = "Red = significant jump; non-manipulable vars (PIBpc) should be smooth",
+    #subtitle = "Red = significant jump; non-manipulable vars (PIBpc) should be smooth",
     x = "RD Estimate (Robust)", y = NULL
   ) +
   theme_classic(base_size = 13) +
@@ -643,87 +656,76 @@ p_rd_smooth
 
 
 # ---------------------------------------------------------------------------- #
-# 5. RDD ON ENROLLMENT AT TERCILE BOUNDARIES ----
+# 5. RDD ON PRE-SCHOOL ENROLLMENT ----
 #
-# Motivation: the tercile cutoffs in aluno_dosage define the treatment groups.
-# If municipalities manipulated their enrollment (particularly mat_inf) to
-# sort into a higher tercile, we should see a DISCONTINUOUS JUMP in mat_inf
-# exactly at the tercile boundary in the running variable (aluno_dosage).
+# Motivation: the manipulation channel runs through pre-school enrollment
+# (mat_inf). If municipalities retained students in pre-school in 2006 to
+# inflate the higher-weight Fundeb category, we should see a DISCONTINUOUS
+# JUMP in mat_inf (and in inf_share = mat_inf/mat_total) at the tercile
+# boundaries defined by aluno_dosage.
 #
-# The key distinction from Section 4:
-#   Section 4 tests smoothness at the POLICY threshold (dosage = 0, i.e. the
-#   break-even between net losers and net gainers).
-#   Section 5 tests smoothness at the TERCILE BOUNDARIES, which are the
-#   cutoffs that determine treatment intensity in your DiD design.
+# Running variable: aluno_dosage (continuous, within-UF)
+# Cutoffs: the empirical T1/T2 and T2/T3 boundary values within each UF.
+#   Because terciles are defined within UF, we demean aluno_dosage by its
+#   within-UF tercile boundary so that a single cutoff at zero applies pool-
+#   wide. We do this separately for each boundary.
 #
-# A jump in mat_inf at the T1/T2 or T2/T3 boundary would mean municipalities
-# near the boundary manipulated enrollment to cross into the next tercile.
-# mat_fun and the 8/9-year variables test whether the reform confounds this.
-#
-# Running variable: aluno_dosage (continuous, within-UF rank determines tercile)
-# Cutoffs: the within-UF tercile boundary values (T1/T2 and T2/T3 cuts)
+# Outcomes tested:
+#   mat_inf   — pre-school level (direct manipulation target)
+#   inf_share — pre-school share of total (composition, not scale)
+#   mat_fun8  — middle school 8yr (shrinks under reform; should be smooth)
+#   mat_fun9  — middle school 9yr (grows under reform; should be smooth)
 # ---------------------------------------------------------------------------- #
 
-## 5.1 Recover Tercile Boundary Values ----
-# Since terciles are defined within UF, boundary values differ by UF.
-# We work in ranks (0-1 normalized dosage within UF) so that a single
-# cutoff at 1/3 and 2/3 applies universally. This is cleaner than trying
-# to use raw dosage values.
+df_2006 <- df_main %>% filter(ano == 2006)
 
-df_rdd <- df_main %>%
-  filter(ano == 2006) %>%
+## 5.1 Compute within-UF boundary values and re-center aluno_dosage ----
+# For each UF, find the dosage values at the T1/T2 and T2/T3 cutoffs.
+# Re-centering makes the cutoff sit at 0 for both boundaries pooled.
+
+df_rdd_base <- df_2006 %>%
+  mutate(inf_share = mat_inf / mat_total) %>%
   group_by(cod_uf) %>%
   mutate(
-    # Rank within UF, normalized to [0, 1]
-    dosage_rank = (rank(aluno_dosage, ties.method = "average") - 1) /
-      (n() - 1)
+    # Exact boundary: the mean of the max of T1 and min of T2, etc.
+    cut_12 = (max(aluno_dosage[dosage_tercile == 1], na.rm = TRUE) +
+                min(aluno_dosage[dosage_tercile == 2], na.rm = TRUE)) / 2,
+    cut_23 = (max(aluno_dosage[dosage_tercile == 2], na.rm = TRUE) +
+                min(aluno_dosage[dosage_tercile == 3], na.rm = TRUE)) / 2,
+    
+    # Re-centered running variables: distance from each boundary
+    rv_12  = aluno_dosage - cut_12,   # >0 means in T2 or above
+    rv_23  = aluno_dosage - cut_23    # >0 means in T3
   ) %>%
   ungroup()
 
-# Cutoffs: 1/3 (T1->T2 boundary) and 2/3 (T2->T3 boundary)
-cut_low  <- 1/3   # T1 vs T2 boundary
-cut_high <- 2/3   # T2 vs T3 boundary
 
-# Enrollment outcomes to test
-rdd_outcomes <- list(
-  # Label                   variable        description
-  list("mat_inf",   "Pre-School Enrollment (mat_inf)",        "Manipulation channel: inflation here is the concern"),
-  list("mat_fun",   "Middle School Total (mat_fun)",           "Reform channel: students transitioning to middle school"),
-  list("mat_fun8",  "Middle School 8yr (mat_fun8)",            "Shrinks under 8->9 reform"),
-  list("mat_fun9",  "Middle School 9yr (mat_fun9)",            "Grows under 8->9 reform"),
-  list("mat_ini8",  "Middle School Initial Years 8yr (mat_ini8)", "First years of old structure"),
-  list("mat_ini9",  "Middle School Initial Years 9yr (mat_ini9)", "First years of new structure"),
-  list("mat_total", "Total Enrollment (mat_total)",             "Overall enrollment check")
-)
+## 5.2 Helper: rdrobust on a re-centered running variable ----
 
-
-## 5.2 Helper: run rdrobust and return tidy tibble ----
-
-run_rdd_boundary <- function(outcome_var, data, cutoff, bw_method = "mserd") {
-  y <- data[[outcome_var]]
-  x <- data$dosage_rank
-  
-  # Drop NAs
+run_rdd_inf <- function(outcome_var, rv_var, data, label_str) {
+  y    <- data[[outcome_var]]
+  x    <- data[[rv_var]]
   keep <- !is.na(y) & !is.na(x)
   y <- y[keep]; x <- x[keep]
   
   tryCatch({
-    fit <- rdrobust(y = y, x = x, c = cutoff, bwselect = bw_method)
+    fit <- rdrobust(y = y, x = x, c = 0, bwselect = "mserd")
     tibble(
-      outcome   = outcome_var,
-      cutoff    = cutoff,
-      estimate  = fit$coef[1, 1],       # conventional
-      se_robust = fit$se[3, 1],         # robust
-      p_robust  = fit$pv[3, 1],
-      ci_low    = fit$ci[3, 1],
-      ci_high   = fit$ci[3, 2],
-      bw_left   = fit$bws[1, 1],
-      bw_right  = fit$bws[1, 2],
-      n_left    = fit$N_h[1],
-      n_right   = fit$N_h[2]
+      outcome      = outcome_var,
+      boundary     = rv_var,
+      label        = label_str,
+      estimate     = fit$coef[1, 1],
+      se_robust    = fit$se[3, 1],
+      p_robust     = fit$pv[3, 1],
+      ci_low       = fit$ci[3, 1],
+      ci_high      = fit$ci[3, 2],
+      bw_left      = fit$bws[1, 1],
+      bw_right     = fit$bws[1, 2],
+      n_left       = fit$N_h[1],
+      n_right      = fit$N_h[2]
     )
   }, error = function(e) {
-    tibble(outcome = outcome_var, cutoff = cutoff,
+    tibble(outcome = outcome_var, boundary = rv_var, label = label_str,
            estimate = NA_real_, se_robust = NA_real_, p_robust = NA_real_,
            ci_low = NA_real_, ci_high = NA_real_,
            bw_left = NA_real_, bw_right = NA_real_,
@@ -732,280 +734,156 @@ run_rdd_boundary <- function(outcome_var, data, cutoff, bw_method = "mserd") {
 }
 
 
-## 5.3 Run RDD at Both Boundaries for All Outcomes ----
+## 5.3 Run RDD for each outcome × boundary combination ----
 
-rdd_results <- map_dfr(rdd_outcomes, function(o) {
-  var <- o[[1]]
-  bind_rows(
-    run_rdd_boundary(var, df_rdd, cut_low),
-    run_rdd_boundary(var, df_rdd, cut_high)
-  )
+rdd_specs <- list(
+  # outcome var   rv var    readable label
+  list("mat_inf",   "rv_12", "Pre-School Level — T1/T2"),
+  list("mat_inf",   "rv_23", "Pre-School Level — T2/T3"),
+  list("inf_share", "rv_12", "Pre-School Share — T1/T2"),
+  list("inf_share", "rv_23", "Pre-School Share — T2/T3"),
+  list("mat_fun8",  "rv_12", "Middle School 8yr — T1/T2"),
+  list("mat_fun8",  "rv_23", "Middle School 8yr — T2/T3"),
+  list("mat_fun9",  "rv_12", "Middle School 9yr — T1/T2"),
+  list("mat_fun9",  "rv_23", "Middle School 9yr — T2/T3")
+)
+
+rdd_results <- map_dfr(rdd_specs, function(s) {
+  run_rdd_inf(s[[1]], s[[2]], df_rdd_base, s[[3]])
 }) %>%
-  left_join(
-    tibble(
-      outcome     = map_chr(rdd_outcomes, 1),
-      label       = map_chr(rdd_outcomes, 2),
-      description = map_chr(rdd_outcomes, 3)
-    ),
-    by = "outcome"
-  ) %>%
   mutate(
-    cutoff_label = ifelse(cutoff == cut_low, "T1/T2 Boundary", "T2/T3 Boundary"),
-    sig          = case_when(
-      p_robust < 0.01 ~ "p < 0.01",
-      p_robust < 0.05 ~ "p < 0.05",
-      p_robust < 0.10 ~ "p < 0.10",
-      TRUE            ~ "p ≥ 0.10"
+    cutoff_label = ifelse(boundary == "rv_12", "T1/T2 Boundary", "T2/T3 Boundary"),
+    outcome_label = case_when(
+      outcome == "mat_inf"   ~ "Pre-School Level",
+      outcome == "inf_share" ~ "Pre-School Share",
+      outcome == "mat_fun8"  ~ "Middle School 8yr",
+      outcome == "mat_fun9"  ~ "Middle School 9yr"
     ),
-    sig_flag = p_robust < 0.10
-  )
-
-print(rdd_results %>% select(label, cutoff_label, estimate, se_robust,
-                             p_robust, ci_low, ci_high, n_left, n_right))
-
-
-## 5.4 Summary Plot: RDD Estimates at Both Boundaries ----
-# The key pattern to look for:
-#   mat_inf significant at T2/T3 -> municipalities just below the T3 threshold
-#     inflated pre-school enrollment to cross into the highest-dosage tercile
-#   mat_fun8 significant (negative) + mat_fun9 significant (positive) ->
-#     this is the reform effect, NOT manipulation — interpret carefully
-#   mat_total significant -> suspicious overall enrollment inflation
-
-p_rdd_boundaries <- rdd_results %>%
-  filter(!is.na(estimate)) %>%
-  mutate(label = fct_reorder(label, estimate)) %>%
-  ggplot(aes(x = estimate, y = label, color = sig_flag, shape = cutoff_label)) +
-  geom_vline(xintercept = 0, color = "grey40", linetype = "dashed") +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
-                 height = 0.25, linewidth = 0.7,
-                 position = position_dodge(width = 0.5)) +
-  geom_point(size = 3.5,
-             position = position_dodge(width = 0.5)) +
-  facet_wrap(~cutoff_label, ncol = 1) +
-  scale_color_manual(
-    values = c("FALSE" = "#0072B2", "TRUE" = "#D62728"),
-    labels = c("p ≥ 0.10 (Smooth)", "p < 0.10 (Jump)"),
-    name   = NULL
-  ) +
-  scale_shape_manual(
-    values = c("T1/T2 Boundary" = 16, "T2/T3 Boundary" = 17),
-    name   = NULL
-  ) +
-  labs(
-    title    = "RDD Estimates: Enrollment Discontinuity at Tercile Boundaries (2006)",
-    subtitle = paste0(
-      "Running variable: normalized within-UF dosage rank\n",
-      "Red = significant at 10% | mat_inf jump at T2/T3 = manipulation concern"
-    ),
-    x = "RD Estimate (students)",
-    y = NULL
-  ) +
-  theme_classic(base_size = 12) +
-  theme(
-    legend.position  = "bottom",
-    strip.background = element_blank(),
-    strip.text       = element_text(face = "bold", size = 12)
-  )
-
-p_rdd_boundaries
-
-
-## 5.5 RD Plots: Visual Inspection at Each Boundary ----
-# rdplot shows the raw data on both sides of the cutoff.
-# Look for a visible jump in the outcome at the cutoff vs. a smooth polynomial fit.
-
-# Focus on the two most relevant variables:
-#   mat_inf  (manipulation concern)
-#   mat_fun9 (reform concern)
-
-make_rdplot <- function(outcome_var, cutoff, title_str, df) {
-  y <- df[[outcome_var]]
-  x <- df$dosage_rank
-  keep <- !is.na(y) & !is.na(x)
-  
-  rdplot(
-    y     = y[keep],
-    x     = x[keep],
-    c     = cutoff,
-    title = title_str,
-    x.label = "Normalized Dosage Rank (within UF)",
-    y.label = outcome_var
-  )
-}
-
-# T1/T2 boundary — pre-school
-make_rdplot("mat_inf",  cut_low,  "Pre-School Enrollment at T1/T2 Boundary (2006)", df_rdd)
-
-# T2/T3 boundary — pre-school (main manipulation concern)
-make_rdplot("mat_inf",  cut_high, "Pre-School Enrollment at T2/T3 Boundary (2006)", df_rdd)
-
-# T2/T3 boundary — middle school 9yr (reform check)
-make_rdplot("mat_fun9", cut_high, "Middle School 9yr Enrollment at T2/T3 Boundary (2006)", df_rdd)
-
-# T2/T3 boundary — middle school 8yr (reform check)
-make_rdplot("mat_fun8", cut_high, "Middle School 8yr Enrollment at T2/T3 Boundary (2006)", df_rdd)
-
-
-## 5.6 Placebo Year Test: Same RDD in 2005 ----
-# Core logic: if the discontinuity in mat_inf at the T2/T3 boundary exists in 2006
-# but NOT in 2005, it emerged specifically in the Fundeb base year — strong evidence
-# of anticipatory manipulation. If it exists in both years, it is a structural
-# feature of high-dosage municipalities (not manipulation).
-#
-# Note: we apply the SAME 2006-defined tercile boundaries to 2005 data.
-# This is intentional — we want to know if 2005 municipalities near the
-# 2006 T2/T3 cut already had more mat_inf, or if the jump is new in 2006.
-
-df_rdd_2005 <- df_main %>%
-  filter(ano == 2005) %>%
-  left_join(
-    df_rdd %>% select(codigo_ibge, dosage_rank),  # 2006 ranks applied to 2005 data
-    by = "codigo_ibge"
-  )
-
-rdd_placebo_2005 <- map_dfr(rdd_outcomes, function(o) {
-  var <- o[[1]]
-  bind_rows(
-    run_rdd_boundary(var, df_rdd_2005, cut_low),
-    run_rdd_boundary(var, df_rdd_2005, cut_high)
-  )
-}) %>%
-  left_join(
-    tibble(outcome = map_chr(rdd_outcomes, 1), label = map_chr(rdd_outcomes, 2)),
-    by = "outcome"
-  ) %>%
-  mutate(
-    cutoff_label = ifelse(cutoff == cut_low, "T1/T2 Boundary", "T2/T3 Boundary"),
-    year         = 2005,
-    sig_flag     = !is.na(p_robust) & p_robust < 0.10
-  )
-
-# Combine 2005 and 2006 for direct comparison
-rdd_combined <- bind_rows(
-  rdd_results %>% mutate(year = 2006),
-  rdd_placebo_2005
-) %>%
-  mutate(year_f = factor(year))
-
-# Plot: 2005 vs 2006 estimates — did the discontinuity emerge in 2006?
-p_rdd_placebo <- rdd_combined %>%
-  filter(!is.na(estimate), cutoff_label == "T2/T3 Boundary") %>%
-  mutate(label = fct_reorder(label, abs(estimate))) %>%
-  ggplot(aes(x = estimate, y = label,
-             color = year_f, shape = year_f)) +
-  geom_vline(xintercept = 0, color = "grey40", linetype = "dashed") +
-  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
-                 height = 0.25, linewidth = 0.7,
-                 position = position_dodge(width = 0.5)) +
-  geom_point(size = 3.5,
-             position = position_dodge(width = 0.5)) +
-  scale_color_manual(
-    values = c("2005" = "#0072B2", "2006" = "#D55E00"),
-    name   = "Year"
-  ) +
-  scale_shape_manual(
-    values = c("2005" = 16, "2006" = 17),
-    name   = "Year"
-  ) +
-  labs(
-    title    = "Placebo Test: RDD Estimates at T2/T3 Boundary — 2005 vs 2006",
-    subtitle = paste0(
-      "Same boundary, same running variable applied to both years\n",
-      "A jump in 2006 but not 2005 indicates manipulation in the Fundeb base year"
-    ),
-    x = "RD Estimate (students)",
-    y = NULL
-  ) +
-  theme_classic(base_size = 12) +
-  theme(legend.position = "bottom")
-
-p_rdd_placebo
-
-
-## 5.7 LaTeX Table: RDD Results ----
-
-rdd_results %>%
-  filter(!is.na(estimate)) %>%
-  select(label, cutoff_label, estimate, se_robust, p_robust,
-         ci_low, ci_high, n_left, n_right) %>%
-  mutate(
-    across(c(estimate, se_robust, ci_low, ci_high), ~round(.x, 1)),
-    p_robust = round(p_robust, 3),
+    sig_flag = !is.na(p_robust) & p_robust < 0.10,
     sig = case_when(
       p_robust < 0.01 ~ "***",
       p_robust < 0.05 ~ "**",
       p_robust < 0.10 ~ "*",
       TRUE            ~ ""
     )
+  )
+
+print(rdd_results %>%
+        select(label, estimate, se_robust, p_robust, ci_low, ci_high, n_left, n_right))
+
+
+## 5.4 Coefficient plot: all outcomes × boundaries ----
+# Key reading guide:
+#   mat_inf or inf_share significant at T2/T3 -> pre-school manipulation concern
+#   mat_fun8 / mat_fun9 significant -> reform effect bleeding through, not manipulation
+#   All smooth (p > 0.10) -> no evidence of sorting at the tercile boundary
+
+p_rdd_inf <- rdd_results %>%
+  filter(!is.na(estimate)) %>%
+  mutate(outcome_label = fct_rev(factor(outcome_label,
+                                        levels = c("Pre-School Level",
+                                                   "Pre-School Share",
+                                                   "Middle School 8yr",
+                                                   "Middle School 9yr")))) %>%
+  ggplot(aes(x = estimate, y = outcome_label,
+             color = sig_flag, shape = cutoff_label)) +
+  geom_vline(xintercept = 0, color = "grey40", linetype = "dashed") +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.2, linewidth = 0.7,
+                 position = position_dodge(width = 0.55)) +
+  geom_point(size = 3.8,
+             position = position_dodge(width = 0.55)) +
+  scale_color_manual(
+    values = c("FALSE" = "#0072B2", "TRUE"  = "#D62728"),
+    labels = c("p \u2265 0.10 (Smooth)", "p < 0.10 (Jump)"),
+    name   = NULL
+  ) +
+  scale_shape_manual(
+    values = c("T1/T2 Boundary" = 16, "T2/T3 Boundary" = 17),
+    name   = "Boundary"
+  ) +
+  labs(
+    title    = "RDD: Enrollment Discontinuity at Tercile Boundaries (2006)",
+    # subtitle = paste0(
+    #   "Running variable: aluno\\_dosage re-centred at within-UF boundary\n",
+    #   "Red = p < 0.10 | inf\\_share jump at T2/T3 = main manipulation signal"
+    # ),
+    x = "RD Estimate",
+    y = NULL
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    legend.position  = "bottom",
+    legend.box       = "vertical"
+  )
+
+p_rdd_inf
+
+
+## 5.5 Visual RD plots for the two key outcomes at T2/T3 ----
+# rdplot shows binned means on each side — a visible jump vs. smooth fit
+
+make_rdplot_rv <- function(outcome_var, rv_var, title_str, df) {
+  y    <- df[[outcome_var]]
+  x    <- df[[rv_var]]
+  keep <- !is.na(y) & !is.na(x)
+  rdplot(
+    y       = y[keep],
+    x       = x[keep],
+    c       = 0,
+    title   = title_str,
+    x.label = paste0("Aluno Dosage (re-centred at ", rv_var, " = 0)"),
+    y.label = outcome_var
+  )
+}
+
+# Pre-school level at T2/T3 — main manipulation concern
+make_rdplot_rv("mat_inf",   "rv_23",
+               "Pre-School Enrollment at T2/T3 Boundary (2006)", df_rdd_base)
+
+# Pre-school share at T2/T3 — composition check
+make_rdplot_rv("inf_share", "rv_23",
+               "Pre-School Share at T2/T3 Boundary (2006)", df_rdd_base)
+
+# Middle school 9yr at T2/T3 — reform check (should be smooth if not reform-driven)
+make_rdplot_rv("mat_fun9",  "rv_23",
+               "Middle School 9yr at T2/T3 Boundary (2006)", df_rdd_base)
+
+
+## 5.6 LaTeX Table: RDD Results ----
+
+tex_table <- rdd_results %>%
+  filter(!is.na(estimate)) %>%
+  select(label, estimate, se_robust, p_robust, ci_low, ci_high,
+         n_left, n_right, sig) %>%
+  mutate(
+    across(c(estimate, se_robust, ci_low, ci_high), ~ round(.x, 3)),
+    p_robust = round(p_robust, 3)
   ) %>%
   kable(
     format   = "latex",
     booktabs = TRUE,
-    caption  = "RDD Estimates: Enrollment Discontinuity at Tercile Boundaries (2006)",
-    label    = "tab:rdd_boundaries",
-    col.names = c("Outcome", "Boundary", "Estimate", "SE (Robust)",
-                  "p-value", "CI Low", "CI High", "N Left", "N Right", "Sig."),
-    align    = c("l","l","r","r","r","r","r","r","r","c")
+    caption  = "RDD: Pre-School Enrollment Discontinuity at Tercile Boundaries (2006)",
+    label    = "tab:rdd_preschool",
+    col.names = c("Outcome", "Estimate", "SE (Robust)", "p-value",
+                  "CI Low", "CI High", "N Left", "N Right", "Sig."),
+    align    = c("l","r","r","r","r","r","r","r","c")
   ) %>%
-  kable_styling(latex_options = c("hold_position", "scale_down"), font_size = 9) %>%
-  writeLines(paste0(path_tables, "rdd_enrollment_boundaries.tex"))
-
-
-# ---------------------------------------------------------------------------- #
-# 6. ROBUSTNESS: RECOMPUTE DOSAGE WITH 2005 ENROLLMENT ----
-# ---------------------------------------------------------------------------- #
-
-df_main <- df_main %>%
-  group_by(codigo_ibge) %>%
-  mutate(
-    mat_2005          = mat_total[ano == 2005],
-    mat_inf_2005      = mat_inf[ano == 2005],
-    
-    # Clean dosage: 2005 enrollment as denominator (unaffected by 2006 base year)
-    aluno_dosage_2005 = (receita_real - receita_simulada) / mat_2005,
-    
-    # Pre-school specific: did municipalities with more inf in 2005
-    # sort into higher terciles? (mechanical vs. manipulated)
-    inf_share_2005    = mat_inf_2005 / mat_2005
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"),
+    font_size = 9
   ) %>%
-  ungroup() %>%
-  group_by(cod_uf) %>%
-  mutate(dosage_tercile_2005 = ntile(aluno_dosage_2005, 3)) %>%
-  ungroup()
+  add_footnote(
+    paste0(
+      "Running variable is aluno\\_dosage re-centred at the within-UF T1/T2 or T2/T3 boundary. ",
+      "inf\\_share = mat\\_inf / mat\\_total. ",
+      "A significant jump in inf\\_share at T2/T3 indicates compositional manipulation."
+    ),
+    notation = "none"
+  )
 
-# How much does tercile assignment change when using 2005 vs. 2006 denominator?
-tercile_change <- df_main %>%
-  filter(ano == 2006) %>%
-  count(dosage_tercile, dosage_tercile_2005) %>%
-  group_by(dosage_tercile) %>%
-  mutate(pct = n / sum(n) * 100)
-
-# Confusion matrix style: if manipulation moved municipalities into higher terciles,
-# you'll see dosage_tercile_2005 = 2 but dosage_tercile = 3 for some municipalities
-print(tercile_change)
-
-# Regression comparison: 2006 vs. 2005 denominator
-est_base <- feols(
-  real_des_edu_pa ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
-  | codigo_ibge + ano + uf^ano,
-  data    = df_main,
-  cluster = ~codigo_ibge
-)
-
-est_clean <- feols(
-  real_des_edu_pa ~ aluno_dosage_2005 : i(ano, ref = 2006) + PIBpc
-  | codigo_ibge + ano + uf^ano,
-  data    = df_main,
-  cluster = ~codigo_ibge
-)
-
-etable(est_base, est_clean,
-       headers  = c("Baseline (2006 Enrollment)", "Robust (2005 Enrollment)"),
-       title    = "Robustness: Effect of Dosage on Spending per Student",
-       tex      = TRUE,
-       file     = paste0(path_tables, "robust_dosage_denominator.tex"),
-       replace  = TRUE)
+writeLines(as.character(tex_table),
+           paste0(path_tables, "rdd_preschool_boundaries.tex"))
 
 
 # ---------------------------------------------------------------------------- #
@@ -1051,15 +929,5 @@ ggsave(plot = panel_D,
        filename = file.path(path_figures, "panel_D_placebo.pdf"),
        device = "pdf", height = 6, width = 14)
 
-# Panel E: RDD at tercile boundaries
-panel_E <- p_rdd_boundaries / p_rdd_placebo +
-  plot_annotation(
-    title = "E. RDD at Tercile Boundaries: Enrollment Discontinuity Test",
-    theme = theme(plot.title = element_text(face = "bold", size = 14))
-  )
-
-ggsave(plot = panel_E,
-       filename = file.path(path_figures, "panel_E_rdd_boundaries.pdf"),
-       device = "pdf", height = 12, width = 12)
 
 message("All manipulation analysis outputs saved.")
