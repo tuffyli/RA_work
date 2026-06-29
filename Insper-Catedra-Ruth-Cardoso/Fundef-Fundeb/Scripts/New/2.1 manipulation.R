@@ -1,5 +1,29 @@
----------------------------------------------------------------------------- #
-  # 0. Data Prep ----
+# ---------------------------------------------------------------------------- #
+# Manipulation Analysis
+# Focus: Pre-school retention manipulation in 2006 (Fundeb base year)
+#        Confounded by 8->9 year school reform
+#        Placebo transfer comparison within terciles
+#        RDD on enrollment at tercile boundaries (Section 5)
+# ---------------------------------------------------------------------------- #
+
+library(tidyverse)
+library(fixest)
+library(rdrobust)
+library(rddensity)
+library(cobalt)
+library(patchwork)
+library(knitr)
+library(kableExtra)
+
+options(scipen = 999)
+
+# ---- Paths ---- #
+path_figures  <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Figures/Manipulation/"
+path_tables   <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Tables/Manipulation/"
+
+
+# ---------------------------------------------------------------------------- #
+# 0. Data Prep ----
 # ---------------------------------------------------------------------------- #
 
 df_main <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf_flags.rds")
@@ -44,21 +68,27 @@ df_transitions <- df_main %>%
   group_by(codigo_ibge) %>%
   mutate(
     # Level changes
-    d_mat_inf  = mat_inf  - lag(mat_inf),
-    d_mat_fun  = mat_fun  - lag(mat_fun),
-    d_mat_fun8 = mat_fun8 - lag(mat_fun8),
-    d_mat_fun9 = mat_fun9 - lag(mat_fun9),
+    d_mat_inf   = mat_inf   - lag(mat_inf),
+    d_mat_fun   = mat_fun   - lag(mat_fun),
+    d_mat_fun8  = mat_fun8  - lag(mat_fun8),
+    d_mat_fun9  = mat_fun9  - lag(mat_fun9),
+    d_mat_ini8  = mat_ini8  - lag(mat_ini8),
+    d_mat_ini9  = mat_ini9  - lag(mat_ini9),
     d_mat_total = mat_total - lag(mat_total),
     
     # Growth rates
-    gr_inf   = d_mat_inf  / lag(mat_inf)  * 100,
-    gr_fun   = d_mat_fun  / lag(mat_fun)  * 100,
-    gr_fun8  = d_mat_fun8 / lag(mat_fun8) * 100,
-    gr_fun9  = d_mat_fun9 / lag(mat_fun9) * 100,
+    gr_inf   = d_mat_inf   / lag(mat_inf)   * 100,
+    gr_fun   = d_mat_fun   / lag(mat_fun)   * 100,
+    gr_fun8  = d_mat_fun8  / lag(mat_fun8)  * 100,
+    gr_fun9  = d_mat_fun9  / lag(mat_fun9)  * 100,
+    gr_ini8  = d_mat_ini8  / lag(mat_ini8)  * 100,
+    gr_ini9  = d_mat_ini9  / lag(mat_ini9)  * 100,
     gr_total = d_mat_total / lag(mat_total) * 100,
     
     # Ratio: pre-school share of total enrollment
-    inf_share = mat_inf / mat_total
+    inf_share  = mat_inf  / mat_total,
+    fun8_share = mat_fun8 / mat_total,
+    fun9_share = mat_fun9 / mat_total
   ) %>%
   ungroup()
 
@@ -95,7 +125,7 @@ p_inf_share <- df_transitions %>%
   scale_x_continuous(breaks = 2005:2009) +
   labs(
     title    = "Pre-School Share of Total Enrollment by Dosage Tercile",
-    subtitle = "Spike in 2006 + drop in 2007 in tercile 3 would indicate retention manipulation",
+    #subtitle = "Spike in 2006 + drop in 2007 in tercile 3 would indicate retention manipulation",
     x = "Year", y = "Mean Pre-School Share", color = NULL
   ) +
   theme_classic(base_size = 13) +
@@ -590,11 +620,8 @@ print(rd_smooth)
 p_rd_smooth <- rd_smooth %>%
   filter(!is.na(estimate)) %>%
   mutate(
-    label     = fct_reorder(label, estimate),
-    sig       = p_robust < 0.1,
-    # Normalize estimates by SD for comparability across variables
-    sd_y      = map_dbl(rd_covariates[rd_covariates %in% covariate],
-                        ~sd(df_2006[[.x]], na.rm=TRUE))
+    label = fct_reorder(label, estimate),
+    sig   = p_robust < 0.1
   ) %>%
   ggplot(aes(x = estimate, y = label, color = sig)) +
   geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
@@ -616,7 +643,317 @@ p_rd_smooth
 
 
 # ---------------------------------------------------------------------------- #
-# 5. ROBUSTNESS: RECOMPUTE DOSAGE WITH 2005 ENROLLMENT ----
+# 5. RDD ON ENROLLMENT AT TERCILE BOUNDARIES ----
+#
+# Motivation: the tercile cutoffs in aluno_dosage define the treatment groups.
+# If municipalities manipulated their enrollment (particularly mat_inf) to
+# sort into a higher tercile, we should see a DISCONTINUOUS JUMP in mat_inf
+# exactly at the tercile boundary in the running variable (aluno_dosage).
+#
+# The key distinction from Section 4:
+#   Section 4 tests smoothness at the POLICY threshold (dosage = 0, i.e. the
+#   break-even between net losers and net gainers).
+#   Section 5 tests smoothness at the TERCILE BOUNDARIES, which are the
+#   cutoffs that determine treatment intensity in your DiD design.
+#
+# A jump in mat_inf at the T1/T2 or T2/T3 boundary would mean municipalities
+# near the boundary manipulated enrollment to cross into the next tercile.
+# mat_fun and the 8/9-year variables test whether the reform confounds this.
+#
+# Running variable: aluno_dosage (continuous, within-UF rank determines tercile)
+# Cutoffs: the within-UF tercile boundary values (T1/T2 and T2/T3 cuts)
+# ---------------------------------------------------------------------------- #
+
+## 5.1 Recover Tercile Boundary Values ----
+# Since terciles are defined within UF, boundary values differ by UF.
+# We work in ranks (0-1 normalized dosage within UF) so that a single
+# cutoff at 1/3 and 2/3 applies universally. This is cleaner than trying
+# to use raw dosage values.
+
+df_rdd <- df_main %>%
+  filter(ano == 2006) %>%
+  group_by(cod_uf) %>%
+  mutate(
+    # Rank within UF, normalized to [0, 1]
+    dosage_rank = (rank(aluno_dosage, ties.method = "average") - 1) /
+      (n() - 1)
+  ) %>%
+  ungroup()
+
+# Cutoffs: 1/3 (T1->T2 boundary) and 2/3 (T2->T3 boundary)
+cut_low  <- 1/3   # T1 vs T2 boundary
+cut_high <- 2/3   # T2 vs T3 boundary
+
+# Enrollment outcomes to test
+rdd_outcomes <- list(
+  # Label                   variable        description
+  list("mat_inf",   "Pre-School Enrollment (mat_inf)",        "Manipulation channel: inflation here is the concern"),
+  list("mat_fun",   "Middle School Total (mat_fun)",           "Reform channel: students transitioning to middle school"),
+  list("mat_fun8",  "Middle School 8yr (mat_fun8)",            "Shrinks under 8->9 reform"),
+  list("mat_fun9",  "Middle School 9yr (mat_fun9)",            "Grows under 8->9 reform"),
+  list("mat_ini8",  "Middle School Initial Years 8yr (mat_ini8)", "First years of old structure"),
+  list("mat_ini9",  "Middle School Initial Years 9yr (mat_ini9)", "First years of new structure"),
+  list("mat_total", "Total Enrollment (mat_total)",             "Overall enrollment check")
+)
+
+
+## 5.2 Helper: run rdrobust and return tidy tibble ----
+
+run_rdd_boundary <- function(outcome_var, data, cutoff, bw_method = "mserd") {
+  y <- data[[outcome_var]]
+  x <- data$dosage_rank
+  
+  # Drop NAs
+  keep <- !is.na(y) & !is.na(x)
+  y <- y[keep]; x <- x[keep]
+  
+  tryCatch({
+    fit <- rdrobust(y = y, x = x, c = cutoff, bwselect = bw_method)
+    tibble(
+      outcome   = outcome_var,
+      cutoff    = cutoff,
+      estimate  = fit$coef[1, 1],       # conventional
+      se_robust = fit$se[3, 1],         # robust
+      p_robust  = fit$pv[3, 1],
+      ci_low    = fit$ci[3, 1],
+      ci_high   = fit$ci[3, 2],
+      bw_left   = fit$bws[1, 1],
+      bw_right  = fit$bws[1, 2],
+      n_left    = fit$N_h[1],
+      n_right   = fit$N_h[2]
+    )
+  }, error = function(e) {
+    tibble(outcome = outcome_var, cutoff = cutoff,
+           estimate = NA_real_, se_robust = NA_real_, p_robust = NA_real_,
+           ci_low = NA_real_, ci_high = NA_real_,
+           bw_left = NA_real_, bw_right = NA_real_,
+           n_left = NA_integer_, n_right = NA_integer_)
+  })
+}
+
+
+## 5.3 Run RDD at Both Boundaries for All Outcomes ----
+
+rdd_results <- map_dfr(rdd_outcomes, function(o) {
+  var <- o[[1]]
+  bind_rows(
+    run_rdd_boundary(var, df_rdd, cut_low),
+    run_rdd_boundary(var, df_rdd, cut_high)
+  )
+}) %>%
+  left_join(
+    tibble(
+      outcome     = map_chr(rdd_outcomes, 1),
+      label       = map_chr(rdd_outcomes, 2),
+      description = map_chr(rdd_outcomes, 3)
+    ),
+    by = "outcome"
+  ) %>%
+  mutate(
+    cutoff_label = ifelse(cutoff == cut_low, "T1/T2 Boundary", "T2/T3 Boundary"),
+    sig          = case_when(
+      p_robust < 0.01 ~ "p < 0.01",
+      p_robust < 0.05 ~ "p < 0.05",
+      p_robust < 0.10 ~ "p < 0.10",
+      TRUE            ~ "p ≥ 0.10"
+    ),
+    sig_flag = p_robust < 0.10
+  )
+
+print(rdd_results %>% select(label, cutoff_label, estimate, se_robust,
+                             p_robust, ci_low, ci_high, n_left, n_right))
+
+
+## 5.4 Summary Plot: RDD Estimates at Both Boundaries ----
+# The key pattern to look for:
+#   mat_inf significant at T2/T3 -> municipalities just below the T3 threshold
+#     inflated pre-school enrollment to cross into the highest-dosage tercile
+#   mat_fun8 significant (negative) + mat_fun9 significant (positive) ->
+#     this is the reform effect, NOT manipulation — interpret carefully
+#   mat_total significant -> suspicious overall enrollment inflation
+
+p_rdd_boundaries <- rdd_results %>%
+  filter(!is.na(estimate)) %>%
+  mutate(label = fct_reorder(label, estimate)) %>%
+  ggplot(aes(x = estimate, y = label, color = sig_flag, shape = cutoff_label)) +
+  geom_vline(xintercept = 0, color = "grey40", linetype = "dashed") +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.25, linewidth = 0.7,
+                 position = position_dodge(width = 0.5)) +
+  geom_point(size = 3.5,
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~cutoff_label, ncol = 1) +
+  scale_color_manual(
+    values = c("FALSE" = "#0072B2", "TRUE" = "#D62728"),
+    labels = c("p ≥ 0.10 (Smooth)", "p < 0.10 (Jump)"),
+    name   = NULL
+  ) +
+  scale_shape_manual(
+    values = c("T1/T2 Boundary" = 16, "T2/T3 Boundary" = 17),
+    name   = NULL
+  ) +
+  labs(
+    title    = "RDD Estimates: Enrollment Discontinuity at Tercile Boundaries (2006)",
+    subtitle = paste0(
+      "Running variable: normalized within-UF dosage rank\n",
+      "Red = significant at 10% | mat_inf jump at T2/T3 = manipulation concern"
+    ),
+    x = "RD Estimate (students)",
+    y = NULL
+  ) +
+  theme_classic(base_size = 12) +
+  theme(
+    legend.position  = "bottom",
+    strip.background = element_blank(),
+    strip.text       = element_text(face = "bold", size = 12)
+  )
+
+p_rdd_boundaries
+
+
+## 5.5 RD Plots: Visual Inspection at Each Boundary ----
+# rdplot shows the raw data on both sides of the cutoff.
+# Look for a visible jump in the outcome at the cutoff vs. a smooth polynomial fit.
+
+# Focus on the two most relevant variables:
+#   mat_inf  (manipulation concern)
+#   mat_fun9 (reform concern)
+
+make_rdplot <- function(outcome_var, cutoff, title_str, df) {
+  y <- df[[outcome_var]]
+  x <- df$dosage_rank
+  keep <- !is.na(y) & !is.na(x)
+  
+  rdplot(
+    y     = y[keep],
+    x     = x[keep],
+    c     = cutoff,
+    title = title_str,
+    x.label = "Normalized Dosage Rank (within UF)",
+    y.label = outcome_var
+  )
+}
+
+# T1/T2 boundary — pre-school
+make_rdplot("mat_inf",  cut_low,  "Pre-School Enrollment at T1/T2 Boundary (2006)", df_rdd)
+
+# T2/T3 boundary — pre-school (main manipulation concern)
+make_rdplot("mat_inf",  cut_high, "Pre-School Enrollment at T2/T3 Boundary (2006)", df_rdd)
+
+# T2/T3 boundary — middle school 9yr (reform check)
+make_rdplot("mat_fun9", cut_high, "Middle School 9yr Enrollment at T2/T3 Boundary (2006)", df_rdd)
+
+# T2/T3 boundary — middle school 8yr (reform check)
+make_rdplot("mat_fun8", cut_high, "Middle School 8yr Enrollment at T2/T3 Boundary (2006)", df_rdd)
+
+
+## 5.6 Placebo Year Test: Same RDD in 2005 ----
+# Core logic: if the discontinuity in mat_inf at the T2/T3 boundary exists in 2006
+# but NOT in 2005, it emerged specifically in the Fundeb base year — strong evidence
+# of anticipatory manipulation. If it exists in both years, it is a structural
+# feature of high-dosage municipalities (not manipulation).
+#
+# Note: we apply the SAME 2006-defined tercile boundaries to 2005 data.
+# This is intentional — we want to know if 2005 municipalities near the
+# 2006 T2/T3 cut already had more mat_inf, or if the jump is new in 2006.
+
+df_rdd_2005 <- df_main %>%
+  filter(ano == 2005) %>%
+  left_join(
+    df_rdd %>% select(codigo_ibge, dosage_rank),  # 2006 ranks applied to 2005 data
+    by = "codigo_ibge"
+  )
+
+rdd_placebo_2005 <- map_dfr(rdd_outcomes, function(o) {
+  var <- o[[1]]
+  bind_rows(
+    run_rdd_boundary(var, df_rdd_2005, cut_low),
+    run_rdd_boundary(var, df_rdd_2005, cut_high)
+  )
+}) %>%
+  left_join(
+    tibble(outcome = map_chr(rdd_outcomes, 1), label = map_chr(rdd_outcomes, 2)),
+    by = "outcome"
+  ) %>%
+  mutate(
+    cutoff_label = ifelse(cutoff == cut_low, "T1/T2 Boundary", "T2/T3 Boundary"),
+    year         = 2005,
+    sig_flag     = !is.na(p_robust) & p_robust < 0.10
+  )
+
+# Combine 2005 and 2006 for direct comparison
+rdd_combined <- bind_rows(
+  rdd_results %>% mutate(year = 2006),
+  rdd_placebo_2005
+) %>%
+  mutate(year_f = factor(year))
+
+# Plot: 2005 vs 2006 estimates — did the discontinuity emerge in 2006?
+p_rdd_placebo <- rdd_combined %>%
+  filter(!is.na(estimate), cutoff_label == "T2/T3 Boundary") %>%
+  mutate(label = fct_reorder(label, abs(estimate))) %>%
+  ggplot(aes(x = estimate, y = label,
+             color = year_f, shape = year_f)) +
+  geom_vline(xintercept = 0, color = "grey40", linetype = "dashed") +
+  geom_errorbarh(aes(xmin = ci_low, xmax = ci_high),
+                 height = 0.25, linewidth = 0.7,
+                 position = position_dodge(width = 0.5)) +
+  geom_point(size = 3.5,
+             position = position_dodge(width = 0.5)) +
+  scale_color_manual(
+    values = c("2005" = "#0072B2", "2006" = "#D55E00"),
+    name   = "Year"
+  ) +
+  scale_shape_manual(
+    values = c("2005" = 16, "2006" = 17),
+    name   = "Year"
+  ) +
+  labs(
+    title    = "Placebo Test: RDD Estimates at T2/T3 Boundary — 2005 vs 2006",
+    subtitle = paste0(
+      "Same boundary, same running variable applied to both years\n",
+      "A jump in 2006 but not 2005 indicates manipulation in the Fundeb base year"
+    ),
+    x = "RD Estimate (students)",
+    y = NULL
+  ) +
+  theme_classic(base_size = 12) +
+  theme(legend.position = "bottom")
+
+p_rdd_placebo
+
+
+## 5.7 LaTeX Table: RDD Results ----
+
+rdd_results %>%
+  filter(!is.na(estimate)) %>%
+  select(label, cutoff_label, estimate, se_robust, p_robust,
+         ci_low, ci_high, n_left, n_right) %>%
+  mutate(
+    across(c(estimate, se_robust, ci_low, ci_high), ~round(.x, 1)),
+    p_robust = round(p_robust, 3),
+    sig = case_when(
+      p_robust < 0.01 ~ "***",
+      p_robust < 0.05 ~ "**",
+      p_robust < 0.10 ~ "*",
+      TRUE            ~ ""
+    )
+  ) %>%
+  kable(
+    format   = "latex",
+    booktabs = TRUE,
+    caption  = "RDD Estimates: Enrollment Discontinuity at Tercile Boundaries (2006)",
+    label    = "tab:rdd_boundaries",
+    col.names = c("Outcome", "Boundary", "Estimate", "SE (Robust)",
+                  "p-value", "CI Low", "CI High", "N Left", "N Right", "Sig."),
+    align    = c("l","l","r","r","r","r","r","r","r","c")
+  ) %>%
+  kable_styling(latex_options = c("hold_position", "scale_down"), font_size = 9) %>%
+  writeLines(paste0(path_tables, "rdd_enrollment_boundaries.tex"))
+
+
+# ---------------------------------------------------------------------------- #
+# 6. ROBUSTNESS: RECOMPUTE DOSAGE WITH 2005 ENROLLMENT ----
 # ---------------------------------------------------------------------------- #
 
 df_main <- df_main %>%
@@ -672,7 +1009,7 @@ etable(est_base, est_clean,
 
 
 # ---------------------------------------------------------------------------- #
-# 6. COMBINED FIGURE PANELS ----
+# 7. COMBINED FIGURE PANELS ----
 # ---------------------------------------------------------------------------- #
 
 # Panel A: Pre-school share over time + reform decomposition
@@ -713,5 +1050,16 @@ panel_D <- p_transfer_dist | p_pre_trends +
 ggsave(plot = panel_D,
        filename = file.path(path_figures, "panel_D_placebo.pdf"),
        device = "pdf", height = 6, width = 14)
+
+# Panel E: RDD at tercile boundaries
+panel_E <- p_rdd_boundaries / p_rdd_placebo +
+  plot_annotation(
+    title = "E. RDD at Tercile Boundaries: Enrollment Discontinuity Test",
+    theme = theme(plot.title = element_text(face = "bold", size = 14))
+  )
+
+ggsave(plot = panel_E,
+       filename = file.path(path_figures, "panel_E_rdd_boundaries.pdf"),
+       device = "pdf", height = 12, width = 12)
 
 message("All manipulation analysis outputs saved.")
