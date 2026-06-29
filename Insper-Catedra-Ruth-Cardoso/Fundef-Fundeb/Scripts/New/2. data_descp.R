@@ -416,10 +416,12 @@ ggsave(plot = plot_final,
 # ---------------------------------------------------------------------------- #
 
 df_main <- df_main %>% 
+  group_by(codigo_ibge, ano) %>% 
   mutate(
     fun_dif = mat_fun9 - mat_fun8,
     ini_dif = mat_ini9 - mat_ini8
-  )
+  ) %>% 
+  ungroup()
 
 outcomes <- c(
   "fun_dif",
@@ -649,32 +651,6 @@ df_2006_growth %>%
     .groups = "drop"
   )
 
-# Formal test
-chisq.test(table(df_2006_growth$dosage_tercile,
-                 df_2006_growth$anomaly_2006))
 
 # ---------------------------------------------------------------------------- #
 
-# ---------------------------------------------------------------------------- #
-# Manipulation Analysis
-# Focus: Pre-school retention manipulation in 2006 (Fundeb base year)
-#        Confounded by 8->9 year school reform
-#        Placebo transfer comparison within terciles
-# ---------------------------------------------------------------------------- #
-
-library(tidyverse)
-library(fixest)
-library(rdrobust)
-library(rddensity)
-library(cobalt)
-library(patchwork)
-library(knitr)
-library(kableExtra)
-
-options(scipen = 999)
-
-# ---- Paths ---- #
-path_figures  <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Figures/Manipulation/"
-path_tables   <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Tables/Manipulation/"
-
-#
