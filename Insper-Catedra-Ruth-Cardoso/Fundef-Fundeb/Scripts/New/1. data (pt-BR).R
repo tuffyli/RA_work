@@ -383,8 +383,9 @@ df_nota <- left_join(df, df_ideb,
 rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 
 
+# ---------------------------------------------------------------------------- #
 # 4. Transferencias ----
-
+# ---------------------------------------------------------------------------- #
 ## 4.1 Notas do SAEB + Taxa de Aprovação (faltantes):----
 
 # Como o IDEB foi criado em 2007, as notas do Saeb e as Taxas de Aprovação só estão disponíveis dessa forma para 2005 em diante.
@@ -394,8 +395,9 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 
 
 
-
+# ---------------------------------------------------------------------------- #
 ## 4.2 Transferências do Fundeb: ----
+# ---------------------------------------------------------------------------- #
 
 # rm(list =ls())
 # siope <- read.csv2("C:/Users/giovannioz/Downloads/finbraRREO_MUNEST_Previsaoatualizadaexercicio/finbraRREO.csv", fileEncoding = "latin1", skip = 5) %>%
@@ -432,8 +434,9 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 # 
 
 
+# ---------------------------------------------------------------------------- #
 ### 4.2.1 Baixando as planilhas pelo Portal de Dados Abertos do FNDE (RODAR UMA VEZ SÓ): ----
-
+# ---------------------------------------------------------------------------- #
 
 # # Pasta onde salvar os arquivos
 # pasta_destino <- "C:/Users/giovannioz/OneDrive - Insper/Av. Novo Fundeb/Dados/SIOPE"
@@ -489,9 +492,9 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 # log_erros <- bind_rows(falhas)
 
 
-
+# ---------------------------------------------------------------------------- #
 ### 4.2.2 Junta os dataframes de UF por ano e criar arquivos ano a ano (RODAR UMA VEZ SÓ): ----
-
+# ---------------------------------------------------------------------------- #
 # for (ano in 2000:2024) {
 #   
 #   lista_ufs <- list()
@@ -540,8 +543,9 @@ rm(df_apr, df_saeb, df_ideb, ciclo, ciclos)
 # 
 # rm(list = ls(pattern = "^dados_2"))
 
-
+# ---------------------------------------------------------------------------- #
 ### 4.2.3 Importar todos os anos para uma lista: ----
+# ---------------------------------------------------------------------------- #
 
 pasta_anos <- "Z:/Giovanni Zanetti/Av. Novo Fundeb/Dados/SIOPE/Anos"
 
@@ -621,8 +625,10 @@ for (ano in 2005:2024) {
 }
 
 
-
+# ---------------------------------------------------------------------------- #
 ### 4.2.4 Manipulação - Criar "Transferências Líquidas"----
+# ---------------------------------------------------------------------------- #
+
 # Aqui, estamos olhando apenas as receitas realizadas.
 
 # As transferências líquidas do FUNDEF/FUNDEB podem ser calculadas como:
@@ -718,8 +724,9 @@ for (ano in 2005:2024) {
 #   clean_names()
 
 
-
+# ---------------------------------------------------------------------------- #
 ### 4.2.5 Deflacionar:----
+# ---------------------------------------------------------------------------- #
 
 # ipca <- read_excel("C:/Users/giovannioz/OneDrive - Insper/Av. Novo Fundeb/Dados/IPCA_acumulado_ano.xlsx", skip = 1)
 # colnames(ipca) = c("ano", "ipca")
@@ -747,9 +754,9 @@ for (ano in 2005:2024) {
 # rm(ipca)
 
 
-
+# ---------------------------------------------------------------------------- #
 ### 4.2.6 Juntar tudo e exportar:----
-
+# ---------------------------------------------------------------------------- #
 
 # colnames(transf)
 # colnames(transf) <- c("ano", "tipo", "uf", "cod_uf", "nome", "codigo_ibge_n", "principal", "complementacao", "deducoes", 'transf_liquida')
@@ -775,11 +782,12 @@ for (ano in 2005:2024) {
 
 
 
-
+# ----------------------------------------------------------------------------- #
 # 5. Simulação ----
 ## 5.1. Agreg Mun ----
-
-### 5.1) Censo Escolar de 2006 (deixar comentado):----
+# ----------------------------------------------------------------------------- #
+### 5.1.1 Censo Escolar de 2006 (deixar comentado):----
+# ----------------------------------------------------------------------------- #
 
 censo <- read_delim("Z:/Arquivos IFB/Censo Escolar/Bases Agregadas/2006/microdados_educação_básica_2006/DADOS/CENSOESC_2006.CSV", delim = "|",
                              col_types = cols(.default = col_double(),
@@ -837,7 +845,9 @@ censo <- read_delim("Z:/Arquivos IFB/Censo Escolar/Bases Agregadas/2006/microdad
                                               NEF11I = col_double(),
                                               NEF11J = col_double()))
 
-### 3.1.1) Agregação das matrículas de cada ciclo por ESCOLA: ----
+# ---------------------------------------------------------------------------- #
+### 5.1.2 Agregação das matrículas de cada ciclo por ESCOLA: ----
+# ---------------------------------------------------------------------------- #
 mat_2006 <- censo %>%
   select(c(1:9,
 
@@ -937,8 +947,10 @@ glimpse(mat_2006_munic %>% select(CODMUNIC, mat_reg_in, mat_reg_fin, mat_tot_esp
 saveRDS(mat_2006_munic, file = "Z:/Tuffy/Paper - Educ/Dados/censo_2006_filtrado_mun.rds")
 
 
+# ---------------------------------------------------------------------------- #
 ## 5.2 Sim. Dados Censo (antigas) ----
 ### 5.2.1 Coef de distribuição ----
+# ---------------------------------------------------------------------------- #
 
 #' Fatores de ponderação do FUNDEF podem ser decompostos em:
 #' FD1 <- 1.00 para 1 a 4 série regular
@@ -1015,7 +1027,9 @@ mat_cd <- mat_cd %>%
   add_label("mat_tot_esp", "Mat. Especiais total (CENSO)") %>% 
   add_label("TA_esp", "Total Mat. Especiais do UF (CENSO)")
 
+# ---------------------------------------------------------------------------- #
 ## 5.3 Matric. Oficiais do FUNDEF ----
+# ---------------------------------------------------------------------------- #
 
 lista_ufs <- list()
 
@@ -1062,7 +1076,9 @@ dis_fed <- lista_ufs[["df"]] %>%
 lista_ufs[["df"]] <- dis_fed
 rm(dis_fed)
 
+# ---------------------------------------------------------------------------- #
 ## 5.4 Unico DF----
+# ---------------------------------------------------------------------------- #
 
 df_fnde <- data.frame()
 
@@ -1107,7 +1123,9 @@ test <- df_fnde %>%
 
 rm(test)
 
+# ---------------------------------------------------------------------------- #
 ### 5.4.1 Calculando a proporção de alunos em cada ciclo pelos dados do Censo: ----
+# ---------------------------------------------------------------------------- #
 
 # Mais para frente, precisaremos dividir as matrículas do Ensino Integral entre os Anos Iniciais e Anos Finais.
 # Como alguns municípios só tem ensino integral, é impossível calcular a proporção de alunos em cada ciclo pelas
@@ -1129,9 +1147,10 @@ mat_cd <- mat_cd %>%
   add_label("prop_5_8_mun", "Prop. de Mat. Finais (CENSO)")
 
 
+# ---------------------------------------------------------------------------- #
 ### 5.4.2 Matríc. indígenas e especiais pelo Censo: ----
-
 #### 5.4.2.1 Especiais: ----
+# ---------------------------------------------------------------------------- #
 
 df_fnde <- df_fnde %>%
   mutate(chave = paste(nome, uf, sep = "_"))
@@ -1746,9 +1765,15 @@ data <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf.rds") %>%
 #Total enrollments
 df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
   group_by(codmun, ano) %>% 
-  mutate( 
-    mat_reg_fun9 = mat_reg_in_9 + mat_reg_fin_9,
-    mat_reg_fun8 = mat_reg_in_8 + mat_reg_fin_8,
+  
+mutate( 
+    mat_reg_fun9 = ifelse( !is.na(reg_in_9) & !is.na(reg_fin_9),
+                           reg_in_9 + reg_fin_9,
+                           NA),
+    
+    mat_reg_fun8 = ifelse( !is.na(reg_in_8) & !is.na(reg_fin_8),
+                           reg_in_8 + reg_fin_8,
+                           NA)
     ) %>% 
   summarise(
     mat_fun = sum(ef_tot, na.rm = T),
@@ -1762,11 +1787,11 @@ df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>
     mat_fun9 = sum(mat_reg_fun9, na.rm = T),
     mat_fun8 = sum(mat_reg_fun8, na.rm = T),
     
-    mat_ini9 = sum(mat_reg_in_9, na.rm = T),
-    mat_ini8 = sum(mat_reg_in_8, na.rm = T),
+    mat_ini9 = sum(reg_in_9, na.rm = T),
+    mat_ini8 = sum(reg_in_8, na.rm = T),
     
-    mat_fin9 = sum(mat_reg_fin_9, na.rm = T),
-    mat_fin8 = sum(mat_reg_fin_8, na.rm = T),
+    mat_fin9 = sum(reg_fin_9, na.rm = T),
+    mat_fin8 = sum(reg_fin_8, na.rm = T),
     
     .groups = "drop") %>% 
   mutate(codmun = codmun %/% 10
