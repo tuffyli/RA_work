@@ -84,7 +84,9 @@ path_list <- c("Z:/Arquivos IFB/Censo Escolar/MicrodCenso Escolar1998/DADOS/DADO
 )
 
 #Loop for creating a database regarding each schools characteristics
-#1. Loop -----
+# ---------------------------------------------------------------------------- #
+#1. Loop School Infra + teachers -----
+# ---------------------------------------------------------------------------- #
 for(i in c(1998:2018)){
   
   gc()
@@ -92,10 +94,23 @@ for(i in c(1998:2018)){
   
   ini <- Sys.time()
   
-  j <- i - 2004 #path index
+  j <- i - 1997 #path index
   
-  ##1.1 2005-2006 years ----
-  if (i <= 2006){
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  {
+    
+    
+    
+  } else if (i %in% c(2005,2006)) {
+    ##1.1 2005-2006 years ----
     
     temp <- read_dta(path_list[j]) %>%
       select(c(1:24,
@@ -655,7 +670,8 @@ path_list <- c("Z:/Arquivos IFB/Censo Escolar/MicrodCenso Escolar1998/DADOS/DADO
                "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/Dados RDS/ts_censo_basico_situacao_2009.rds",
                "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/Dados RDS/ts_censo_basico_situacao_2010.rds",
                "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/Dados RDS/ts_censo_basico_situacao_2011.rds",
-               "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/Dados RDS/ts_censo_basico_situacao_2012.rds",                          "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/Dados RDS/ts_censo_basico_situacao_2013.rds",
+               "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/Dados RDS/ts_censo_basico_situacao_2012.rds",
+               "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/Dados RDS/ts_censo_basico_situacao_2013.rds",
                "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/Dados RDS/ts_censo_basico_situacao_2014.rds",
                "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/Dados RDS/ts_censo_basico_situacao_2015.rds",
                "Z:/Arquivos IFB/Censo Escolar/Situação do Aluno/Dados RDS/ts_censo_basico_situacao_2016.rds",
@@ -666,7 +682,7 @@ path_list <- c("Z:/Arquivos IFB/Censo Escolar/MicrodCenso Escolar1998/DADOS/DADO
                "Z:/Arquivos IFB/Censo Escolar/MicrodCenso Escolar2021/2021/dados/microdados_ed_basica_2021.csv"
 )
 
-for (i in c(2005:2005)) {
+for (i in c(1998:2018)) {
   
   
   gc()
@@ -677,19 +693,25 @@ for (i in c(2005:2005)) {
   j <- i - 1997 #path index
   
   
+  #Total running time:
+  if (j == 1){
+    main_time <- Sys.time()
+  }
+  
+  
   if (i < 2005) {
   ## 3.1 1998 - 2004 ----
     
     ### 3.1.1 1998 - 2002 ----
     if (i < 2003) {
-        ##### 3.1.1.1 1998 - 1999----
-        if ( i < 2000 ) {
+        ##### 3.1.1.1 1998 ----
+        if ( i == 1998 ) {
           temp <- read_dta(path_list[j])
           
           temp <- temp %>% 
             select(c(1:24,
                      
-                     #For the Enrollments
+                     # --- Enrollments --- #
                      DEF11C:DEF11F, NEF11C:NEF11F,      # EF iniciais (8 anos)
                      DEF11G:DEF11J, NEF11G:NEF11J,      # EF finais (8 anos)
                      VEE1431:VEE1435,                   # Alunos de educação especial do EF por ano de nascimento
@@ -697,12 +719,15 @@ for (i in c(2005:2005)) {
                      
                      DEM118, DEM119, DEM11A, DEM11B, DEM11C, #Highschool
                      NEM118, NEM119, NEM11A, NEM11B, NEM11C,
-                     DPE119, NPE119,                         #          (N) - Daycare
-                     DPE11D, NPE11D,                         #          (D) - Preschool
+                     DPE119, NPE119,                         #(N) - Daycare
+                     DPE11D, NPE11D,                         #(D) - Preschool
                      VES731:VES756,                         #EJA
+                     
+                     # --- Teachers --- #
+                     
+                     # --- Infra --- #
             )) %>%
-            filter(DEP == "Municipal", # Removes Federal and Private Schools
-                   CODFUNC == "Ativo") %>%  # Removes deactivated schools
+            filter(CODFUNC == "Ativo") %>%  # Removes deactivated schools
             mutate(
 
               
@@ -726,39 +751,39 @@ for (i in c(2005:2005)) {
               reg_fin_8 = rowSums(across(c(DEF11G:DEF11J, NEF11G:NEF11J)), na.rm = TRUE)# in 8 anos
               
             ) %>%
-            select(c(1:9,53:65, ef_tot:reg_fin_8)) 
+            select(c(1:9,DEP,53:65, ef_tot:reg_fin_8)) 
             
-        } else { 
-          ### 3.1.1.2 2000 - 2002 ----
-              
+        } else if (i == 1999) {
+          ### 3.1.1.2 1999 ----
           
-          temp <- read_dta(path_list[j]) #%>% 
-          select(c(1:24,
-                   
-                   #For the Enrollments
-                   DEF11C:DEF11F, NEF11C:NEF11F,      # EF iniciais (8 anos)
-                   DEF11G:DEF11J, NEF11G:NEF11J,      # EF finais (8 anos)
-                   VEE1431:VEE1437,                   # Alunos de educação especial do EF por ano de nascimento
-                   
-                   
-                   DEM118, DEM119, DEM11A, DEM11B, DEM11C, #Highschool
-                   NEM118, NEM119, NEM11A, NEM11B, NEM11C,
-                   DPE119, NPE119,                         #          (N) - Daycare
-                   DPE11D, NPE11D,                         #          (D) - Preschool
-                   VEE1451:VEE1457                        #EJA
-          )) %>%
-            filter(DEP == "Municipal", # Removes Federal and Private Schools
-                   CODFUNC == "Ativo") %>%  # Removes deactivated schools
+          temp <- read_dta(path_list[j])
+          
+          temp <- temp %>% 
+            select(c(1:24,
+                     
+                     #For the Enrollments
+                     DEF11C:DEF11F, NEF11C:NEF11F,      # EF iniciais (8 anos)
+                     DEF11G:DEF11J, NEF11G:NEF11J,      # EF finais (8 anos)
+                     VEE1431:VEE1435,                   # Alunos de educação especial do EF por ano de nascimento
+                     
+                     
+                     DEM118, DEM119, DEM11A, DEM11B, DEM11C, #Highschool
+                     NEM118, NEM119, NEM11A, NEM11B, NEM11C,
+                     DPE119, NPE119,                         #          (N) - Daycare
+                     DPE11D, NPE11D,                         #          (D) - Preschool
+                     VES761:VES7C6                         #EJA
+            )) %>%
+            filter(CODFUNC == "Ativo") %>%  # Removes deactivated schools
             mutate(
-             
               
-              reg_in = rowSums(across(c(DEF11C:VEF1715)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
-              reg_fin = rowSums(across(c(DEF11G:VEF1719)), na.rm = TRUE),
+              
+              reg_in = rowSums(across(c(DEF11C:DEF11F, NEF11C:NEF11F)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
+              reg_fin = rowSums(across(c(DEF11G:DEF11J, NEF11G:NEF11J)), na.rm = TRUE),
               
               ef_tot = reg_in + reg_fin,
               em_tot = rowSums(across(c(DEM118:NEM11C)), na.rm = TRUE),
               ed_inf_tot = rowSums(across(c(DPE119:NPE11D)), na.rm = TRUE),
-              eja_tot = rowSums(across(c(VEE1451:VEE1457)), na.rm = TRUE),
+              eja_tot = rowSums(across(c(VES761:VES7C6)), na.rm = TRUE),
               day_tot = rowSums(across(c(NPE119,NPE11D)), na.rm = TRUE),
               pre_tot = rowSums(across(c(DPE119,DPE11D)), na.rm = TRUE),
               esp1 = rowSums(across(c(VEE1431:VEE1435)), na.rm = TRUE),
@@ -772,21 +797,86 @@ for (i in c(2005:2005)) {
               reg_fin_8 = rowSums(across(c(DEF11G:DEF11J, NEF11G:NEF11J)), na.rm = TRUE)# in 8 anos
               
             ) %>%
-            select(c(1:9,53:65, ef_tot:reg_fin_8)) 
+            select(c(1:9,DEP,53:65, ef_tot:reg_fin_8))
+          
+        
+      } else { 
+          #### 3.1.1.2 2000 - 2002 ----
+              
+          
+          temp <- read_dta(path_list[j]) #%>% 
+          
+          temp <- temp %>% select(c(1:24,
+                   
+                   #For the Enrollments
+                   DEF11C:DEF11F, NEF11C:NEF11F,      # EF iniciais (8 anos)
+                   DEF11G:DEF11J, NEF11G:NEF11J,      # EF finais (8 anos)
+                   VEE1431:VEE1437,                   # Alunos de educação especial do EF por ano de nascimento
+                   
+                   
+                   DEM118, DEM119, DEM11A, DEM11B, DEM11C, #Highschool
+                   NEM118, NEM119, NEM11A, NEM11B, NEM11C,
+                   DPE119, NPE119,                         #          (N) - Daycare
+                   DPE11D, NPE11D,                         #          (D) - Preschool
+                   VES761:VES813                        #EJA
+          )) %>%
+            filter(CODFUNC == "Ativo") %>%  # Removes deactivated schools
+            mutate(
+             
+              
+              reg_in = rowSums(across(c(DEF11C:DEF11F, NEF11C:NEF11F)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
+              reg_fin = rowSums(across(c(DEF11G:DEF11J, NEF11G:NEF11J)), na.rm = TRUE),
+              
+              ef_tot = reg_in + reg_fin,
+              em_tot = rowSums(across(c(DEM118:NEM11C)), na.rm = TRUE),
+              ed_inf_tot = rowSums(across(c(DPE119:NPE11D)), na.rm = TRUE),
+              eja_tot = rowSums(across(c(VES761:VES813)), na.rm = TRUE),
+              day_tot = rowSums(across(c(NPE119,NPE11D)), na.rm = TRUE),
+              pre_tot = rowSums(across(c(DPE119,DPE11D)), na.rm = TRUE),
+              esp1 = rowSums(across(c(VEE1431:VEE1437)), na.rm = TRUE),
+              
+              esp_tot = pmax(esp1), #extracts maximum value between both groups
+              
+              reg_in_9 = 0, #in 9 anos
+              reg_in_8 = rowSums(across(c(DEF11C:DEF11F, NEF11C:NEF11F)), na.rm = TRUE),# in 8 anos
+              
+              reg_fin_9 = 0, #fin 9 anos
+              reg_fin_8 = rowSums(across(c(DEF11G:DEF11J, NEF11G:NEF11J)), na.rm = TRUE)# in 8 anos
+              
+            ) %>%
+            select(c(1:9,DEP, 53:65, ef_tot:reg_fin_8)) 
           
             }
             
-
+      # Final adjusted base
+      
             temp <- temp %>%
-            rename(
-              ano = ANO,
-              school = MASCARA,
-              codmun = CODMUNIC
-            ) %>%
-            select(ano, school, codmun, ef_tot:pre_tot, esp_tot, reg_in_9:reg_fin_8) %>%
-              mutate( uf = as.numeric(codmun) %/% 100000) 
+              rename(
+                ano = ANO,
+                school = MASCARA,
+                codmunic = CODMUNIC,
+                dep_adm = DEP
+              ) %>%
+              select(ano, school, codmunic, dep_adm, ef_tot:pre_tot, esp_tot, reg_in_9:reg_fin_8) %>%
+              mutate(
+                codmun = str_c(str_sub(codmunic, 1,2),
+                               str_sub(codmunic, 8,12)),
+                
+                uf = as.numeric(codmun) %/% 100000
+              ) %>% 
+              select(-codmunic) 
             
 
+            # ---- Comparable Area (1998 - 1999) ---- #
+            if (i < 2000){
+              
+              #Openning comparable area
+              
+              amcs <- read_dta("Z:/Tuffy/Paper - Brasil/amcs.dta")
+              
+              
+              rm(amcs)
+            }
       
       
       } else if (i == 2003) {
@@ -809,29 +899,17 @@ for (i in c(2005:2005)) {
                  NEM118, NEM119, NEM11A, NEM11B, NEM11C,
                  DPE119, NPE119,                         #          (N) - Daycare
                  DPE11D, NPE11D,                         #          (D) - Preschool
-                 VEE1451:VEE1457                         #EJA
+                 DES1017:NES101A                         #EJA
         )) %>%
-        filter(DEP == "Municipal", # Removes Federal and Private Schools
-               CODFUNC == "Ativo") %>%  # Removes deactivated schools
+        filter(CODFUNC == "Ativo") %>%  # Removes deactivated schools
         mutate(
-          #Education levels
-          kinder = ifelse(NIVELCRE == "s" | NIVELPRE == "s" , 1, 0),
-          elementary = ifelse(NIV_F1A4_8 == "s" | NIV_F5A8_8 == "s" | NIV_F9FIM == "s" |
-                                NIV_F9INI == "s", 1, 0),
-          high = ifelse(NIVELMED == "s", 1, 0),
-          inclusion = ifelse(ESP_EXCL == "s" | ESP_T_ES == "s" | ENS_INCL == "s",
-                             1, 0),
-          
-          eja = ifelse(SUPL_AVA == "s" |
-                         SUPL_SAVA == "s", 1, 0),
-          
           reg_in = rowSums(across(c(DEF11C:VEF1715)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
           reg_fin = rowSums(across(c(DEF11G:VEF1719)), na.rm = TRUE),
           
           ef_tot = reg_in + reg_fin,
           em_tot = rowSums(across(c(DEM118:NEM11C)), na.rm = TRUE),
           ed_inf_tot = rowSums(across(c(DPE119:NPE11D)), na.rm = TRUE),
-          eja_tot = rowSums(across(c(DES101F:NES101A)), na.rm = TRUE),
+          eja_tot = rowSums(across(c(DES1017:NES101A)), na.rm = TRUE),
           day_tot = rowSums(across(c(NPE119,NPE11D)), na.rm = TRUE),
           pre_tot = rowSums(across(c(DPE119,DPE11D)), na.rm = TRUE),
           esp1 = rowSums(across(c(VEE1431:VEE1437)), na.rm = TRUE),
@@ -845,13 +923,14 @@ for (i in c(2005:2005)) {
           reg_fin_8 = rowSums(across(c(DEF11G:DEF11J, NEF11G:NEF11J)), na.rm = TRUE)# in 8 anos
           
         ) %>%
-        select(c(1:9,53:65, ef_tot:reg_fin_8)) %>%
+        select(c(1:9,DEP,53:65, ef_tot:reg_fin_8)) %>%
         rename(
           ano = ANO,
           school = MASCARA,
-          codmunic = CODMUNIC
+          codmunic = CODMUNIC,
+          dep_adm = DEP
         ) %>%
-        select(ano, school, codmunic, ef_tot:pre_tot, esp_tot, reg_in_9:reg_fin_8) %>%
+        select(ano, school, codmunic, dep_adm, ef_tot:pre_tot, esp_tot, reg_in_9:reg_fin_8) %>%
         mutate(
           codmun = str_c(str_sub(codmunic, 1,2),
                          str_sub(codmunic, 8,12)),
@@ -881,10 +960,9 @@ for (i in c(2005:2005)) {
                  NEM118, NEM119, NEM11A, NEM11B, NEM11C,
                  DPE119, NPE119,                         #          (N) - Daycare
                  DPE11D, NPE11D,                         #          (D) - Preschool
-                 VEE1451:VEE1457                         #EJA
+                 VES762:VES7C4                         #EJA
         )) %>%
-        filter(DEP == "Municipal", # Removes Federal and Private Schools
-               CODFUNC == "Ativo") %>%  # Removes deactivated schools
+        filter(CODFUNC == "Ativo") %>%  # Removes deactivated schools
         mutate(
           
           reg_in = rowSums(across(c(DEF11C:NE9F11G)), na.rm = TRUE), # Contando EF de 8 e 9 anos!
@@ -893,7 +971,7 @@ for (i in c(2005:2005)) {
           ef_tot = reg_in + reg_fin,
           em_tot = rowSums(across(c(DEM118:NEM11C)), na.rm = TRUE),
           ed_inf_tot = rowSums(across(c(DPE119:NPE11D)), na.rm = TRUE),
-          eja_tot = rowSums(across(c(VEE1451:VEE1457)), na.rm = TRUE),
+          eja_tot = rowSums(across(c(VES762:VES7C4)), na.rm = TRUE),
           day_tot = rowSums(across(c(NPE119,NPE11D)), na.rm = TRUE),
           pre_tot = rowSums(across(c(DPE119,DPE11D)), na.rm = TRUE),
           esp1 = rowSums(across(c(VEE1431:VEE1437)), na.rm = TRUE),
@@ -907,13 +985,14 @@ for (i in c(2005:2005)) {
           reg_fin_8 = rowSums(across(c(DEF11G:DEF11J, NEF11G:NEF11J)), na.rm = TRUE)# in 8 anos
           
         ) %>%
-        select(c(1:9,53:65, ef_tot:reg_fin_8)) %>%
+        select(c(1:9,DEP,53:65, ef_tot:reg_fin_8)) %>%
         rename(
           ano = ANO,
           school = MASCARA,
-          codmunic = CODMUNIC
+          codmunic = CODMUNIC,
+          dep_adm = DEP
         ) %>%
-        select(ano, school, codmunic, ef_tot:pre_tot, esp_tot, reg_in_9:reg_fin_8) %>%
+        select(ano, school, codmunic, dep_adm, ef_tot:pre_tot, esp_tot, reg_in_9:reg_fin_8) %>%
         mutate(
           codmun = str_c(str_sub(codmunic, 1,2),
                          str_sub(codmunic, 8,12)),
@@ -968,8 +1047,7 @@ for (i in c(2005:2005)) {
                DPE11D, NPE11D,                         #          (D) - Preschool
                DES101F:DES101A, NES101F:NES101A        #EJA
       )) %>%
-      filter(DEP == "Municipal", # Removes Federal and Private Schools
-             CODFUNC == "Ativo") %>%  # Removes deactivated schools
+      filter(CODFUNC == "Ativo") %>%  # Removes deactivated schools
       mutate(
         CODMUNIC = as.numeric(str_c( #concatenates
           str_sub(as.character(CODMUNIC), 1, 2), #only first two strings
@@ -1025,13 +1103,14 @@ for (i in c(2005:2005)) {
         reg_fin_8 = rowSums(across(c(DEF11G:DEF11J, NEF11G:NEF11J)), na.rm = TRUE)# in 8 anos
         
       ) %>%
-      select(c(1:9,53:65, ef_tot:reg_fin_8)) %>%
+      select(c(1:9,DEP, 53:65, ef_tot:reg_fin_8)) %>%
       rename(
         ano = ANO,
         school = MASCARA,
-        codmun = CODMUNIC
+        codmun = CODMUNIC,
+        dep_adm = DEP
       ) %>%
-      select(ano, school, codmun, ef_tot:pre_tot, esp_tot, reg_in_9:reg_fin_8) %>%
+      select(ano, school, codmun, dep_adm, ef_tot:pre_tot, esp_tot, reg_in_9:reg_fin_8) %>%
       mutate( uf = as.numeric(codmun) %/% 100000) 
     
     
@@ -1052,7 +1131,6 @@ for (i in c(2005:2005)) {
                co_entidade,
                in_necessidade_especial
         ) %>% 
-        filter(tp_dependencia == 3) %>% 
         rename(in_especial_exclusiva = in_necessidade_especial) #This is a abandoned variable
       
       gc()
@@ -1071,8 +1149,7 @@ for (i in c(2005:2005)) {
                tp_dependencia,
                co_entidade,
                in_especial_exclusiva
-        ) %>% 
-        filter(tp_dependencia == 3)
+        ) 
       
       message("Openned data base for: ", i)
       
@@ -1098,7 +1175,7 @@ for (i in c(2005:2005)) {
         reg_fin_9 = ifelse(tp_etapa_ensino %in% c(19,20,21,41), 1, 0) #End 9y
         
       ) %>% 
-      group_by(co_uf, co_municipio, co_entidade, nu_ano_censo) %>% 
+      group_by(co_uf, co_municipio, co_entidade, nu_ano_censo, tp_dependencia) %>% 
       summarise(
         ef_tot = sum(ef, na.rm = T),
         esp_tot = sum(as.numeric(in_especial_exclusiva), 1, 0),
@@ -1118,6 +1195,7 @@ for (i in c(2005:2005)) {
         .groups = "drop"
       ) %>% 
       rename(
+        dep_adm = tp_dependencia,
         ano = nu_ano_censo,
         school = co_entidade, 
         codmun = co_municipio,
@@ -1153,13 +1231,32 @@ for (i in c(2005:2005)) {
   message("Total time elapsed: ",mins," mins e ", secs, " s")
   message("---------------------------------------------")
   
+  
+  # Total Loop time
+  if (j == 20) {
+    
+    fim <- Sys.time()
+    
+    
+    delta <- difftime(fim, main_time, units = "secs")
+    mins <- floor(as.numeric(delta) / 60)
+    secs <- round(as.numeric(delta) %% 60)
+    
+    message("------------------------------------------------------------------")
+    message("Total Loop time: ",mins," mins and ", secs, " s")
+    message("------------------------------------------------------------------")
+    
+    rm(main_time)
+    
+  }
+  
   rm(temp, delta, ini, fim, temp, mins, secs, i, j)
   
   gc()
   
   }
 
-saveRDS(data,"Z:/Tuffy/Paper - Educ/Dados/matriculas_por_escola.rds")
+saveRDS(data,"Z:/Tuffy/Paper - Educ/Dados/intermediate/matriculas_por_escola.rds")
 
 # ---------------------------------------------------------------------------- #
 #4. Merging the two datasets ----
@@ -1396,6 +1493,7 @@ for (i in c(2005:2018)) {
   message("---------------------------------------------")
   message("Total time elapsed: ",mins," mins e ", secs, " s")
   message("---------------------------------------------")
+  
   
   rm(temp, delta, ini, fim, temp, mins, secs, i, j)
   
