@@ -128,13 +128,32 @@ for(i in c(1998:2018)){
                228:241,  #Teacher's especiality
                PARQ_INF, #Playground
                QUAD_DES, #Court
-               QUAD_COB  #Covered court
+               QUAD_COB, #Covered court
+               GIN_ESP,  #Sport Ginasium
                
+               # SANI_PRE, #Adapt elementary toilet
+               # FRALD,    #Dipper changers
+               
+               ENER_INE, #Non-existing energy
+               ENER_PUB, #Pub. Infra. energy
+               AGUA_INE, #Non-existing water
+               AGUA_PUB, #Pub. Infra. water
+               ESG_INEX,  #Non-existing sewage
+               ESG_PUB,  #Pub. Infra. water
+               
+               # -- Teacher Education -- #
+               VDG1CA:VDG1C3, #N° Teachers (Day, Kinder, Middle)
+               
+               VDG1E5, VDG1E6, VDG1F5, VDG1F6, #Creche with College
+               VDG125, VDG126, VDG135, VDG136, #Pre with college
+               VDG155, VDG156, VDG165, VDG166, #Fund(8)
+               VDG155, VDG156, VDG165, VDG1M6  #Fund(9)
                
       )
       ) %>% 
-      filter(DEP == "Municipal", # Removes Federal and Private Schools
-             CODFUNC == "Ativo") %>%  # Removes deactivated schools
+      filter(CODFUNC == "Ativo")  # Removes deactivated schools
+      
+    temp <- temp %>% 
       mutate(
         CODMUNIC = as.numeric(str_c( #concatenates
           str_sub(as.character(CODMUNIC), 1, 2), #only first two strings
@@ -142,42 +161,67 @@ for(i in c(1998:2018)){
         
         #School characteristics variables
         classroom = as.numeric(PERMANEN),
+        
         teach_room = ifelse(SAL_DE_P == "s", 1, 0),
+        
         lab_dummy = ifelse(LAB_INFO == "s" | LAB_CIEN == "s" | LAB_OUTR == "s",
                            1, 0),
+        
         lib_dummy = ifelse(BIBLIO == "s", 1, 0),
-        play_area = ifelse(PARQ_INF == "s"| QUAD_DES == "s" | QUAD_COB == "s",
+        
+        play_area = ifelse(PARQ_INF == "s"| QUAD_DES == "s" |
+                             QUAD_COB == "s" | GIN_ESP == "s",
                            1, 0),
+        
         lunch = ifelse(MERE_ESC == "s", 1, 0),
+        
         employee = as.numeric(FUNCION),
+        
+        # diaper = ifelse(FRALD == "s", 1, 0), #Diaper changing room
+        # 
+        # toilet_adapt = ifelse(SANI_PRE == "s", 1, 0), #Toilet adapted for Preschool
+        
+        # --- Teachers --- #
+        
         teacher = as.numeric(PROFESS),
+        # aux_cre = as.numeric(AUX_CRECHE),
+        # aux_pre = as.numeric(AUX_PRE),
         
-        #Education levels
-        kinder = ifelse(NIVELCRE == "s" | NIVELPRE == "s" , 1, 0),
-        elementary = ifelse(NIV_F1A4_8 == "s" | NIV_F5A8_8 == "s" | NIV_F9FIM == "s" |
-                              NIV_F9INI == "s", 1, 0),
+        t_fund  = as.numeric(VDG1C3), #N° at Middle
+        t_pree  = as.numeric(VDG1C1), #N° at Preschool
+        t_crec  = as.numeric(VDG1CA), #N³ at Daycare
         
-        daycare = ifelse(NIVELCRE == "s", 1, 0),
-        preschool = ifelse(NIVELPRE == "s", 1, 0),
+        ## Education
+        t_crec_educ = sum(VDG1E5 + VDG1E6 + VDG1F5 + VDG1F6, na.rm = T), #College in Daycare
+        t_pree_educ = sum(VDG125 + VDG126 + VDG135 + VDG136, na.rm = T), #College in Preschool
+        t_fund_educ = sum(VDG155 + VDG156 + VDG165 + VDG166,  #Fund(8)
+                          VDG155 + VDG156 + VDG165 + VDG1M6,  #Fund(9)
+                          na.rm = T),                         #Middle (8 and 9 years)
+
         
+        # --- Infra --- #
         
-        high = ifelse(NIVELMED == "s", 1, 0),
-        inclusion = ifelse(ESP_EXCL == "s" | ESP_T_ES == "s" | ENS_INCL == "s",
-                           1, 0)
+        water_non = ifelse(AGUA_INE == "s", 1, 0), #Non-access to Water
+        water_dummy = ifelse(AGUA_PUB == "s", 1, 0), #Public Water system
         
-        # eja = ifelse(SUPL_AVA == "s" |
-        #                SUPL_SAVA == "s", 1, 0),
+        sewage_non = ifelse(ESG_INEX == "s", 1, 0), #Non-access to sewage
+        sewage_dummy = ifelse(ESG_PUB == "s", 1, 0), #Public sewage system
         
+        energy_non = ifelse(ENER_INE == "s", 1, 0), #Non-access to eletric energy
+        energy_dummy = ifelse(ENER_PUB == "s", 1, 0), #Public energy
         
+        affil_mun  = NA,
+        affiliated = NA #No information on affiliation
         
       ) %>% 
-      select(c(1:9,53:66)) %>% 
+      select(c(1:9,classroom:affiliated)) %>% 
       rename(
         ano = ANO,
+        dep_adm = DEP,
         school = MASCARA,
         codmun = CODMUNIC
       ) %>% 
-      select(-c(UF, SIGLA, DEP, LOC, CODFUNC, MUNIC, teacher)) %>% 
+      select(-c(UF, SIGLA, LOC, CODFUNC, MUNIC)) %>% 
       mutate( uf = codmun %/% 100000)
     
     
@@ -187,117 +231,470 @@ for(i in c(1998:2018)){
     temp <- read_dta(path_list[j]) %>%
       rename_all(tolower) 
     
+    message("Opened database for year: ", i)
+    
+    
+    #For teachers data
+    regioes <- c("CO", "NORDESTE", "NORTE", "SUDESTE", "SUL")
+    
+    pasta_dados <- dirname(path_list[j])   # pega .../2007/DADOS
+    
+    
     if (i %in% c(2011:2014)){ #Valid for this years specific variables constructions
+      ### 1.2.1 2011 - 2014 ----
+      # ---------------------------------------------------------------------- #
+      
       temp <- temp %>% 
         mutate(id_quadra_esportes = ifelse(id_quadra_esportes_coberta == 1 |
                                              id_quadra_esportes_descoberta == 1,
                                            1, 0)) %>% 
         filter(desc_situacao_funcionamento == 1)
       
+      
+      # --- Teacher DF --- #
+      
+      docentes_ano <- purrr::map_dfr(regioes, function(reg) {
+        arq <- file.path(pasta_dados, paste0("DOCENTES_", reg, ".dta"))
+        
+        haven::read_dta(arq) %>%
+          dplyr::rename_all(tolower) %>%
+          dplyr::mutate(regiao = reg, ano = i)
+      })
+      
+      message("Teacher data extraction completed")
+      
+      docentes_ano <- docentes_ano %>% 
+        select(fk_cod_escolaridade,
+               fk_cod_etapa_ensino,
+               pk_cod_entidade,
+               fk_cod_municipio,
+               id_situacao_curso_1,
+               id_situacao_curso_2,
+               id_situacao_curso_3)
+      
+      # Grouping by school
+      
+      docentes_school <- docentes_ano %>% 
+        group_by(pk_cod_entidade, fk_cod_municipio) %>% 
+        summarise(
+          teacher    = n(),
+          
+          t_fund     = sum(fk_cod_etapa_ensino %in% c(4:24, 41), na.rm = T),
+          t_pree     = sum(fk_cod_etapa_ensino == 2, na.rm = T),
+          t_crec     = sum(fk_cod_etapa_ensino == 1, na.rm = T),
+          
+          # - Education - #
+          t_crec_educ = sum(fk_cod_etapa_ensino == 1 & fk_cod_escolaridade %in% c(6,7) &
+                              (id_situacao_curso_1 == 1 | id_situacao_curso_2 == 1 |
+                                 id_situacao_curso_3 == 1),
+                            na.rm = T), #College in Daycare
+          
+          t_pree_educ = sum(fk_cod_etapa_ensino == 2 & fk_cod_escolaridade %in% c(6,7) &
+                              (id_situacao_curso_1 == 1 | id_situacao_curso_2 == 1 |
+                                 id_situacao_curso_3 == 1),
+                            na.rm = T), #College in Preschool
+          
+          t_fund_educ = sum(fk_cod_etapa_ensino %in% c(4:24, 41) & fk_cod_escolaridade %in% c(6,7) &
+                              (id_situacao_curso_1 == 1 | id_situacao_curso_2 == 1 |
+                                 id_situacao_curso_3 == 1),
+                            na.rm = T),
+          .groups = "drop"
+        )
+      
+      rm(docentes_ano)
+      
+      # -- Main DF -- #
+      
+      temp <- temp %>% 
+        select(fk_cod_estado,
+               fk_cod_municipio,
+               ano_censo,
+               id_dependencia_adm,
+               pk_cod_entidade,
+               id_conveniada_pp,               #Affiliation
+               id_tipo_convenio_poder_publico, #Aff. type
+               
+               #School characteristics
+               id_sala_professor,          #Teacher's room
+               id_laboratorio_ciencias,    #Science Lab
+               id_laboratorio_informatica, #Computer Lab
+               id_quadra_esportes,         #Court
+               id_parque_infantil,         #Playground
+               id_biblioteca,              #Library
+               num_salas_existentes,       #Classrooms
+               num_salas_utilizadas,
+               num_funcionarios,           #Employees
+               id_alimentacao,             #Lunch
+               
+               #Education levels
+               id_reg_infantil_creche,     #Kindergarden
+               id_reg_infantil_preescola,  #Kindergarden
+               id_reg_fund_8_anos,         #Elementary
+               id_reg_fund_9_anos,         #Elementary
+               
+               id_reg_medio_integrado,
+               id_reg_medio_medio,
+               id_reg_medio_normal,        #Highschool
+               id_reg_medio_prof,
+               id_mod_ens_esp,
+               
+               # -- Infra -- #
+               
+               id_agua_inexistente,
+               id_agua_rede_publica,
+               id_energia_inexistente,
+               id_energia_rede_publica,
+               id_esgoto_inexistente,
+               id_esgoto_rede_publica
+        )
+      
+      temp <- temp %>% 
+        mutate(
+          
+          #School characteristics variables
+          classroom = ifelse(!is.na(num_salas_existentes),
+                             as.numeric(num_salas_existentes), NA), 
+          
+          teach_room = as.numeric(id_sala_professor),
+          
+          lab_dummy = ifelse(id_laboratorio_ciencias == 1 |
+                               id_laboratorio_informatica == 1, 1, 0),
+          
+          lib_dummy = as.numeric(id_biblioteca),
+          
+          play_area = ifelse(id_parque_infantil == 1 |
+                               id_quadra_esportes == 1, 1, 0),
+          
+          lunch = as.numeric(id_alimentacao),
+          
+          employee = ifelse(!is.na(num_funcionarios),
+                            as.numeric(num_funcionarios), NA),
+          
+          # --- Infra --- #
+          
+          water_non = as.numeric(id_agua_inexistente), #Non-access to Water
+          water_dummy = as.numeric(id_agua_rede_publica), #Public Water system
+          
+          sewage_non = as.numeric(id_esgoto_inexistente), #Non-access to sewage
+          sewage_dummy = as.numeric(id_esgoto_rede_publica), #Public sewage system
+          
+          energy_non = as.numeric(id_energia_inexistente), #Non-access to eletric energy
+          energy_dummy = as.numeric(id_energia_rede_publica), #Public energy
+          
+          affil_mun  = ifelse(id_tipo_convenio_poder_publico %in% c(2,3), 1, 0),
+          affiliated = as.numeric(id_conveniada_pp) #No information on affiliation
+        ) %>% 
+        left_join(docentes_school, 
+                  by = c("fk_cod_municipio", "pk_cod_entidade")) %>% 
+        rename(
+          uf = fk_cod_estado,
+          codmun = fk_cod_municipio,
+          dep_adm = id_dependencia_adm,
+          ano = ano_censo,
+          school = pk_cod_entidade
+        ) %>% 
+        select(1:5, classroom:t_fund_educ)
+      
+      
+      rm(docentes_school)
+      
       #For 2008-2010 the sports court code remains the same as 2007
     } else if (i %in% c(2008:2010)) { #2008 is the first year to present the change in notation
+      ### 1.2.2 2008 - 2010 ----
+      # ---------------------------------------------------------------------- #
       
       temp <- temp %>%
         filter(desc_situacao_funcionamento == 1)
       
+      # --- Teacher DF --- #
+      
+      docentes_ano <- purrr::map_dfr(regioes, function(reg) {
+        arq <- file.path(pasta_dados, paste0("DOCENTES_", reg, ".dta"))
+        
+        haven::read_dta(arq) %>%
+          dplyr::rename_all(tolower) %>%
+          dplyr::mutate(regiao = reg, ano = i)
+      })
+      
+      message("Teacher data extraction completed")
+      
+      docentes_ano <- docentes_ano %>% 
+        select(fk_cod_escolaridade,
+               fk_cod_etapa_ensino,
+               pk_cod_entidade,
+               fk_cod_municipio)
+      
+      # Grouping by school
+      
+      docentes_school <- docentes_ano %>% 
+        group_by(pk_cod_entidade, fk_cod_municipio) %>% 
+        summarise(
+          teacher    = n(),
+          
+          t_fund     = sum(fk_cod_etapa_ensino %in% c(4:24, 41), na.rm = T),
+          t_pree     = sum(fk_cod_etapa_ensino == 2, na.rm = T),
+          t_crec     = sum(fk_cod_etapa_ensino == 1, na.rm = T),
+          
+          # - Education - #
+          t_crec_educ = sum(fk_cod_etapa_ensino == 1 & fk_cod_escolaridade %in% c(6,7),
+                            na.rm = T), #College in Daycare
+          
+          t_pree_educ = sum(fk_cod_etapa_ensino == 2 & fk_cod_escolaridade %in% c(6,7),
+                            na.rm = T), #College in Preschool
+          
+          t_fund_educ = sum(fk_cod_etapa_ensino %in% c(4:24, 41) & fk_cod_escolaridade %in% c(6,7),
+                            na.rm = T),
+          .groups = "drop" 
+        )
+      
+      rm(docentes_ano)
+      
+      # -- Main DF -- #
+      
+      temp <- temp %>% 
+        select(fk_cod_estado,
+               fk_cod_municipio,
+               ano_censo,
+               id_dependencia_adm,
+               pk_cod_entidade,
+               id_conveniada_pp,               #Affiliation
+               id_tipo_convenio_poder_publico, #Aff. type
+               
+               #School characteristics
+               id_sala_professor,          #Teacher's room
+               id_laboratorio_ciencias,    #Science Lab
+               id_laboratorio_informatica, #Computer Lab
+               id_quadra_esportes,         #Court
+               id_parque_infantil,         #Playground
+               id_biblioteca,              #Library
+               num_salas_existentes,       #Classrooms
+               num_salas_utilizadas,
+               num_funcionarios,           #Employees
+               id_alimentacao,             #Lunch
+               
+               #Education levels
+               id_reg_infantil_creche,     #Kindergarden
+               id_reg_infantil_preescola,  #Kindergarden
+               id_reg_fund_8_anos,         #Elementary
+               id_reg_fund_9_anos,         #Elementary
+               
+               id_reg_medio_integrado,
+               id_reg_medio_medio,
+               id_reg_medio_normal,        #Highschool
+               id_reg_medio_prof,
+               id_mod_ens_esp,
+               
+               # -- Infra -- #
+               
+               id_agua_inexistente,
+               id_agua_rede_publica,
+               id_energia_inexistente,
+               id_energia_rede_publica,
+               id_esgoto_inexistente,
+               id_esgoto_rede_publica
+        )
+      
+      temp <- temp %>% 
+        mutate(
+          
+          #School characteristics variables
+          classroom = ifelse(!is.na(num_salas_existentes),
+                             as.numeric(num_salas_existentes), NA), 
+          
+          teach_room = as.numeric(id_sala_professor),
+          
+          lab_dummy = ifelse(id_laboratorio_ciencias == 1 |
+                               id_laboratorio_informatica == 1, 1, 0),
+          
+          lib_dummy = as.numeric(id_biblioteca),
+          
+          play_area = ifelse(id_parque_infantil == 1 |
+                               id_quadra_esportes == 1, 1, 0),
+          
+          lunch = as.numeric(id_alimentacao),
+          
+          employee = ifelse(!is.na(num_funcionarios),
+                            as.numeric(num_funcionarios), NA),
+          
+          # --- Infra --- #
+          
+          water_non = as.numeric(id_agua_inexistente), #Non-access to Water
+          water_dummy = as.numeric(id_agua_rede_publica), #Public Water system
+          
+          sewage_non = as.numeric(id_esgoto_inexistente), #Non-access to sewage
+          sewage_dummy = as.numeric(id_esgoto_rede_publica), #Public sewage system
+          
+          energy_non = as.numeric(id_energia_inexistente), #Non-access to eletric energy
+          energy_dummy = as.numeric(id_energia_rede_publica), #Public energy
+          
+          affil_mun  = ifelse(id_tipo_convenio_poder_publico %in% c(2,3), 1, 0),
+          affiliated = as.numeric(id_conveniada_pp) #No information on affiliation
+        ) %>% 
+        left_join(docentes_school, 
+                  by = c("fk_cod_municipio", "pk_cod_entidade")) %>% 
+        rename(
+          uf = fk_cod_estado,
+          codmun = fk_cod_municipio,
+          dep_adm = id_dependencia_adm,
+          ano = ano_censo,
+          school = pk_cod_entidade
+        ) %>% 
+        select(1:5, clasroom:t_fund_educ)
+      
+      rm(docentes_school)
+      
     } else {
+      ### 1.2.3 2007 ----
+      
       temp <- temp %>% #Exclusive for 2007
         filter(desc_situacao_funcionamento == "EM ATIVIDADE") #Active Schools
+      
+      # --- Teacher DF --- #
+      
+      docentes_ano <- purrr::map_dfr(regioes, function(reg) {
+        arq <- file.path(pasta_dados, paste0("DOCENTES_", reg, ".dta"))
+        
+        haven::read_dta(arq) %>%
+          dplyr::rename_all(tolower) %>%
+          dplyr::mutate(regiao = reg, ano = i)
+      })
+      
+      message("Teacher data extraction completed")
+      
+      docentes_ano <- docentes_ano %>% 
+        select(fk_cod_escolaridade,
+               fk_cod_etapa_ensino,
+               pk_cod_entidade,
+               fk_cod_municipio)
+      
+    # Grouping by school
+      
+      docentes_school <- docentes_ano %>% 
+        group_by(pk_cod_entidade, fk_cod_municipio) %>% 
+        summarise(
+          teacher    = n(),
+          
+          t_fund     = sum(fk_cod_etapa_ensino %in% c(4:24, 41), na.rm = T),
+          t_pree     = sum(fk_cod_etapa_ensino == 2, na.rm = T),
+          t_crec     = sum(fk_cod_etapa_ensino == 1, na.rm = T),
+          
+          # - Education - #
+          t_crec_educ = sum(fk_cod_etapa_ensino == 1 & fk_cod_escolaridade %in% c(6,7),
+                            na.rm = T), #College in Daycare
+          
+          t_pree_educ = sum(fk_cod_etapa_ensino == 2 & fk_cod_escolaridade %in% c(6,7),
+                            na.rm = T), #College in Preschool
+          
+          t_fund_educ = sum(fk_cod_etapa_ensino %in% c(4:24, 41) & fk_cod_escolaridade %in% c(6,7),
+                            na.rm = T),
+          .groups = "drop" 
+          )
+      
+      rm(docentes_ano)
+      
+      # -- Main DF -- #
+      
+      temp <- temp %>% 
+        select(fk_cod_estado,
+               fk_cod_municipio,
+               ano_censo,
+               id_dependencia_adm,
+               pk_cod_entidade,
+               id_conveniada_pp,           #Affiliation
+               
+               #School characteristics
+               id_sala_professor,          #Teacher's room
+               id_laboratorio_ciencias,    #Science Lab
+               id_laboratorio_informatica, #Computer Lab
+               id_quadra_esportes,         #Court
+               id_parque_infantil,         #Playground
+               id_biblioteca,              #Library
+               num_salas_existentes,       #Classrooms
+               num_salas_utilizadas,
+               num_funcionarios,           #Employees
+               id_alimentacao,             #Lunch
+               
+               #Education levels
+               id_reg_infantil_creche,     #Kindergarden
+               id_reg_infantil_preescola,  #Kindergarden
+               id_reg_fund_8_anos,         #Elementary
+               id_reg_fund_9_anos,         #Elementary
+               
+               id_reg_medio_integrado,
+               id_reg_medio_medio,
+               id_reg_medio_normal,        #Highschool
+               id_reg_medio_prof,
+               id_mod_ens_esp,
+               
+               # -- Infra -- #
+               
+               id_agua_inexistente,
+               id_agua_rede_publica,
+               id_energia_inexistente,
+               id_energia_rede_publica,
+               id_esgoto_inexistente,
+               id_esgoto_rede_publica
+        )
+      
+      temp <- temp %>% 
+        mutate(
+          
+          #School characteristics variables
+          classroom = ifelse(!is.na(num_salas_existentes),
+                             as.numeric(num_salas_existentes), NA), 
+          
+          teach_room = as.numeric(id_sala_professor),
+          
+          lab_dummy = ifelse(id_laboratorio_ciencias == 1 |
+                               id_laboratorio_informatica == 1, 1, 0),
+          
+          lib_dummy = as.numeric(id_biblioteca),
+          
+          play_area = ifelse(id_parque_infantil == 1 |
+                               id_quadra_esportes == 1, 1, 0),
+          
+          lunch = as.numeric(id_alimentacao),
+          
+          employee = ifelse(!is.na(num_funcionarios),
+                            as.numeric(num_funcionarios), NA),
+          
+          # --- Infra --- #
+          
+          water_non = as.numeric(id_agua_inexistente), #Non-access to Water
+          water_dummy = as.numeric(id_agua_rede_publica), #Public Water system
+          
+          sewage_non = as.numeric(id_esgoto_inexistente), #Non-access to sewage
+          sewage_dummy = as.numeric(id_esgoto_rede_publica), #Public sewage system
+          
+          energy_non = as.numeric(id_energia_inexistente), #Non-access to eletric energy
+          energy_dummy = as.numeric(id_energia_rede_publica), #Public energy
+          
+          affil_mun  = NA,
+          affiliated = as.numeric(id_conveniada_pp) #No information on affiliation
+        ) %>% 
+        left_join(docentes_school, 
+                  by = c("fk_cod_municipio", "pk_cod_entidade")) %>% 
+        rename(
+          uf = fk_cod_estado,
+          codmun = fk_cod_municipio,
+          dep_adm = id_dependencia_adm,
+          ano = ano_censo,
+          school = pk_cod_entidade
+        ) %>% 
+        select(1:5, clasroom:affiliated)
+      
+      
     } 
     
-    temp <- temp %>% 
-      select(fk_cod_estado,
-             fk_cod_municipio,
-             ano_censo,
-             id_dependencia_adm,
-             pk_cod_entidade,
-             
-             #School characteristics
-             id_sala_professor,          #Teacher's room
-             id_laboratorio_ciencias,    #Science Lab
-             id_laboratorio_informatica, #Computer Lab
-             id_quadra_esportes,         #Court
-             id_parque_infantil,         #Playground
-             id_biblioteca,              #Library
-             num_salas_existentes,       #Classrooms
-             num_salas_utilizadas,
-             num_funcionarios,           #Employees
-             id_alimentacao,             #Lunch
-             
-             #Education levels
-             id_reg_infantil_creche,     #Kindergarden
-             id_reg_infantil_preescola,  #Kindergarden
-             id_reg_fund_8_anos,         #Elementary
-             id_reg_fund_9_anos,         #Elementary
-             
-             id_reg_medio_integrado,
-             id_reg_medio_medio,
-             id_reg_medio_normal,        #Highschool
-             id_reg_medio_prof,
-             id_mod_ens_esp 
-      ) %>% 
-      filter(id_dependencia_adm == 3)
     
-    message("Opened database for year: ", i)
-    
-    
-    temp <- temp %>% 
-      mutate(
-        
-        #School characteristics variables
-        classroom = ifelse(!is.na(num_salas_existentes),
-                           as.numeric(num_salas_existentes), NA), 
-        
-        teach_room = as.numeric(id_sala_professor),
-        
-        lab_dummy = ifelse(id_laboratorio_ciencias == 1 |
-                             id_laboratorio_informatica == 1, 1, 0),
-        
-        lib_dummy = as.numeric(id_biblioteca),
-        
-        play_area = ifelse(id_parque_infantil == 1 |
-                             id_quadra_esportes == 1, 1, 0),
-        
-        lunch = as.numeric(id_alimentacao),
-        
-        employee = ifelse(!is.na(num_funcionarios),
-                          as.numeric(num_funcionarios), NA),
-        
-        #teacher = as.numeric(PROFESS), #Not present in this data frame.
-        
-        #Education levels
-        kinder = ifelse(id_reg_infantil_creche == 1 |
-                          id_reg_infantil_preescola == 1, 1, 0),
-        
-        daycare = ifelse(id_reg_infantil_creche == 1, 1, 0),
-        preschool = ifelse(id_reg_infantil_preescola == 1, 1, 0),
-        
-        elementary = ifelse(id_reg_fund_8_anos == 1 | id_reg_fund_9_anos == 1, 1, 0),
-        
-        high = ifelse(id_reg_medio_integrado == 1 | id_reg_medio_medio == 1 |
-                        id_reg_medio_normal == 1, 1, 0),
-        
-        inclusion = ifelse(id_mod_ens_esp == 1, 1, 0)
-      ) %>% 
-      rename(
-        uf = fk_cod_estado,
-        codmun = fk_cod_municipio,
-        ano = ano_censo,
-        school = pk_cod_entidade
-      ) %>% 
-      select( c(uf, codmun, ano, school, 25:37) ) #Final datafilter
-    
-    
-    
-    
-    ###1.2.1 2008
-    
+
     
     
     message("Finishing data preparation for: ", i)
     
     
     
+    rm(regioes, pasta_dados)
     
   } else if(i %in% c(2015:2020)) {
     ## 1.3 2015 - 2020 year ----
@@ -305,6 +702,60 @@ for(i in c(1998:2018)){
     temp <- read_dta(path_list[j]) %>% 
       rename_all(tolower) %>%
       filter(tp_situacao_funcionamento == 1) 
+    
+    
+    # --- Teacher DF --- #
+    
+    docentes_ano <- purrr::map_dfr(regioes, function(reg) {
+      arq <- file.path(pasta_dados, paste0("DOCENTES_", reg, ".dta"))
+      
+      haven::read_dta(arq) %>%
+        dplyr::rename_all(tolower) %>%
+        dplyr::mutate(regiao = reg, ano = i)
+    })
+    
+    message("Teacher data extraction completed")
+    
+    docentes_ano <- docentes_ano %>% 
+      select(fk_cod_escolaridade,
+             fk_cod_etapa_ensino,
+             pk_cod_entidade,
+             fk_cod_municipio,
+             id_situacao_curso_1,
+             id_situacao_curso_2,
+             id_situacao_curso_3)
+    
+    # Grouping by school
+    
+    docentes_school <- docentes_ano %>% 
+      group_by(pk_cod_entidade, fk_cod_municipio) %>% 
+      summarise(
+        teacher    = n(),
+        
+        t_fund     = sum(fk_cod_etapa_ensino %in% c(4:24, 41), na.rm = T),
+        t_pree     = sum(fk_cod_etapa_ensino == 2, na.rm = T),
+        t_crec     = sum(fk_cod_etapa_ensino == 1, na.rm = T),
+        
+        # - Education - #
+        t_crec_educ = sum(fk_cod_etapa_ensino == 1 & fk_cod_escolaridade %in% c(6,7) &
+                            (id_situacao_curso_1 == 1 | id_situacao_curso_2 == 1 |
+                               id_situacao_curso_3 == 1),
+                          na.rm = T), #College in Daycare
+        
+        t_pree_educ = sum(fk_cod_etapa_ensino == 2 & fk_cod_escolaridade %in% c(6,7) &
+                            (id_situacao_curso_1 == 1 | id_situacao_curso_2 == 1 |
+                               id_situacao_curso_3 == 1),
+                          na.rm = T), #College in Preschool
+        
+        t_fund_educ = sum(fk_cod_etapa_ensino %in% c(4:24, 41) & fk_cod_escolaridade %in% c(6,7) &
+                            (id_situacao_curso_1 == 1 | id_situacao_curso_2 == 1 |
+                               id_situacao_curso_3 == 1),
+                          na.rm = T),
+        .groups = "drop"
+      )
+    
+    rm(docentes_ano)
+    
     
     ### 1.3.1 2015 - 2017 ----
     if(i %in% c(2015:2017)) {
@@ -1233,7 +1684,7 @@ for (i in c(1998:2018)) {
   
   
   # Total Loop time
-  if (j == 20) {
+  if (j == 21) {
     
     fim <- Sys.time()
     
