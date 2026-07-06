@@ -1285,22 +1285,6 @@ for(i in c(1998:2018)){
           employee = ifelse(!is.na(nu_funcionarios),
                             as.numeric(nu_funcionarios), NA),
           
-          #teacher = as.numeric(PROFESS), #Not present in this data frame.
-          
-          #Education levels
-          kinder = ifelse(in_comum_creche == 1 |
-                            in_comum_pre == 1, 1, 0),
-          
-          daycare = ifelse(in_comum_creche == 1, 1, 0),
-          preschool = ifelse(in_comum_pre == 1, 1, 0),
-          
-          elementary = ifelse(in_comum_fund_ai == 1 | in_comum_fund_af == 1, 1, 0),
-          
-          high = ifelse(in_comum_medio_medio == 1 | in_comum_medio_integrado == 1 |
-                          in_comum_medio_normal == 1, 1, 0),
-          
-          inclusion = ifelse(in_especial_exclusiva == 1, 1, 0),
-          
           # --- Infra --- #
           
           water_non = as.numeric(in_agua_inexistente), #Non-access to Water
@@ -1312,7 +1296,7 @@ for(i in c(1998:2018)){
           energy_non = as.numeric(in_energia_inexistente), #Non-access to eletric energy
           energy_dummy = as.numeric(in_energia_rede_publica), #Public energy
           
-          affil_mun  = ifelse(in_tipo_convenio_poder_publico %in% c(1,3), 1, 0), #2015 onwards changed the name
+          affil_mun  = ifelse(tp_convenio_poder_publico %in% c(1,3), 1, 0), #2015 onwards changed the name
           affiliated = as.numeric(in_conveniada_pp) #No information on affiliation
           
           
@@ -1394,22 +1378,7 @@ for(i in c(1998:2018)){
             
             employee = ifelse(!is.na(qt_funcionarios),
                               as.numeric(qt_funcionarios), NA),
-            
-            #teacher = as.numeric(PROFESS), #Not present in this data frame.
-            
-            #Education levels
-            kinder = ifelse(in_comum_creche == 1 |
-                              in_comum_pre == 1, 1, 0),
-            
-            daycare = ifelse(in_comum_creche == 1, 1, 0),
-            preschool = ifelse(in_comum_pre == 1, 1, 0),
-            
-            elementary = ifelse(in_comum_fund_ai == 1 | in_comum_fund_af == 1, 1, 0),
-            
-            high = ifelse(in_comum_medio_medio == 1 | in_comum_medio_integrado == 1 |
-                            in_comum_medio_normal == 1, 1, 0),
-            
-            inclusion = ifelse(in_especial_exclusiva == 1, 1, 0),
+    
             
             # --- Infra --- #
             
@@ -1422,7 +1391,7 @@ for(i in c(1998:2018)){
             energy_non = as.numeric(in_energia_inexistente), #Non-access to eletric energy
             energy_dummy = as.numeric(in_energia_rede_publica), #Public energy
             
-            affil_mun  = ifelse(in_tipo_convenio_poder_publico %in% c(1,3), 1, 0), #2015 onwards changed the name
+            affil_mun  = ifelse(tp_convenio_poder_publico %in% c(1,3), 1, 0), #2015 onwards changed the name
             affiliated = as.numeric(in_conveniada_pp) #No information on affiliation
             
             
@@ -1432,11 +1401,11 @@ for(i in c(1998:2018)){
           rename(
             uf = co_uf,
             codmun = co_municipio,
-            dep_adm = tp_denpendecia,
+            dep_adm = tp_dependencia,
             ano = nu_ano_censo,
             school = co_entidade
           ) %>% 
-          select( c(uf, codmun, ano, dep_adm, school, classroom:t_educ_fund) ) #Final datafilter'
+          select( c(uf, codmun, ano, dep_adm, school, classroom:t_fund_educ) ) #Final datafilter'
         
       } else if(i %in% c(2019:2020)){
         # -------------------------------------------------------------------- #
@@ -1597,8 +1566,11 @@ for(i in c(1998:2018)){
       } 
     }
     message("Finishing data preparation for ", i)
-  }
+    
+    rm(docentes_school)
+    }
   
+
   #Binding itno a single dataframe
   if(j == 1){
     data <- temp
@@ -2261,15 +2233,17 @@ for (i in c(1998:2018)) {
 
 saveRDS(data,"Z:/Tuffy/Paper - Educ/Dados/intermediate/matriculas_por_escola.rds")
 
+rm(data)
 # ---------------------------------------------------------------------------- #
 #4. Merging the two datasets ----
 # ---------------------------------------------------------------------------- #
 
+data <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/matriculas_por_escola.rds")
 
-df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base.rds")
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/censo_escolar_base.rds")
 
-df_combined <- df_school %>% 
-  left_join(data,
+df_combined <- data %>% 
+  left_join(df_school %>% select(-dep_adm),
             by = c("uf" = "uf", "ano" = "ano", "codmun" = "codmun", "school" = "school")) %>% 
   group_by(school, ano) %>% 
   mutate(
@@ -2277,7 +2251,7 @@ df_combined <- df_school %>%
   ) %>% 
   ungroup()
 
-saveRDS(df_combined, "Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds")
+saveRDS(df_combined, "Z:/Tuffy/Paper - Educ/Dados/intermediate/censo_escolar_base_v2.rds")
 rm(df_school, data)
 
 
