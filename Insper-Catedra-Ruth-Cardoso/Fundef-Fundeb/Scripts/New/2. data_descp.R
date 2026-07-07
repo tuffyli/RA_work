@@ -653,4 +653,8 @@ df_2006_growth %>%
 
 
 # ---------------------------------------------------------------------------- #
+# 6. Enrollment prop ----
+# ---------------------------------------------------------------------------- #
+# Summary statistics for the proportion per municipality.
 
+df_prop <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/enroll_prop.rds")

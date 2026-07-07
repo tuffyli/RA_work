@@ -1868,7 +1868,7 @@ colnames(df_reg)
 attr(df_reg$dosage,       "label") <- "Parcela da diferença de receita pelo FUNDEB (2007)"
 attr(df_reg$aluno_dosage, "label") <- "Diferença de receita (2007) por aluno (2006)"
 
-saveRDS(df_reg, file.path(PATH_TUFFY, "Dados/regdf.rds"))
+saveRDS(df_reg, file.path(PATH_TUFFY, "Dados/final/regdf.rds"))
 
 gc()
 rm(list = ls())
@@ -1887,7 +1887,7 @@ rm(list = ls())
 #   (f) create binary flags for municipalities with extreme growth in any year
 #       — used as exclusion criteria in robustness checks
 
-data <- readRDS(file.path(PATH_TUFFY, "Dados/regdf.rds")) %>%
+data <- readRDS(file.path(PATH_TUFFY, "Dados/final/regdf.rds")) %>%
   # Drop columns that were intermediates or are superseded by annual census data
   select(-c(
     X.x, total_politica_d, total_coun_d,
@@ -2126,4 +2126,4 @@ rm(plot_df, mean_long, mean_df, od, p)
 # regdf_flags.rds is the primary input for all regression scripts.
 # It covers 2005–2018 and contains all outcome variables, treatment variables,
 # controls, and the full set of outlier flags.
-saveRDS(data, file.path(PATH_TUFFY, "Dados/regdf_flags.rds"))
+saveRDS(data, file.path(PATH_TUFFY, "Dados/final/regdf_flags.rds"))
