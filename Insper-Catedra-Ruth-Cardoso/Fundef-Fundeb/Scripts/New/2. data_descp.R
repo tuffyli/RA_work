@@ -658,3 +658,239 @@ df_2006_growth %>%
 # Summary statistics for the proportion per municipality.
 
 df_prop <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/enroll_prop.rds")
+
+# ---------------------------------------------------------------------------- #
+## 6.1 Table ---- 
+# ---------------------------------------------------------------------------- #
+
+dftab <- df_prop %>%
+  summarise(
+    across(
+      c(prop_inf, prop_fund, prop_mun_inf, prop_mun_fund),
+      list(
+        Mean   = ~mean(., na.rm = TRUE),
+        SD     = ~sd(., na.rm = TRUE),
+        Median = ~median(., na.rm = TRUE),
+        Min    = ~min(., na.rm = TRUE),
+        Max    = ~max(., na.rm = TRUE)
+        )
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", ".value"),
+    names_sep = "_(?=[^_]+$)"
+  ) %>%
+  mutate(
+    Variable = dplyr::recode(
+      Variable,
+      prop_inf      = "Early childhood (all schools)",
+      prop_fund     = "Elementary (all schools)",
+      prop_mun_inf  = "Early childhood (municipal schools)",
+      prop_mun_fund = "Elementary (municipal schools)"
+    )
+  )
+
+dftab
+
+# ---------------------------------------------------------------------------- #
+### 6.1.1 Yearly ---- 
+# ---------------------------------------------------------------------------- #
+
+dftab_year <- df_prop %>%
+  group_by(ano) %>%
+  summarise(
+    prop_inf_mean  = mean(prop_inf, na.rm = TRUE),
+    prop_inf_sd    = sd(prop_inf, na.rm = TRUE),
+    prop_fund_mean = mean(prop_fund, na.rm = TRUE),
+    prop_fund_sd   = sd(prop_fund, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+dftab_year
+
+
+# ---------------------------------------------------------------------------- #
+### 6.1.2 Saving -----
+# ---------------------------------------------------------------------------- #
+
+#Main Table
+
+tex_table <- dftab %>%
+  kable(
+    format = "latex",
+    booktabs = TRUE,
+    longtable = FALSE,
+    digits = 3,
+    caption = "Summary statistics of municipal enrollment shares.",
+    label = "tab:summary_prop",
+    align = c("l", "r", "r", "r", "r", "r", "r")
+  ) %>%
+  kable_styling(
+    latex_options = c("hold_position", "striped"),
+    font_size = 9
+  )
+
+writeLines(
+  tex_table,
+  paste0(path_additional, "summary_prop.tex")
+)
+
+
+#Yearly
+
+tex_table <- dftab_year %>%
+  kable(
+    format = "latex",
+    booktabs = TRUE,
+    longtable = FALSE,
+    digits = 3,
+    caption = "Annual municipal enrollment shares.",
+    label = "tab:annual_prop",
+    align = c("r", "r", "r", "r", "r")
+  ) %>%
+  kable_styling(
+    latex_options = c("hold_position", "striped"),
+    font_size = 9
+  )
+
+writeLines(
+  tex_table,
+  paste0(path_additional, "annual_prop.tex")
+)
+
+# ---------------------------------------------------------------------------- #
+## 6.2 Histogram ----
+# ---------------------------------------------------------------------------- #
+
+# Reshape data
+df_plot <- df_prop %>%
+  select(prop_inf, prop_fund) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Stage",
+    values_to = "Proportion"
+  ) %>%
+  mutate(
+    Stage = dplyr::recode(
+      Stage,
+      prop_inf  = "Early Childhood",
+      prop_fund = "Elementary"
+    )
+  )
+
+means <- df_plot %>%
+  group_by(Stage) %>%
+  summarise(mean = mean(Proportion, na.rm = TRUE), .groups = "drop")
+
+plot <- ggplot(df_plot, aes(Proportion)) +
+  
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 40,
+    fill = "#4472C4",
+    color = "white"
+  ) +
+  
+  geom_density(
+    color = "#1B365D",
+    linewidth = 1.2,
+    adjust = 1.1
+  ) +
+  
+  facet_wrap(~Stage, ncol = 1) +
+  
+  scale_x_continuous(
+    limits = c(0, 2.5),
+    breaks = seq(0, 2.5, by = 0.5)
+  ) +
+  
+  labs(
+    x = "Municipal enrollment share",
+    y = "Density"
+  ) +
+  
+  theme_classic(base_size = 15) +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 14)
+  )
+
+plot
+
+# Saving
+
+ggsave(
+  plot = plot,
+  filename = file.path(path_descp, "Figures", "enrollment_distribution.pdf"),
+  device = "pdf",
+  width = 7,
+  height = 8,
+  dpi = 300
+)
+
+# ------ Municipal ------- #
+
+df_plot_mun <- df_prop %>%
+  select(prop_mun_inf, prop_mun_fund) %>%
+  pivot_longer(
+    everything(),
+    names_to = "Stage",
+    values_to = "Proportion"
+  ) %>%
+  mutate(
+    Stage = dplyr::recode(
+      Stage,
+      prop_mun_inf  = "Early childhood",
+      prop_mun_fund = "Elementary"
+    )
+  )
+
+# plot
+plot_mun <- ggplot(df_plot_mun, aes(Proportion)) +
+  
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 40,
+    fill = "#4472C4",
+    color = "white"
+  ) +
+  
+  geom_density(
+    color = "#1B365D",
+    linewidth = 1.2,
+    adjust = 1.1
+  ) +
+  
+  facet_wrap(~Stage, ncol = 1) +
+  
+  scale_x_continuous(
+    limits = c(0, 2),
+    breaks = seq(0, 2, by = 0.5)
+  ) +
+  
+  labs(
+    x = "Municipal school enrollment-to-population ratio",
+    y = "Density"
+  ) +
+  
+  theme_classic(base_size = 15) +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 14),
+    axis.title = element_text(face = "bold"),
+    panel.spacing = unit(1, "lines")
+  )
+
+#Saving
+ggsave(
+  plot = plot_mun,
+  filename = file.path(path_descp, "Figures", "municipal_enrollment_distribution.pdf"),
+  device = "pdf",
+  width = 7,
+  height = 8,
+  dpi = 300
+)
+
+rm(list = ls())
+gc()

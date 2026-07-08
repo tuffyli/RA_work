@@ -2250,7 +2250,9 @@ df_combined <- df_school %>%
             by = c("uf" = "uf", "ano" = "ano", "codmun" = "codmun", "school" = "school")) %>% 
   group_by(school, ano) %>% 
   mutate(
-    enroll = ef_tot + em_tot + ed_inf_tot + eja_tot #We dont count the discarded variable of esp
+    enroll = rowSums(
+      across(c(ef_tot, em_tot, ed_inf_tot, eja_tot)),
+      na.rm = TRUE) #We dont count the discarded variable of esp
   ) %>% 
   ungroup() %>% 
   mutate(
@@ -2322,6 +2324,8 @@ saveRDS(pop_mun, "Z:/Tuffy/Paper - Educ/Dados/intermediate/pop_age.rds")
 ## 5.1 Enrollment proportion ----
 # ---------------------------------------------------------------------------- #
 
+pop_mun <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/pop_age.rds")
+
 df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/censo_escolar_base_v2.rds")
 
 # Municipal enrollment
@@ -2329,29 +2333,30 @@ df_enroll_mun <- df_enroll %>%
   ungroup() %>% 
   group_by(codmun, ano) %>% 
   summarise(
-    inf_enroll = sum(pre_tot + day_tot, na.rm = TRUE),
+    inf_enroll = sum(
+      rowSums(across(c(pre_tot, day_tot)), na.rm = TRUE)
+    ),
     
     fund_enroll = sum(
-      reg_in_9 + reg_in_8 + reg_fin_9 + reg_fin_8,
-      na.rm = TRUE
+      rowSums(across(c(reg_in_9, reg_in_8,
+                       reg_fin_9, reg_fin_8)), na.rm = TRUE)
     ),
     
     inf_mun_enroll = sum(
-      ifelse(
-        dep_adm == "Municipal" | affiliated == 1 & affil_mun == 1,
-        pre_tot + day_tot,
+      if_else(
+        dep_adm == "Municipal" | (affiliated == 1 & affil_mun == 1),
+        rowSums(across(c(pre_tot, day_tot)), na.rm = TRUE),
         0
-      ),
-      na.rm = TRUE
+      )
     ),
     
     fund_mun_enroll = sum(
-      ifelse(
-        dep_adm == "Municipal" | affiliated == 1 & affil_mun == 1,
-        reg_in_9 + reg_in_8 + reg_fin_9 + reg_fin_8,
+      if_else(
+        dep_adm == "Municipal" | (affiliated == 1 & affil_mun == 1),
+        rowSums(across(c(reg_in_9, reg_in_8,
+                         reg_fin_9, reg_fin_8)), na.rm = TRUE),
         0
-      ),
-      na.rm = TRUE
+      )
     ),
     
     .groups = "drop"
@@ -2364,7 +2369,10 @@ df_enroll_mun <- df_enroll_mun %>%
   left_join(pop_mun %>% mutate(ano = as.numeric(ano)), by = c("codmun" = "cod_mun", "ano")) %>% 
   mutate( #Prop Variables
     prop_inf  = ifelse(!is.na(inf_enroll) & !is.na(age_inf), inf_enroll/age_inf, NA),
-    prop_fund = ifelse(!is.na(fund_enroll) & !is.na(age_fund), fund_enroll/age_fund, NA)
+    prop_fund = ifelse(!is.na(fund_enroll) & !is.na(age_fund), fund_enroll/age_fund, NA),
+    
+    prop_mun_inf = ifelse(!is.na(inf_mun_enroll) & !is.na(age_inf), inf_mun_enroll/age_inf, NA),
+    prop_mun_fund = ifelse(!is.na(fund_mun_enroll) & !is.na(age_fund), fund_mun_enroll/age_fund, NA)
   )
   
   
