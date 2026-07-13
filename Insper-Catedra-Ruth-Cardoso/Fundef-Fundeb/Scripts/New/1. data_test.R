@@ -117,9 +117,9 @@ add_label <- function(data, variable, label) {
 }
 
 
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # 1. FINBRA — Municipal Education Expenditures ----
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # FINBRA (Finanças do Brasil) is the STN's annual municipal finance report.
 # It records actual expenditures broken down by functional area for every
 # Brazilian municipality. We use function 12 (Education) and its sub-functions.
@@ -132,8 +132,9 @@ add_label <- function(data, variable, label) {
 # Section 1.3 combines both periods into FINBRA_EDU_05_21.csv,
 # which is the file consumed by the regression assembly in Section 6.
 
-
-# ── 1.1 FINBRA 2005–2012 (Excel format) ─────────────────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 1.1 FINBRA 2005–2012 (Excel format) ----
+# ---------------------------------------------------------------------------- #
 
 # Load the minimum-comparable-areas crosswalk used in spatial robustness checks.
 # This is referenced in the companion analysis scripts; keeping it here ensures
@@ -191,11 +192,12 @@ finbra_2005_2012 <- finbra_2005_2012 %>%
 # Save the cleaned 2005–2012 panel. Used as input to Section 1.3 below.
 saveRDS(finbra_2005_2012, file.path(PATH_TUFFY, "Dados/finbra_2005_2012.rds"))
 
-
-# ── 1.2 FINBRA 2013–2021 (CSV format) ───────────────────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 1.2 FINBRA 2013–2021 (CSV format)----
 # From 2013 onwards FINBRA is published as a long-form CSV at account-code level.
 # We filter to function 12 (Education) plus the grand-total expenditure row,
 # then pivot from long to wide so each sub-function becomes its own column.
+# ---------------------------------------------------------------------------- #
 
 for (year in 2013:2021) {
   
@@ -275,8 +277,8 @@ finbra_novo <- finbra_novo %>%
 
 saveRDS(finbra_novo, file.path(PATH_TUFFY, "Dados/finbra_2007_2021.rds"))
 
-
-# ── 1.3 Combine Both Periods → FINBRA_EDU_05_21.csv ─────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 1.3 Combine Both Periods → FINBRA_EDU_05_21.csv----
 # This step (originally in gastos_municipais.R by Giovanni Zanetti) harmonises
 # the 2005–2012 column schema to match the 2013–2021 format, stacks both, and
 # exports the combined CSV that Section 6 reads as df_fib.
@@ -287,6 +289,7 @@ saveRDS(finbra_novo, file.path(PATH_TUFFY, "Dados/finbra_2007_2021.rds"))
 #     `ano < 2013 | coluna == "Despesas Empenhadas"` handles this correctly.
 #   • codmun in the 2005–2012 frame is already 6-digit and matches codigo_ibge
 #     in the 2013–2021 frame; we simply rename it.
+# ---------------------------------------------------------------------------- #
 
 finbra_para_unir <- finbra_2005_2012 %>%
   rename(
@@ -313,9 +316,9 @@ write.csv2(
 rm(finbra_para_unir, finbra_completo)
 
 
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # 2. FUNDEF / FUNDEB Intergovernmental Transfers ----
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # Brazil's two successive education funds (FUNDEF 2000–2006, FUNDEB 2007–2021)
 # work through a constitutional redistribution mechanism: municipalities and
 # states contribute a share of their fiscal revenues to a state-level fund,
@@ -331,8 +334,9 @@ rm(finbra_para_unir, finbra_completo)
 # Both are collapsed from transfer-type level to municipality (or UF) × year level
 # and deflated to 2021 BRL using the accumulated IPCA index.
 
-
-# ── 2.1 Municipal Network (2000–2021) ────────────────────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 2.1 Municipal Network (2000–2021)----
+# ---------------------------------------------------------------------------- #
 
 caminho1 <- file.path(
   PATH_GIOVANNI,
@@ -378,11 +382,12 @@ df_anual <- df_anual %>%
 
 summary(df_anual)
 
-
-# ── 2.2 State Network (2007–2021) ────────────────────────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 2.2 State Network (2007–2021) ----
 # State (Estadual) school networks are funded from the state government's
 # share of the FUNDEF/FUNDEB fund. We load their transfers separately because
 # identifying them via codigo_ibge requires a UF-level code crosswalk.
+# ---------------------------------------------------------------------------- #
 
 df_ufs <- read.csv2(
   file.path(
@@ -413,8 +418,9 @@ df_ufs <- read.csv2(
     .groups = "drop"
   )
 
-
-# ── 2.3 Stack Municipal + State and Deflate ───────────────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 2.3 Stack Municipal + State and Deflate----
+# ---------------------------------------------------------------------------- #
 
 # Combine both networks into one long panel indexed by (codigo_ibge, ano)
 df <- bind_rows(df_anual, df_ufs)
@@ -457,9 +463,9 @@ saveRDS(df, file.path(PATH_TUFFY, "Dados/defla_fundef_fundeb_2000_2001.rds"))
 rm(df_ipca, df_anual, df_ufs, caminho1, caminho2)
 
 
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # 3. SAEB / IDEB — Test Scores and Approval Rates ----
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # IDEB (Índice de Desenvolvimento da Educação Básica) combines two components:
 #   • SAEB scores — standardised exam in Mathematics and Portuguese Language
 #   • Approval rates — share of enrolled students who pass and advance a grade
@@ -505,11 +511,13 @@ for (ciclo in ciclos) {
       uf          = "sg_uf"
     )
   
-  
-  # ── 3.1 Approval Rates ───────────────────────────────────────────────────── #
+  # ---------------------------------------------------------------------------- #
+  ## 3.1 Approval Rates----
   # Select vl_aprovacao_* columns and pivot from wide (one col per year)
   # to long (one row per year × grade). The regex captures the biennial year
   # and an INEP-internal grade code from the column name.
+  # ---------------------------------------------------------------------------- #
+  
   apr <- ideb %>%
     select(c(1:4, starts_with("vl_aprovacao_")))
   
@@ -556,12 +564,14 @@ for (ciclo in ciclos) {
     df_apr <- full_join(df_apr, apr, by = c("codigo_ibge", "uf", "nome", "rede", "ano"))
   }
   
-  
-  # ── 3.2 SAEB Exam Scores ─────────────────────────────────────────────────── #
+  # ---------------------------------------------------------------------------- #
+  ## 3.2 SAEB Exam Scores ----
   # Select vl_nota_* columns and pivot similarly.
   # The cycle suffix embedded in the output column name marks which exam level
   # the score belongs to: _5_ = grade 5 (iniciais), _9_ = grade 9 (finais),
   # _em_ = upper secondary.
+  # ---------------------------------------------------------------------------- #
+  
   saeb <- ideb %>%
     select(c(1:4, starts_with("vl_nota_")))
   
@@ -596,10 +606,12 @@ for (ciclo in ciclos) {
   rm(saeb, ideb, apr)
 }
 
-
-# ── 3.3 Join Scores with Approval Rates, Then Join onto Transfer Panel ────── #
+# ---------------------------------------------------------------------------- #
+## 3.3 Join Scores with Approval Rates, Then Join onto Transfer Panel ----
 # df_ideb: one row per municipality × year × school network (rede),
 # containing both score and approval-rate columns for all three cycles.
+# ---------------------------------------------------------------------------- #
+
 df_ideb <- full_join(
   df_saeb, df_apr,
   by = c("codigo_ibge", "rede", "uf", "ano", "nome")
@@ -633,9 +645,9 @@ write.csv2(
 )
 
 
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # 4. SIOPE — FUNDEB Realised Revenues ----
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # SIOPE (Sistema de Informações sobre Orçamentos Públicos em Educação) is the
 # FNDE's database of municipal and state education budget declarations.
 # We use it to extract the realised FUNDEB receipt and deduction items per
@@ -647,20 +659,21 @@ write.csv2(
 # 4.2.4 – 4.2.6 — Liquid-transfer construction and join with df_nota
 #          (preserved in commented form; activate when data quality checks pass).
 
-
-# ── 4.1 Note on Missing Approval Rates ──────────────────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 4.1 Note on Missing Approval Rates ----
 # Because IDEB was introduced in 2007, SAEB scores and approval rates are only
 # available from 2005 (biennial) for EF and from 2017 for EM. Years 2000–2004
 # (EF) and 2000–2016 (EM) have no approval rates in df_nota.
 # Pre-2005 SAEB scores (2001, 2003) would be needed for parallel-trends testing
 # but are not yet integrated; those rows remain NA in the panel.
+# ---------------------------------------------------------------------------- #
 
-
-# ── 4.2 FUNDEB Transfers from SIOPE ─────────────────────────────────────── #
-
-### 4.2.1 [RUN-ONCE] Download Raw SIOPE Files from FNDE Open Data API ─────── ###
+# ---------------------------------------------------------------------------- #
+## 4.2 FUNDEB Transfers from SIOPE ----
+### 4.2.1 [RUN-ONCE] Download Raw SIOPE Files from FNDE Open Data API----
 # Set RUN_ONCE_SIOPE_DOWNLOAD <- TRUE only on the very first run.
 # Once files are written to PATH_GIOVANNI/Dados/SIOPE/, set it back to FALSE.
+# ---------------------------------------------------------------------------- #
 
 RUN_ONCE_SIOPE_DOWNLOAD <- FALSE   # ← change to TRUE on first run only
 
@@ -718,11 +731,12 @@ if (RUN_ONCE_SIOPE_DOWNLOAD) {
   log_erros <- bind_rows(falhas)
 }
 
-
-### 4.2.2 [RUN-ONCE] Stack Per-UF Files into One Annual CSV ────────────────── ###
+# ---------------------------------------------------------------------------- #
+### 4.2.2 [RUN-ONCE] Stack Per-UF Files into One Annual CSV----
 # After 4.2.1, each UF × year has its own file. Here we merge all UFs for a
 # given year into one consolidated file saved under SIOPE/Anos/.
 # Run this section only after 4.2.1 has completed successfully.
+# ---------------------------------------------------------------------------- #
 
 RUN_ONCE_SIOPE_ANNUAL <- FALSE   # ← change to TRUE on first run (after 4.2.1)
 
@@ -769,12 +783,13 @@ if (RUN_ONCE_SIOPE_ANNUAL) {
   }
 }
 
-
-### 4.2.3 Import Annual SIOPE Files into a Named List ─────────────────────── ###
+# ---------------------------------------------------------------------------- #
+### 4.2.3 Import Annual SIOPE Files into a Named List----
 # Runs on every execution (not a run-once step).
 # Reads the pre-built annual CSVs from SIOPE/Anos/ and applies year-specific
 # item filters to retain only the FUNDEB receipt and deduction rows.
 # Output: lista_anos — a named list where each element is one year's data.
+# ---------------------------------------------------------------------------- #
 
 pasta_anos <- file.path(PATH_GIOVANNI, "Dados/SIOPE/Anos")
 
@@ -875,11 +890,12 @@ for (ano in 2005:2024) {
   rm(df2, df_filtrado)
 }
 
-
-### 4.2.4 [PRESERVED] Compute Net FUNDEB Transfers ─────────────────────────── ###
+# ---------------------------------------------------------------------------- #
+### 4.2.4 [PRESERVED] Compute Net FUNDEB Transfers----
 # Net (liquid) transfer = principal FUNDEF/FUNDEB receipt − FUNDEB deductions.
 # This block is preserved for when SIOPE data quality checks are complete.
 # Activate by uncommenting and running after 4.2.3.
+# ---------------------------------------------------------------------------- #
 
 # lista_liq <- list()
 #
@@ -929,8 +945,9 @@ for (ano in 2005:2024) {
 #
 # transf <- bind_rows(lista_liq) %>% clean_names()
 
-
-### 4.2.5 [PRESERVED] Deflate Net Transfers ────────────────────────────────── ###
+# ---------------------------------------------------------------------------- #
+### 4.2.5 [PRESERVED] Deflate Net Transfers----
+# ---------------------------------------------------------------------------- #
 
 # ipca <- read_excel(file.path(PATH_GIOVANNI, "Dados/IPCA_acumulado_ano.xlsx"), skip = 1)
 # colnames(ipca) <- c("ano", "ipca")
@@ -952,10 +969,11 @@ for (ano in 2005:2024) {
 #
 # rm(ipca)
 
-
-### 4.2.6 [PRESERVED] Join SIOPE Liquid Transfers with df_nota ──────────────── ###
+# ---------------------------------------------------------------------------- #
+### 4.2.6 [PRESERVED] Join SIOPE Liquid Transfers with df_nota----
 # Once transf is ready, merge with the transfer + score panel and re-export.
 # Uncomment and run after 4.2.5 passes all quality checks.
+# ---------------------------------------------------------------------------- #
 
 # colnames(transf) <- c("ano","tipo","uf","cod_uf","nome","codigo_ibge_n",
 #                        "principal","complementacao","deducoes","transf_liquida")
@@ -973,9 +991,9 @@ for (ano in 2005:2024) {
 #   file.path(PATH_GIOVANNI, "Dados/painel_notas_transferencias_2000_2024.csv"))
 
 
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # 5. SIMULATION — FUNDEF Counterfactual ----
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # The core identification strategy asks: how much would each municipality have
 # received in 2007 if FUNDEF distribution rules had continued, rather than the
 # expanded FUNDEB rules that actually took effect?
@@ -999,12 +1017,13 @@ for (ano in 2005:2024) {
 #   5.5  Simulate the FUNDEF distribution coefficient per municipality
 #   5.6  Compute VAA (Valor Aluno-Ano) under actual FUNDEB and counterfactual
 
-
-## 5.1 Censo Escolar 2006 — School-Level Microdata ─────────────────────────── ##
+# ---------------------------------------------------------------------------- #
+## 5.1 Censo Escolar 2006 — School-Level Microdata----
 # The 2006 Censo is the last one before FUNDEB took effect.
 # Its enrolment counts reflect the baseline FUNDEF-era composition.
 # The raw pipe-delimited file is ~400 MB; we filter and save an RDS after the
 # first load so subsequent runs skip the expensive read_delim call.
+# ---------------------------------------------------------------------------- #
 
 censo <- read_delim(
   file.path(
@@ -1042,11 +1061,12 @@ censo <- read_delim(
   )
 )
 
-
-### 5.1.1 Aggregate Enrolments by School ─────────────────────────────────── ###
+# ---------------------------------------------------------------------------- #
+### 5.1.1 Aggregate Enrolments by School----
 # Select and sum enrolment variables for each schooling modality.
 # The 2006 census uses two grade-scale conventions simultaneously:
 # the old 8-year and new 9-year EF tracks — we handle both.
+# ---------------------------------------------------------------------------- #
 
 mat_2006 <- censo %>%
   select(c(
@@ -1132,10 +1152,12 @@ saveRDS(mat_2006, file.path(PATH_TUFFY, "Dados/censo_2006_filtrado.rds"))
 mat_2006 <- readRDS(file.path(PATH_TUFFY, "Dados/censo_2006_filtrado.rds"))
 
 
-### 5.1.2 Aggregate to Municipality Level ─────────────────────────────────── ###
+# ---------------------------------------------------------------------------- #
+### 5.1.2 Aggregate to Municipality Level----
 # Sum all school-level counts to the municipality × administrative network
 # (DEP) × indigenous flag level. The DEP distinction is needed because state
 # and municipal networks have separate distribution coefficients.
+# ---------------------------------------------------------------------------- #
 
 mat_2006_munic <- mat_2006 %>%
   group_by(CODMUNIC, DEP, ind_quil) %>%
@@ -1159,10 +1181,11 @@ glimpse(mat_2006_munic %>%
 
 saveRDS(mat_2006_munic, file.path(PATH_TUFFY, "Dados/censo_2006_filtrado_mun.rds"))
 
-
-## 5.2 FUNDEF Distribution Coefficient — Setup ──────────────────────────────── ##
+# ---------------------------------------------------------------------------- #
+## 5.2 FUNDEF Distribution Coefficient — Setup----
 # Reload the municipality-level aggregates from the saved RDS and attach
 # descriptive labels for documentation purposes.
+# ---------------------------------------------------------------------------- #
 
 mat_2006 <- readRDS(file.path(PATH_TUFFY, "Dados/censo_2006_filtrado_mun.rds")) %>%
   add_label("mat_reg_in",  "Mat. Fund. Iniciais regular (CENSO)") %>%
@@ -1173,9 +1196,11 @@ mat_2006 <- readRDS(file.path(PATH_TUFFY, "Dados/censo_2006_filtrado_mun.rds")) 
   add_label("mat_tot_esp", "Mat. Especiais (CENSO)")
 
 
-### 5.2.1 State-Level Special-Education Totals ─────────────────────────────── ###
+# ---------------------------------------------------------------------------- #
+### 5.2.1 State-Level Special-Education Totals----
 # TA_esp = total special-education enrolments per state (UF).
 # Under FUNDEF rules, special-ed was pooled at the state level in the denominator.
+# ---------------------------------------------------------------------------- #
 
 estaduais <- mat_2006 %>%
   group_by(uf) %>%
@@ -1185,10 +1210,12 @@ estaduais <- mat_2006 %>%
 mat_cd <- mat_2006 %>% left_join(estaduais, by = "uf")
 
 
-### 5.2.2 Aggregate State Network Rows ─────────────────────────────────────── ###
+# ---------------------------------------------------------------------------- #
+### 5.2.2 Aggregate State Network Rows----
 # State (Estadual) schools have one coefficient per UF, not per municipality.
 # We aggregate them to UF level and assign each a numeric codigo_ibge matching
 # the state-level FUNDEF/FUNDEB transfer records.
+# ---------------------------------------------------------------------------- #
 
 mat_cd <- mat_cd %>%
   group_by(DEP, uf, nome = ifelse(DEP == "Estadual", "GOVERNO ESTADUAL", nome)) %>%
@@ -1222,11 +1249,13 @@ mat_cd <- mat_cd %>%
   add_label("TA_esp",           "Total Mat. Especiais do UF (CENSO)")
 
 
-## 5.3 FNDE Official 2007 FUNDEB Pondering Sheets ─────────────────────────── ##
+# ---------------------------------------------------------------------------- #
+## 5.3 FNDE Official 2007 FUNDEB Pondering Sheets----
 # The FNDE published one Excel file per UF with the official enrolment counts
 # and distribution coefficients used in the first year of FUNDEB (2007).
 # These are our reference for the actual FUNDEB allocation and for scaling
 # the counterfactual.
+# ---------------------------------------------------------------------------- #
 
 lista_ufs <- list()
 pasta     <- file.path(PATH_GIOVANNI, "Dados/ponderacao_matriculas_2007/excel/")
@@ -1266,9 +1295,10 @@ lista_ufs[["al"]] <- al; rm(al)
 dis_fed <- lista_ufs[["df"]] %>% mutate(nome = str_replace(nome, "TOTAL -Distrito Federal", "DISTRITO FEDERAL"))
 lista_ufs[["df"]] <- dis_fed; rm(dis_fed)
 
-
-## 5.4 Single FNDE Data Frame ─────────────────────────────────────────────── ##
+# ---------------------------------------------------------------------------- #
+## 5.4 Single FNDE Data Frame----
 # Stack all 27 UF sheets, drop subtotal rows, and label each column.
+# ---------------------------------------------------------------------------- #
 
 df_fnde <- data.frame()
 
@@ -1309,12 +1339,13 @@ test <- df_fnde %>%
   ungroup()
 rm(test)
 
-
-### 5.4.1 Proportion of Iniciais vs. Finais from the Censo ─────────────────── ###
+# ---------------------------------------------------------------------------- #
+### 5.4.1 Proportion of Iniciais vs. Finais from the Censo----
 # Some municipalities report ONLY full-time (integral) EF in the FNDE sheets,
 # making it impossible to split that enrolment using FNDE data alone.
 # We compute the iniciais/finais split from the 2006 Censo and use it as an
 # imputation denominator when allocating integral enrolments.
+# ---------------------------------------------------------------------------- #
 
 mat_cd <- mat_cd %>%
   mutate(
@@ -1331,10 +1362,12 @@ mat_cd <- mat_cd %>%
   add_label("prop_5_8_mun", "Prop. de Mat. Finais (CENSO)")
 
 
-### 5.4.2 Special-Education and Indigenous Enrolments from the Censo ─────────── ###
-
-# ── 5.4.2.1 Join special-ed counts and Censo proportions onto FNDE data ──── #
+# ---------------------------------------------------------------------------- #
+### 5.4.2 Special-Education and Indigenous Enrolments from the Censo----
+#### 5.4.2.1 Join special-ed counts and Censo proportions onto FNDE data -----
 # Create a merge key from municipality name + UF abbreviation
+# ---------------------------------------------------------------------------- #
+
 df_fnde <- df_fnde %>% mutate(chave = paste(nome, uf, sep = "_"))
 mat_cd  <- mat_cd  %>% mutate(chave = paste(nome, uf, sep = "_"))
 
@@ -1353,11 +1386,12 @@ df_fnde <- df_fnde %>%
     by = "chave"
   )
 
-
-# ── 5.4.2.2 Indigenous and Quilombola Enrolments ──────────────────────────── #
+# ---------------------------------------------------------------------------- #
+#### 5.4.2.2 Indigenous and Quilombola Enrolments-----
 # Filter to schools flagged as indigenous/quilombola and aggregate their
 # enrolments by modality. Under FUNDEF these students would have been counted
 # as regular EF, but FUNDEB assigns them a separate weight (FD_ind = 1.20).
+# ---------------------------------------------------------------------------- #
 
 mat_ind <- mat_2006 %>%
   filter(ind_quil == 1) %>%
@@ -1424,8 +1458,8 @@ test <- df_fnde %>%
   ungroup()
 rm(test)
 
-
-## 5.5 De Facto FUNDEF Simulation ─────────────────────────────────────────── ##
+# ---------------------------------------------------------------------------- #
+## 5.5 De Facto FUNDEF Simulation-----
 # Apply the FUNDEF distribution formula to 2006 enrolment data to obtain
 # a simulated coefficient for each municipality (coef_simulado).
 #
@@ -1434,6 +1468,7 @@ rm(test)
 #            / [FD1 * TA_1/4 + FD2 * (TA_5/8 + TA_e)]
 #
 # TA_* = state-level totals; NA_* = municipality-level counts.
+# ---------------------------------------------------------------------------- #
 
 # Step 1: Compute state-level totals (TA_*) for the FUNDEF denominator.
 # Integral enrolments are split into iniciais/finais using the state proportions.
@@ -1558,12 +1593,13 @@ simulacao <- simulacao %>%
            shr_inf_em, shr_inf, everything())) %>%
   add_label("receita_real", "Receita recebida pelo FUNDEB (2007)")
 
-
-## 5.6 VAA Simulation (FUNDEB 2007 Weights) ───────────────────────────────── ##
+# ---------------------------------------------------------------------------- #
+## 5.6 VAA Simulation (FUNDEB 2007 Weights)-----
 # Using the official FUNDEB 2007 weight factors (Art. 36, Law 11.494/2007),
 # compute the Valor Aluno-Ano (VAA) — the per-weighted-student fund value —
 # for both the actual FUNDEB allocation and the FUNDEF counterfactual.
 # d_vaa = % difference between the two, which is an alternative treatment measure.
+# ---------------------------------------------------------------------------- #
 
 # Official FUNDEB 2007 weight factors by modality and location:
 FDC    <- 0.8   # Creche
@@ -1619,8 +1655,9 @@ simulacao <- simulacao %>%
   relocate(d_vaa, .after = dif_per_coef) %>%
   add_label("d_vaa", "Dif. (%) do VAA simulado pro real")
 
-
-### 5.6.1 Add Total 2006 Enrolment and Per-Student Spending Measures ──────── ###
+# ---------------------------------------------------------------------------- #
+### 5.6.1 Add Total 2006 Enrolment and Per-Student Spending Measures----
+# ---------------------------------------------------------------------------- #
 
 simulacao <- simulacao %>%
   mutate(
@@ -1649,9 +1686,9 @@ rm(list = ls())
 gc()
 
 
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # 6. REGRESSION DATA — Joining All Sources ----
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # This section assembles the final panel used in all regressions by joining:
 #   df_trn        — FUNDEF/FUNDEB transfers + SAEB scores (Section 3 export)
 #   df_sim        — Counterfactual simulation (Section 5)
@@ -1704,10 +1741,12 @@ df_ipca <- df_ipca %>%
   ) %>%
   mutate(indice = indice / indice[ano == 2007])   # base year = 2007
 
-
-## 6.1 SAEB Weights and GDP ──────────────────────────────────────────────────
+# ---------------------------------------------------------------------------- #
+## 6.1 SAEB Weights and GDP----
 # Rename weight columns to a cleaner format and join onto the transfer panel.
 # Weights allow computing SAEB-weighted averages across municipalities.
+# ---------------------------------------------------------------------------- #
+
 df_pesosaeb <- df_pesosaeb %>%
   rename(peso_5 = ano_5, peso_9 = ano_9)
 
@@ -1719,7 +1758,6 @@ df_trn <- df_trn %>%
 pib <- read_excel(
   file.path(PATH_TUFFY, "Dados/PIB dos Municípios - base de dados 2002-2009.xls")
 ) %>%
-  filter(Ano >= 2005) %>%
   select(1, 7, 8, 40)   # year, IBGE code, municipality name, GDP per capita
 
 pib2 <- read_excel(
@@ -1727,11 +1765,15 @@ pib2 <- read_excel(
 ) %>%
   select(1, 7, 8, 40)
 
+pib_99 <- read_excel("Z:/Tuffy/Paper - Educ/Dados/pib/pib_99_01.xls") %>%
+  select(1, 4, 5, 13) 
 
-## 6.2 Include Main Treatment and Control Variables ───────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 6.2 Include Main Treatment and Control Variables ----
 # Join the simulation results onto the panel to obtain the treatment measures
 # (dif_per_coef, dosage, aluno_dosage) and the 2007 counterfactual receipt.
 # Also attach the 2007-base deflator to enable real-spending calculations.
+# ---------------------------------------------------------------------------- #
 
 # Network filter for SAEB observations: keep only the chosen network
 # in biennial (odd) years; retain all rows in non-SAEB years.
@@ -1765,11 +1807,12 @@ temp <- temp %>%
   # Remove the 7th IBGE check digit so the code matches FINBRA and the Censo
   mutate(codigo_ibge = as.numeric(str_sub(as.character(codigo_ibge), 1, -2)))
 
-
-## 6.3 Join FINBRA Education Expenditure Variables ─────────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 6.3 Join FINBRA Education Expenditure Variables----
 # Merge real education spending from FINBRA. Reported zeros are treated as
 # missing data (reporting gaps) rather than true zero expenditure.
 # All spending values are deflated to constant 2007 BRL using indice_ipca_07.
+# ---------------------------------------------------------------------------- #
 
 temp <- temp %>%
   left_join(df_fib %>% select(-c(uf)), by = c("codigo_ibge", "ano")) %>%
@@ -1807,25 +1850,40 @@ temp <- temp %>%
   fill(ed_spending_2006, .direction = "downup") %>%
   ungroup()
 
+# ---------------------------------------------------------------------------- #
+## 6.4 Join GDP Per Capita----
+# ---------------------------------------------------------------------------- #
 
-## 6.4 Join GDP Per Capita ─────────────────────────────────────────────────── #
 colnames(pib)  <- c("ano", "codigo_ibge", "nom", "PIBpc")
 colnames(pib2) <- c("ano", "codigo_ibge", "nom", "PIBpc")
+colnames(pib_99) <- c("ano", "codigo_ibge", "nom", "PIBpc")
 
 # Stack both IBGE GDP series and remove the 7th check digit from municipality codes
-pib <- bind_rows(pib, pib2) %>%
-  mutate(codigo_ibge = as.numeric(str_sub(as.character(codigo_ibge), 1, -2)))
+pib_final <- bind_rows(list(pib, pib2,
+                            pib_99 %>% filter(ano < 2002) %>% 
+                              mutate( ano = as.numeric(ano),
+                                      codigo_ibge = as.numeric(codigo_ibge),
+                                      PIBpc = as.numeric(PIBpc)))
+                       )
 
-temp <- left_join(temp, pib, by = c("codigo_ibge", "ano")) %>%
+
+saveRDS(pib_final, file.path(PATH_TUFFY,"Dados/intermediate/final_pib.rds"))
+
+
+
+temp <- left_join(temp, pib %>% mutate(codigo_ibge = as.numeric(codigo_ibge) %/% 10),
+                  by = c("codigo_ibge", "ano")) %>%
   relocate(PIBpc, .after = "nome")
 
 rm(pib2)
 
-
-## 6.5 Join 2006 Censo Enrolment by Modality ─────────────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 6.5 Join 2006 Censo Enrolment by Modality ----
 # Load the 2006 municipal enrolment counts (saved in Section 5.1.2) for the
 # municipal network only, which is the primary recipient of FUNDEF transfers.
 # These are used as the denominator in the aluno_dosage treatment variable.
+# ---------------------------------------------------------------------------- #
+
 mat_mun_2006 <- readRDS(file.path(PATH_TUFFY, "Dados/censo_2006_filtrado_mun.rds")) %>%
   filter(DEP == "Municipal") %>%
   mutate(
@@ -1843,8 +1901,8 @@ mat_mun_2006 <- readRDS(file.path(PATH_TUFFY, "Dados/censo_2006_filtrado_mun.rds
   mutate(total_alunos_2006 = mat_fun + mat_inf + mat_med + mat_esp + mat_eja) %>%
   ungroup()
 
-
-## 6.6 Compute the Main Dosage Variables ──────────────────────────────────── #
+# ---------------------------------------------------------------------------- #
+## 6.6 Compute the Main Dosage Variables ----
 # dosage      = (receita_real − receita_simulada) / receita_real
 #   → fraction of actual 2007 FUNDEB receipt that exceeds the FUNDEF baseline
 #   → positive: municipality gained from FUNDEB; negative: it lost
@@ -1852,6 +1910,7 @@ mat_mun_2006 <- readRDS(file.path(PATH_TUFFY, "Dados/censo_2006_filtrado_mun.rds
 #
 # aluno_dosage = (receita_real − receita_simulada) / total_alunos_2006
 #   → same treatment expressed in BRL per 2006 student (alternative scaling)
+# ---------------------------------------------------------------------------- #
 
 df_reg <- temp %>%
   filter(codigo_ibge > 10) %>%       # drop 2-digit state-level records
@@ -1874,9 +1933,9 @@ gc()
 rm(list = ls())
 
 
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # 7. DATA CLEANING AND FLAGS ----
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 # Load the regression data frame and apply a series of cleaning steps:
 #   (a) drop auxiliary columns no longer needed downstream
 #   (b) join the richer annual school-census panel (censo_escolar_base_v2)
@@ -1896,7 +1955,10 @@ data <- readRDS(file.path(PATH_TUFFY, "Dados/final/regdf.rds")) %>%
     tx_aprovacao_4, tx_aprovacao_5, tx_aprovacao_6, tx_aprovacao_7,
     tx_aprovacao_9, tx_aprovacao_em, tx_aprovacao_1em, tx_aprovacao_2em,
     tx_aprovacao_3em, tx_aprovacao_4em,
-    codigo_ibge_n, coef_simulado, dif_per_coef, dif_coef_pp, ipca, X.y, coluna
+    codigo_ibge_n, coef_simulado, dif_per_coef, dif_coef_pp, ipca, X.y, coluna,
+    total_coun, indice, vl_nota_5_matematica:vl_nota_em_media, principal, complementacao,
+    deducoes, peso_5, peso_9, coef_est_fnde, d_vaa, receita_est_fnde, k, total_alunos_2006,
+    dif_rs_aluno_100, demais_subfuncoes_12
   )) %>%
   # Tag the 2006-Censo enrolment columns with _aux so they are distinguishable
   # from the annual enrolment columns about to be joined from censo_escolar_base_v2
@@ -1970,12 +2032,13 @@ data <- data %>%
   select(-c(tx_aprovacao_finais, tx_aprovacao_8, rs_por_aluno_fundeb,
             rs_por_aluno_sim, nom, nom_mun))
 
-
-## 7.1 Outlier Flags ──────────────────────────────────────────────────────── ##
+# ---------------------------------------------------------------------------- #
+## 7.1 Outlier Flags ----
 # For each municipality, flag whether any year in the panel shows an annual
 # growth rate above/below a given threshold. Flags are binary: 1 if any year
 # exceeds the threshold, 0 otherwise. They allow sensitivity analysis by
 # sequentially excluding more extreme municipalities from the regression sample.
+# ---------------------------------------------------------------------------- #
 
 data <- data %>%
   group_by(codigo_ibge) %>%
@@ -2023,10 +2086,11 @@ summary(data %>% select(flag_enroll15, flag_enroll20, flag_enroll25, flag_enroll
 
 test2 <- data %>% filter(flag_enroll15 == 0 & flag_enrollm15 == 0 & ano == 2007)
 
-
-### 7.1.1 Visualise Flag Prevalence ──────────────────────────────────────── ###
+# ---------------------------------------------------------------------------- #
+### 7.1.1 Visualise Flag Prevalence ----
 # Bar chart showing the percentage of municipalities flagged at each threshold
 # for enrolment (green) and spending (blue), separately for increases and decreases.
+# ---------------------------------------------------------------------------- #
 
 mean_long <- data %>%
   summarise(across(starts_with("flag_"), ~ mean(.x, na.rm = TRUE))) %>%
@@ -2121,9 +2185,209 @@ ggsave(
 
 rm(plot_df, mean_long, mean_df, od, p)
 
-
-## 7.2 Save Final Dataset ──────────────────────────────────────────────────── ##
+# ---------------------------------------------------------------------------- #
+## 7.2 Save Final Dataset----
 # regdf_flags.rds is the primary input for all regression scripts.
 # It covers 2005–2018 and contains all outcome variables, treatment variables,
 # controls, and the full set of outlier flags.
+# ---------------------------------------------------------------------------- #
+
 saveRDS(data, file.path(PATH_TUFFY, "Dados/final/regdf_flags.rds"))
+
+rm(df_enroll, df_fib, df_ipca, df_pesosaeb, df_reg, df_sim, df_trn,
+   mat_mun_2006, pib, temp)
+#  --------------------------------------------------------------------------- #
+# 8. School data ----
+# ---------------------------------------------------------------------------- #
+## 8.0 Data ----
+# ---------------------------------------------------------------------------- #
+
+data <- readRDS(file.path(PATH_TUFFY, "Dados/final/regdf_flags.rds")) %>% 
+  select(-c(growth_enroll:flag_spendm80))
+
+
+lvl_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/censo_escolar_base_v2.rds")
+
+
+# --- Exposure helpers --- #
+# These functions convert school-level characteristics into municipality-year
+# exposure measures. For each listed variable, exposure is:
+#   sum(school_variable * school_enrolment, over selected schools) /
+#   sum(school_enrolment, over all schools in the municipality-year).
+# For a dummy such as sewage access, the result is the share of students in the
+# municipality exposed to that characteristic through the selected school group.
+
+make_school_exposure <- function(df,
+                                 vars,
+                                 exposure_suffix,
+                                 group_vars = c("codmun", "ano"),
+                                 enrollment_var = "mat_total",
+                                 school_filter_fn = NULL) {
+  missing_vars <- setdiff(c(group_vars, enrollment_var, vars), names(df))
+  if (length(missing_vars) > 0) {
+    stop("Missing variables in school data: ", paste(missing_vars, collapse = ", "))
+  }
+  
+  denom <- df %>%
+    group_by(across(all_of(group_vars))) %>%
+    summarise(
+      total_enrollment_mun = sum(.data[[enrollment_var]], na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  numerator_df <- df
+  if (!is.null(school_filter_fn)) {
+    numerator_df <- school_filter_fn(numerator_df)
+  }
+  
+  numerator <- numerator_df %>%
+    group_by(across(all_of(group_vars))) %>%
+    summarise(
+      across(
+        all_of(vars),
+        ~ sum(.x * .data[[enrollment_var]], na.rm = TRUE),
+        .names = "{.col}_num"
+      ),
+      .groups = "drop"
+    )
+  
+  exposure_cols <- paste0(vars, "_", exposure_suffix)
+  numerator_cols <- paste0(vars, "_num")
+  
+  out <- denom %>%
+    left_join(numerator, by = group_vars) %>%
+    mutate(across(all_of(numerator_cols), ~ replace_na(.x, 0))) %>%
+    mutate(across(
+      all_of(numerator_cols),
+      ~ if_else(total_enrollment_mun > 0, .x / total_enrollment_mun, NA_real_)
+    ))
+  
+  names(out)[match(numerator_cols, names(out))] <- exposure_cols
+  
+  out %>%
+    select(all_of(group_vars), all_of(exposure_cols))
+}
+
+# Version 1: exposure through municipal schools only.
+# Use this when the numerator should include schools where the school-network
+# variable identifies the school as municipal.
+make_municipal_school_exposure <- function(df,
+                                           vars,
+                                           group_vars = c("codmun", "ano"),
+                                           enrollment_var = "mat_total",
+                                           network_var = "rede",
+                                           municipal_values = c("Municipal", "MUNICIPAL", "Municipalizada")) {
+  if (!network_var %in% names(df)) {
+    stop("Network variable not found in school data: ", network_var)
+  }
+  
+  make_school_exposure(
+    df = df,
+    vars = vars,
+    exposure_suffix = "exp_mun",
+    group_vars = group_vars,
+    enrollment_var = enrollment_var,
+    school_filter_fn = function(x) {
+      x %>% filter(.data[[network_var]] %in% municipal_values)
+    }
+  )
+}
+
+# Version 2: exposure through municipal schools plus schools affiliated with the
+# municipality. If the affiliation column has a slightly different spelling in
+# the data, pass it through `affiliation_var`.
+make_municipal_affiliated_school_exposure <- function(df,
+                                                      vars,
+                                                      group_vars = c("codmun", "ano"),
+                                                      enrollment_var = "mat_total",
+                                                      network_var = "rede",
+                                                      municipal_values = c("Municipal", "MUNICIPAL", "Municipalizada"),
+                                                      affiliation_var = "affill_mun") {
+  if (!network_var %in% names(df)) {
+    stop("Network variable not found in school data: ", network_var)
+  }
+  
+  if (!affiliation_var %in% names(df) && "affilll_mun" %in% names(df)) {
+    affiliation_var <- "affilll_mun"
+  }
+  if (!affiliation_var %in% names(df)) {
+    stop("Affiliation variable not found in school data: ", affiliation_var)
+  }
+  
+  make_school_exposure(
+    df = df,
+    vars = vars,
+    exposure_suffix = "exp_mun_affil",
+    group_vars = group_vars,
+    enrollment_var = enrollment_var,
+    school_filter_fn = function(x) {
+      x %>%
+        filter(.data[[network_var]] %in% municipal_values | .data[[affiliation_var]] == 1)
+    }
+  )
+}
+
+
+# --- GDP per Capita --- #
+# Municipal GDP per capita — two IBGE series covering non-overlapping year ranges
+
+
+pib_final <- readRDS(file.path(PATH_TUFFY,"Dados/intermediate/final_pib.rds"))
+
+
+
+# Joining the data
+
+df_school <- lvl_school %>% 
+  left_join(pib_final %>% mutate(codmun = as.character(codigo_ibge)) %>% 
+              distinct(codmun, ano, PIBpc),
+            by = c("codmun", "ano")) %>% 
+  mutate(
+    codigo_ibge = as.numeric(codmun) %/% 10
+  ) %>% 
+  left_join(data %>%
+          distinct(codigo_ibge, aluno_dosage), by = c("codigo_ibge")) %>% 
+
+  select(-c(codigo_ibge))
+
+
+# Removing masked municipalities:
+df_school <- df_school %>% 
+  filter(!is.na(aluno_dosage)) %>% 
+  mutate(uf = as.numeric(codmun) %/% 100000)
+
+
+saveRDS(df_school, file.path(PATH_TUFFY,"Dados/final/school_lvl.rds"))
+
+
+# ---------------------------------------------------------------------------- #
+## 8.1 Main DF -----
+# ---------------------------------------------------------------------------- #
+# Joining to the main df the school lvl.
+
+df_school_mun <- df_school %>% 
+  mutate(
+    fund_total = rowSums(across(c(col1, col2, col3, col4)), na.rm = TRUE)
+
+  )
+  group_by(ano, codmun) %>% 
+  summarise(
+    n_schools = n_distinct(school),
+    n_creche  = n_distinct(school[day_tot > 0]),
+    n_presco  = n_distinct(school[pre_tot > 0]),
+    
+    n_fundam  = n_distinct(school[fund_total > 0]),
+    
+    .groups = "drop"
+  )
+
+
+# summarise(
+#   n_schools = n_distinct(school),
+#   n_child_ed_schools = n_distinct(school[kinder == 1]),
+#   n_child_ed_municipal = n_distinct(school[kinder == 1 & dep_adm == 3]),
+#   share_child_ed = n_child_ed_schools / n_schools,
+#   share_child_ed_municipal = n_child_ed_municipal / n_child_ed_schools,
+#   .groups = "drop"
+# )
+
