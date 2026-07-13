@@ -2247,14 +2247,15 @@ df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/censo_escolar_bas
 
 df_combined <- df_school %>% 
   left_join(data %>% select(-dep_adm),
-            by = c("uf" = "uf", "ano" = "ano", "codmun" = "codmun", "school" = "school")) %>% 
-  group_by(school, ano) %>% 
+            by = c("uf" = "uf", "ano" = "ano", "codmun" = "codmun", "school" = "school")) #%>% 
+  
+
+df_combined <- df_combined %>% 
   mutate(
     enroll = rowSums(
       across(c(ef_tot, em_tot, ed_inf_tot, eja_tot)),
       na.rm = TRUE) #We dont count the discarded variable of esp
   ) %>% 
-  ungroup() %>% 
   mutate(
     dep_adm = case_when(
       
@@ -2328,57 +2329,708 @@ pop_mun <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/pop_age.rds")
 
 df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/censo_escolar_base_v2.rds")
 
+# ---------------------------------------------------------------------------- #
+### 5.1.1. Variables ----
+# ---------------------------------------------------------------------------- #
+
 # Municipal enrollment
-df_enroll_mun <- df_enroll %>% 
+df_lvl_mun <- df_enroll %>% 
   ungroup() %>% 
+  mutate(is_mun = dep_adm == "Municipal") %>%
   group_by(codmun, ano) %>% 
   summarise(
+    
+    # -------- Enrollment totals -------- #
     inf_enroll = sum(
-      rowSums(across(c(pre_tot, day_tot)), na.rm = TRUE)
+      rowSums(across(c(pre_tot, day_tot)), na.rm = TRUE),
+      na.rm = TRUE
     ),
     
-    fund_enroll = sum(
-      rowSums(across(c(reg_in_9, reg_in_8,
-                       reg_fin_9, reg_fin_8)), na.rm = TRUE)
+    fun_enroll = sum(
+      rowSums(across(c(reg_in_9, reg_in_8, reg_fin_9, reg_fin_8)), na.rm = TRUE),
+      na.rm = TRUE
     ),
     
-    inf_mun_enroll = sum(
+    total_enroll = sum(coalesce(enroll, 0), na.rm = TRUE),
+    
+    total_pub_enroll = sum(
+      if_else(is_mun, coalesce(enroll, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    inf_pub_enroll = sum(
       if_else(
-        dep_adm == "Municipal" | (affiliated == 1 & affil_mun == 1),
+        is_mun,
         rowSums(across(c(pre_tot, day_tot)), na.rm = TRUE),
-        0
-      )
+        0,
+        missing = 0
+      ),
+      na.rm = TRUE
     ),
     
-    fund_mun_enroll = sum(
-      if_else(
-        dep_adm == "Municipal" | (affiliated == 1 & affil_mun == 1),
-        rowSums(across(c(reg_in_9, reg_in_8,
-                         reg_fin_9, reg_fin_8)), na.rm = TRUE),
-        0
-      )
+    cre_enroll = sum(coalesce(day_tot, 0), na.rm = TRUE),
+    pre_enroll = sum(coalesce(pre_tot, 0), na.rm = TRUE),
+    
+    cre_pub_enroll = sum(
+      if_else(is_mun, coalesce(day_tot, 0), 0, missing = 0),
+      na.rm = TRUE
     ),
+    
+    pre_pub_enroll = sum(
+      if_else(is_mun, coalesce(pre_tot, 0), 0, missing = 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_enroll = sum(
+      if_else(
+        is_mun,
+        rowSums(across(c(reg_in_9, reg_in_8, reg_fin_9, reg_fin_8)), na.rm = TRUE),
+        0,
+        missing = 0
+      ),
+      na.rm = TRUE
+    ),
+    
+    # -------- Number of schools -------- #
+    n_pub_creche = n_distinct(school[coalesce(day_tot, 0) > 0 & is_mun]),
+    
+    n_pub_presco = n_distinct(school[coalesce(pre_tot, 0) > 0 & is_mun]),
+    
+    n_pub_fundam = n_distinct(
+      school[
+        (coalesce(reg_in_8, 0) > 0 | coalesce(reg_fin_8, 0) > 0 |
+           coalesce(reg_in_9, 0) > 0 | coalesce(reg_fin_9, 0) > 0) & is_mun
+      ]
+    ),
+    
+    # -------- Municipal infra / resources -------- #
+    pub_classroom = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                  coalesce(classroom, 0), 0), na.rm = TRUE),
+    
+    pub_teachroom = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                  coalesce(teach_room, 0), 0), na.rm = TRUE),
+    
+    pub_labs      = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                  coalesce(lab_dummy, 0), 0), na.rm = TRUE),
+    
+    pub_library   = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                  coalesce(lib_dummy, 0), 0), na.rm = TRUE),
+    
+    pub_playarea  = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                  coalesce(play_area, 0), 0), na.rm = TRUE),
+    
+    pub_lunch     = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                  coalesce(lunch, 0), 0), na.rm = TRUE),
+    
+    
+    pub_no_water  = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                  coalesce(water_non, 0), 0), na.rm = TRUE),
+    
+    pub_water_dum = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                  coalesce(water_dummy, 0), 0), na.rm = TRUE),
+    
+    
+    pub_no_sewage  = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                   coalesce(sewage_non, 0), 0), na.rm = TRUE),
+    
+    pub_sewage_dum = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                   coalesce(sewage_dummy, 0), 0), na.rm = TRUE),
+    
+    
+    pub_no_energy  = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                   coalesce(energy_non, 0), 0), na.rm = TRUE),
+    
+    pub_energy_dum = sum(if_else(is_mun, coalesce(enroll, 0) * 
+                                   coalesce(energy_dummy, 0), 0), na.rm = TRUE),
+    
+    
+    pub_employee = sum(if_else(is_mun, coalesce(enroll, 0) *
+                                 coalesce(employee, 0), 0), na.rm = TRUE),
+    
+    # -------- Teacher totals / education -------- #
+    pub_t_fun    = sum(if_else(is_mun, coalesce(fun_pub_enroll, 0) *
+                                 coalesce(t_fund, 0), 0), na.rm = TRUE),
+    
+    pub_t_pre    = sum(if_else(is_mun, coalesce(pre_pub_enroll, 0) *
+                                  coalesce(t_pree, 0), 0), na.rm = TRUE),
+    
+    pub_t_cre    = sum(if_else(is_mun, coalesce(cre_pub_enroll, 0) * 
+                                  coalesce(t_crec, 0), 0), na.rm = TRUE),
+    
+    
+    pub_t_fun_edu = sum(if_else(is_mun, coalesce(fun_pub_enroll, 0) * 
+                                  coalesce(t_fund_educ, 0), 0), na.rm = TRUE),
+    
+    pub_t_pre_edu = sum(if_else(is_mun, coalesce(pre_pub_enroll, 0) * 
+                                  coalesce(t_pree_educ, 0), 0), na.rm = TRUE),
+    
+    pub_t_cre_edu = sum(if_else(is_mun, coalesce(cre_pub_enroll, 0) * 
+                                  coalesce(t_crec_educ, 0), 0), na.rm = TRUE),
+    
+    # --- Municipal level variables --- #
+    
+    n_t_fun = sum(
+      if_else(is_mun, coalesce(t_fund, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    n_t_pre = sum(
+      if_else(is_mun, coalesce(t_pree, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    n_t_cre = sum(
+      if_else(is_mun, coalesce(t_crec, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    n_t_cre_edu = sum(
+      if_else(is_mun, coalesce(t_crec_educ, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    n_t_pre_edu = sum(
+      if_else(is_mun, coalesce(t_pree_educ, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    n_t_fun_edu = sum(
+      if_else(is_mun, coalesce(t_fund_educ, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    n_employee = sum(
+      if_else(is_mun, coalesce(employee, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    
+    # -------- Total exposure -------- #
+    
+    tot_classroom = sum(coalesce(enroll, 0) * coalesce(classroom, 0), na.rm = TRUE),
+    
+    tot_teachroom = sum(coalesce(enroll, 0) * coalesce(teach_room, 0), na.rm = TRUE),
+    
+    tot_labs = sum(coalesce(enroll, 0) * coalesce(lab_dummy, 0), na.rm = TRUE),
+    
+    tot_library = sum(coalesce(enroll, 0) * coalesce(lib_dummy, 0), na.rm = TRUE),
+    
+    tot_playarea = sum(coalesce(enroll, 0) * coalesce(play_area, 0), na.rm = TRUE),
+    
+    tot_lunch = sum(coalesce(enroll, 0) * coalesce(lunch, 0), na.rm = TRUE),
+    
+    tot_no_water = sum(coalesce(enroll, 0) * coalesce(water_non, 0), na.rm = TRUE),
+    
+    tot_water_dum = sum(coalesce(enroll, 0) * coalesce(water_dummy, 0), na.rm = TRUE),
+    
+    tot_no_sewage = sum(coalesce(enroll, 0) * coalesce(sewage_non, 0), na.rm = TRUE),
+    
+    tot_sewage_dum = sum(coalesce(enroll, 0) * coalesce(sewage_dummy, 0), na.rm = TRUE),
+    
+    tot_no_energy = sum(coalesce(enroll, 0) * coalesce(energy_non, 0), na.rm = TRUE),
+    
+    tot_energy_dum = sum(coalesce(enroll, 0) * coalesce(energy_dummy, 0), na.rm = TRUE),
+    
+    tot_employee = sum(coalesce(enroll, 0) * coalesce(employee, 0), na.rm = TRUE),
+    
+    tot_t_fund = sum(coalesce(fun_enroll, 0) * coalesce(t_fund, 0), na.rm = TRUE),
+    
+    tot_t_pree = sum(coalesce(pre_enroll, 0) * coalesce(t_pree, 0), na.rm = TRUE),
+    
+    tot_t_crec = sum(coalesce(cre_enroll, 0) * coalesce(t_crec, 0), na.rm = TRUE),
+    
+    tot_t_fun_edu = sum(coalesce(fun_enroll, 0) * coalesce(t_fund_educ, 0), na.rm = TRUE),
+    
+    tot_t_pre_edu = sum(coalesce(pre_enroll, 0) * coalesce(t_pree_educ, 0), na.rm = TRUE),
+    
+    tot_t_cre_edu = sum(coalesce(cre_enroll, 0) * coalesce(t_crec_educ, 0), na.rm = TRUE),
     
     .groups = "drop"
   )
 
 
 # Combining both databases
+# ---------------------------------------------------------------------------- #
+### 5.1.2 Age data ----
+# ---------------------------------------------------------------------------- #
 
-df_enroll_mun <- df_enroll_mun %>% 
-  left_join(pop_mun %>% mutate(ano = as.numeric(ano)), by = c("codmun" = "cod_mun", "ano")) %>% 
-  mutate( #Prop Variables
-    prop_inf  = ifelse(!is.na(inf_enroll) & !is.na(age_inf), inf_enroll/age_inf, NA),
-    prop_fund = ifelse(!is.na(fund_enroll) & !is.na(age_fund), fund_enroll/age_fund, NA),
+df_lvl_mun <- df_lvl_mun %>% 
+  left_join(pop_mun %>% mutate(ano = as.numeric(ano)), by = c("codmun" = "cod_mun", "ano"))
+
+
+# ---------------------------------------------------------------------------- #
+### 5.1.3 Prop. data ----
+# ---------------------------------------------------------------------------- #
+
+df_prop_mun <- df_lvl_mun %>% 
+  mutate(
     
-    prop_mun_inf = ifelse(!is.na(inf_mun_enroll) & !is.na(age_inf), inf_mun_enroll/age_inf, NA),
-    prop_mun_fund = ifelse(!is.na(fund_mun_enroll) & !is.na(age_fund), fund_mun_enroll/age_fund, NA)
+    # -------- Enrollment rates -------- #
+    
+    prop_inf = if_else(
+      !is.na(age_inf) & age_inf > 0,
+      inf_enroll / age_inf,
+      NA_real_
+    ),
+    
+    prop_fun = if_else(
+      !is.na(age_fund) & age_fund > 0,
+      fun_enroll / age_fund,
+      NA_real_
+    ),
+    
+    prop_pub_inf = if_else(
+      !is.na(age_inf) & age_inf > 0,
+      inf_pub_enroll / age_inf,
+      NA_real_
+    ),
+    
+    prop_pub_fun = if_else(
+      !is.na(age_fund) & age_fund > 0,
+      fun_pub_enroll / age_fund,
+      NA_real_
+    ),
+    
+    
+    # -------- Public share of total exposure -------- #
+    exp_classroom = if_else(!is.na(tot_classroom) & tot_classroom > 0,
+                            pub_classroom / tot_classroom,
+                            NA_real_),
+    
+    exp_teachroom = if_else(!is.na(tot_teachroom) & tot_teachroom > 0,
+                            pub_teachroom / tot_teachroom,
+                            NA_real_),
+    
+    exp_labs = if_else(!is.na(tot_labs) & tot_labs > 0,
+                       pub_labs / tot_labs,
+                       NA_real_),
+    
+    exp_library = if_else(!is.na(tot_library) & tot_library > 0,
+                          pub_library / tot_library,
+                          NA_real_),
+    
+    exp_playarea = if_else(!is.na(tot_playarea) & tot_playarea > 0,
+                           pub_playarea / tot_playarea,
+                           NA_real_),
+    
+    exp_lunch = if_else(!is.na(tot_lunch) & tot_lunch > 0,
+                        pub_lunch / tot_lunch,
+                        NA_real_),
+    
+    exp_no_water = if_else(!is.na(tot_no_water) & tot_no_water > 0,
+                           pub_no_water / tot_no_water,
+                           NA_real_),
+    
+    exp_water = if_else(!is.na(tot_water_dum) & tot_water_dum > 0,
+                        pub_water_dum / tot_water_dum,
+                        NA_real_),
+    
+    exp_no_sewage = if_else(!is.na(tot_no_sewage) & tot_no_sewage > 0,
+                            pub_no_sewage / tot_no_sewage,
+                            NA_real_),
+    
+    exp_sewage = if_else(!is.na(tot_sewage_dum) & tot_sewage_dum > 0,
+                         pub_sewage_dum / tot_sewage_dum,
+                         NA_real_),
+    
+    exp_no_energy = if_else(!is.na(tot_no_energy) & tot_no_energy > 0,
+                            pub_no_energy / tot_no_energy,
+                            NA_real_),
+    
+    exp_energy = if_else(!is.na(tot_energy_dum) & tot_energy_dum > 0,
+                         pub_energy_dum / tot_energy_dum,
+                         NA_real_),
+    
+    exp_employee = if_else(!is.na(tot_employee) & tot_employee > 0,
+                           pub_employee / tot_employee,
+                           NA_real_),
+    
+    exp_t_fun = if_else(!is.na(tot_t_fund) & tot_t_fund > 0,
+                        pub_t_fun / tot_t_fund,
+                        NA_real_),
+    
+    exp_t_pre = if_else(!is.na(tot_t_pree) & tot_t_pree > 0,
+                        pub_t_pre / tot_t_pree,
+                        NA_real_),
+    
+    exp_t_cre = if_else(!is.na(tot_t_crec) & tot_t_crec > 0,
+                        pub_t_cre / tot_t_crec,
+                        NA_real_),
+    
+    exp_t_fun_edu = if_else(!is.na(tot_t_fun_edu) & tot_t_fun_edu > 0,
+                            pub_t_fun_edu / tot_t_fun_edu,
+                            NA_real_),
+    
+    exp_t_pre_edu = if_else(!is.na(tot_t_pre_edu) & tot_t_pre_edu > 0,
+                            pub_t_pre_edu / tot_t_pre_edu,
+                            NA_real_),
+    
+    exp_t_cre_edu = if_else(!is.na(tot_t_cre_edu) & tot_t_cre_edu > 0,
+                            pub_t_cre_edu / tot_t_cre_edu,
+                            NA_real_)
+  ) %>% 
+  select(
+    -c(pub_classroom:pub_t_cre_edu, #Removing the non-more needed variables
+       tot_classroom:tot_t_cre_edu)
   )
   
   
-#Saving
-saveRDS(df_enroll_mun, "Z:/Tuffy/Paper - Educ/Dados/intermediate/enroll_prop.rds")
+# ---- Saving ---- #
 
-  
+saveRDS(df_prop_mun, "Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data.rds")
 
+
+
+# ---------------------------------------------------------------------------- #
+## 5.2 With Affiliation -----
+# ---------------------------------------------------------------------------- #
+### 5.2.1 Variables -----
+# ---------------------------------------------------------------------------- #
+
+# Municipal enrollment
+df_lvl_mun <- df_enroll %>% 
+  ungroup() %>% 
+  mutate(is_mun = dep_adm == "Municipal",
+         is_afl = (affiliated == 1 & affil_mun == 1)) %>%
+  group_by(codmun, ano) %>% 
+  summarise(
+        
+        # -------- Enrollment totals -------- #
+        inf_enroll = sum(
+          rowSums(across(c(pre_tot, day_tot)), na.rm = TRUE),
+          na.rm = TRUE
+        ),
+        
+        fun_enroll = sum(
+          rowSums(across(c(reg_in_9, reg_in_8, reg_fin_9, reg_fin_8)), na.rm = TRUE),
+          na.rm = TRUE
+        ),
+        
+        total_enroll = sum(coalesce(enroll, 0), na.rm = TRUE),
+        
+        total_pub_enroll = sum(
+          if_else(is_mun | is_afl, coalesce(enroll, 0), 0),
+          na.rm = TRUE
+        ),
+        
+        inf_pub_enroll = sum(
+          if_else(
+            is_mun | is_afl,
+            rowSums(across(c(pre_tot, day_tot)), na.rm = TRUE),
+            0,
+            missing = 0
+          ),
+          na.rm = TRUE
+        ),
+        
+        cre_enroll = sum(coalesce(day_tot, 0), na.rm = TRUE),
+        pre_enroll = sum(coalesce(pre_tot, 0), na.rm = TRUE),
+        
+        cre_pub_enroll = sum(
+          if_else(is_mun | is_afl, coalesce(day_tot, 0), 0, missing = 0),
+          na.rm = TRUE
+        ),
+        
+        pre_pub_enroll = sum(
+          if_else(is_mun | is_afl, coalesce(pre_tot, 0), 0, missing = 0),
+          na.rm = TRUE
+        ),
+        
+        fun_pub_enroll = sum(
+          if_else(
+            is_mun | is_afl,
+            rowSums(across(c(reg_in_9, reg_in_8, reg_fin_9, reg_fin_8)), na.rm = TRUE),
+            0,
+            missing = 0
+          ),
+          na.rm = TRUE
+        ),
+        
+        # -------- Number of schools -------- #
+        n_pub_creche = n_distinct(school[coalesce(day_tot, 0) > 0 & is_mun | is_afl]),
+        
+        n_pub_presco = n_distinct(school[coalesce(pre_tot, 0) > 0 & is_mun | is_afl]),
+        
+        n_pub_fundam = n_distinct(
+          school[
+            (coalesce(reg_in_8, 0) > 0 | coalesce(reg_fin_8, 0) > 0 |
+               coalesce(reg_in_9, 0) > 0 | coalesce(reg_fin_9, 0) > 0) & is_mun | is_afl
+          ]
+        ),
+        
+        # -------- Municipal infra / resources -------- #
+        pub_classroom = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                      coalesce(classroom, 0), 0), na.rm = TRUE),
+        
+        pub_teachroom = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                      coalesce(teach_room, 0), 0), na.rm = TRUE),
+        
+        pub_labs      = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                      coalesce(lab_dummy, 0), 0), na.rm = TRUE),
+        
+        pub_library   = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                      coalesce(lib_dummy, 0), 0), na.rm = TRUE),
+        
+        pub_playarea  = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                      coalesce(play_area, 0), 0), na.rm = TRUE),
+        
+        pub_lunch     = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                      coalesce(lunch, 0), 0), na.rm = TRUE),
+        
+        
+        pub_no_water  = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                      coalesce(water_non, 0), 0), na.rm = TRUE),
+        
+        pub_water_dum = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                      coalesce(water_dummy, 0), 0), na.rm = TRUE),
+        
+        
+        pub_no_sewage  = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                       coalesce(sewage_non, 0), 0), na.rm = TRUE),
+        
+        pub_sewage_dum = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                       coalesce(sewage_dummy, 0), 0), na.rm = TRUE),
+        
+        
+        pub_no_energy  = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                       coalesce(energy_non, 0), 0), na.rm = TRUE),
+        
+        pub_energy_dum = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) * 
+                                       coalesce(energy_dummy, 0), 0), na.rm = TRUE),
+        
+        
+        pub_employee = sum(if_else(is_mun | is_afl, coalesce(enroll, 0) *
+                                     coalesce(employee, 0), 0), na.rm = TRUE),
+        
+        # -------- Teacher totals / education -------- #
+        pub_t_fun    = sum(if_else(is_mun | is_afl, coalesce(fun_pub_enroll, 0) *
+                                     coalesce(t_fund, 0), 0), na.rm = TRUE),
+        
+        pub_t_pre    = sum(if_else(is_mun | is_afl, coalesce(pre_pub_enroll, 0) *
+                                     coalesce(t_pree, 0), 0), na.rm = TRUE),
+        
+        pub_t_cre    = sum(if_else(is_mun | is_afl, coalesce(cre_pub_enroll, 0) * 
+                                     coalesce(t_crec, 0), 0), na.rm = TRUE),
+        
+        
+        pub_t_fun_edu = sum(if_else(is_mun | is_afl, coalesce(fun_pub_enroll, 0) * 
+                                      coalesce(t_fund_educ, 0), 0), na.rm = TRUE),
+        
+        pub_t_pre_edu = sum(if_else(is_mun | is_afl, coalesce(pre_pub_enroll, 0) * 
+                                      coalesce(t_pree_educ, 0), 0), na.rm = TRUE),
+        
+        pub_t_cre_edu = sum(if_else(is_mun | is_afl, coalesce(cre_pub_enroll, 0) * 
+                                      coalesce(t_crec_educ, 0), 0), na.rm = TRUE),
+        
+        # --- Municipal level variables --- #
+        
+        n_t_fun = sum(
+          if_else(is_mun | is_afl, coalesce(t_fund, 0), 0),
+          na.rm = TRUE
+        ),
+        
+        n_t_pre = sum(
+          if_else(is_mun | is_afl, coalesce(t_pree, 0), 0),
+          na.rm = TRUE
+        ),
+        
+        n_t_cre = sum(
+          if_else(is_mun | is_afl, coalesce(t_crec, 0), 0),
+          na.rm = TRUE
+        ),
+        
+        n_t_cre_edu = sum(
+          if_else(is_mun | is_afl, coalesce(t_crec_educ, 0), 0),
+          na.rm = TRUE
+        ),
+        
+        n_t_pre_edu = sum(
+          if_else(is_mun | is_afl, coalesce(t_pree_educ, 0), 0),
+          na.rm = TRUE
+        ),
+        
+        n_t_fun_edu = sum(
+          if_else(is_mun | is_afl, coalesce(t_fund_educ, 0), 0),
+          na.rm = TRUE
+        ),
+        
+        n_employee = sum(
+          if_else(is_mun | is_afl, coalesce(employee, 0), 0),
+          na.rm = TRUE
+        ),
+        
+        
+        # -------- Total exposure -------- #
+        
+        tot_classroom = sum(coalesce(enroll, 0) * coalesce(classroom, 0), na.rm = TRUE),
+        
+        tot_teachroom = sum(coalesce(enroll, 0) * coalesce(teach_room, 0), na.rm = TRUE),
+        
+        tot_labs = sum(coalesce(enroll, 0) * coalesce(lab_dummy, 0), na.rm = TRUE),
+        
+        tot_library = sum(coalesce(enroll, 0) * coalesce(lib_dummy, 0), na.rm = TRUE),
+        
+        tot_playarea = sum(coalesce(enroll, 0) * coalesce(play_area, 0), na.rm = TRUE),
+        
+        tot_lunch = sum(coalesce(enroll, 0) * coalesce(lunch, 0), na.rm = TRUE),
+        
+        tot_no_water = sum(coalesce(enroll, 0) * coalesce(water_non, 0), na.rm = TRUE),
+        
+        tot_water_dum = sum(coalesce(enroll, 0) * coalesce(water_dummy, 0), na.rm = TRUE),
+        
+        tot_no_sewage = sum(coalesce(enroll, 0) * coalesce(sewage_non, 0), na.rm = TRUE),
+        
+        tot_sewage_dum = sum(coalesce(enroll, 0) * coalesce(sewage_dummy, 0), na.rm = TRUE),
+        
+        tot_no_energy = sum(coalesce(enroll, 0) * coalesce(energy_non, 0), na.rm = TRUE),
+        
+        tot_energy_dum = sum(coalesce(enroll, 0) * coalesce(energy_dummy, 0), na.rm = TRUE),
+        
+        tot_employee = sum(coalesce(enroll, 0) * coalesce(employee, 0), na.rm = TRUE),
+        
+        tot_t_fund = sum(coalesce(fun_enroll, 0) * coalesce(t_fund, 0), na.rm = TRUE),
+        
+        tot_t_pree = sum(coalesce(pre_enroll, 0) * coalesce(t_pree, 0), na.rm = TRUE),
+        
+        tot_t_crec = sum(coalesce(cre_enroll, 0) * coalesce(t_crec, 0), na.rm = TRUE),
+        
+        tot_t_fun_edu = sum(coalesce(fun_enroll, 0) * coalesce(t_fund_educ, 0), na.rm = TRUE),
+        
+        tot_t_pre_edu = sum(coalesce(pre_enroll, 0) * coalesce(t_pree_educ, 0), na.rm = TRUE),
+        
+        tot_t_cre_edu = sum(coalesce(cre_enroll, 0) * coalesce(t_crec_educ, 0), na.rm = TRUE),
+        
+        .groups = "drop"
+      )
+    
+    
+    # Combining both databases
+    # ---------------------------------------------------------------------------- #
+    ### 5.2.2 Age data ----
+    # ---------------------------------------------------------------------------- #
+    
+    df_lvl_mun <- df_lvl_mun %>% 
+      left_join(pop_mun %>% mutate(ano = as.numeric(ano)), by = c("codmun" = "cod_mun", "ano"))
+    
+    
+    # ---------------------------------------------------------------------------- #
+    ### 5.2.3 Prop. data ----
+    # ---------------------------------------------------------------------------- #
+    
+    df_prop_mun <- df_lvl_mun %>% 
+      mutate(
+        
+        # -------- Enrollment rates -------- #
+        
+        prop_inf = if_else(
+          !is.na(age_inf) & age_inf > 0,
+          inf_enroll / age_inf,
+          NA_real_
+        ),
+        
+        prop_fun = if_else(
+          !is.na(age_fund) & age_fund > 0,
+          fun_enroll / age_fund,
+          NA_real_
+        ),
+        
+        prop_pub_inf = if_else(
+          !is.na(age_inf) & age_inf > 0,
+          inf_pub_enroll / age_inf,
+          NA_real_
+        ),
+        
+        prop_pub_fun = if_else(
+          !is.na(age_fund) & age_fund > 0,
+          fun_pub_enroll / age_fund,
+          NA_real_
+        ),
+        
+        
+        # -------- Public share of total exposure -------- #
+        exp_classroom = if_else(!is.na(tot_classroom) & tot_classroom > 0,
+                                pub_classroom / tot_classroom,
+                                NA_real_),
+        
+        exp_teachroom = if_else(!is.na(tot_teachroom) & tot_teachroom > 0,
+                                pub_teachroom / tot_teachroom,
+                                NA_real_),
+        
+        exp_labs = if_else(!is.na(tot_labs) & tot_labs > 0,
+                           pub_labs / tot_labs,
+                           NA_real_),
+        
+        exp_library = if_else(!is.na(tot_library) & tot_library > 0,
+                              pub_library / tot_library,
+                              NA_real_),
+        
+        exp_playarea = if_else(!is.na(tot_playarea) & tot_playarea > 0,
+                               pub_playarea / tot_playarea,
+                               NA_real_),
+        
+        exp_lunch = if_else(!is.na(tot_lunch) & tot_lunch > 0,
+                            pub_lunch / tot_lunch,
+                            NA_real_),
+        
+        exp_no_water = if_else(!is.na(tot_no_water) & tot_no_water > 0,
+                               pub_no_water / tot_no_water,
+                               NA_real_),
+        
+        exp_water = if_else(!is.na(tot_water_dum) & tot_water_dum > 0,
+                            pub_water_dum / tot_water_dum,
+                            NA_real_),
+        
+        exp_no_sewage = if_else(!is.na(tot_no_sewage) & tot_no_sewage > 0,
+                                pub_no_sewage / tot_no_sewage,
+                                NA_real_),
+        
+        exp_sewage = if_else(!is.na(tot_sewage_dum) & tot_sewage_dum > 0,
+                             pub_sewage_dum / tot_sewage_dum,
+                             NA_real_),
+        
+        exp_no_energy = if_else(!is.na(tot_no_energy) & tot_no_energy > 0,
+                                pub_no_energy / tot_no_energy,
+                                NA_real_),
+        
+        exp_energy = if_else(!is.na(tot_energy_dum) & tot_energy_dum > 0,
+                             pub_energy_dum / tot_energy_dum,
+                             NA_real_),
+        
+        exp_employee = if_else(!is.na(tot_employee) & tot_employee > 0,
+                               pub_employee / tot_employee,
+                               NA_real_),
+        
+        exp_t_fun = if_else(!is.na(tot_t_fund) & tot_t_fund > 0,
+                            pub_t_fun / tot_t_fund,
+                            NA_real_),
+        
+        exp_t_pre = if_else(!is.na(tot_t_pree) & tot_t_pree > 0,
+                            pub_t_pre / tot_t_pree,
+                            NA_real_),
+        
+        exp_t_cre = if_else(!is.na(tot_t_crec) & tot_t_crec > 0,
+                            pub_t_cre / tot_t_crec,
+                            NA_real_),
+        
+        exp_t_fun_edu = if_else(!is.na(tot_t_fun_edu) & tot_t_fun_edu > 0,
+                                pub_t_fun_edu / tot_t_fun_edu,
+                                NA_real_),
+        
+        exp_t_pre_edu = if_else(!is.na(tot_t_pre_edu) & tot_t_pre_edu > 0,
+                                pub_t_pre_edu / tot_t_pre_edu,
+                                NA_real_),
+        
+        exp_t_cre_edu = if_else(!is.na(tot_t_cre_edu) & tot_t_cre_edu > 0,
+                                pub_t_cre_edu / tot_t_cre_edu,
+                                NA_real_)
+      ) %>% 
+      select(
+        -c(pub_classroom:pub_t_cre_edu, #Removing the non-more needed variables
+           tot_classroom:tot_t_cre_edu)
+      )
+    
+    
+    # ---- Saving ---- #
+    
+    saveRDS(df_prop_mun, "Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data_fil.rds")
 
