@@ -1864,7 +1864,7 @@ pib_final <- bind_rows(list(pib, pib2,
                               mutate( ano = as.numeric(ano),
                                       codigo_ibge = as.numeric(codigo_ibge),
                                       PIBpc = as.numeric(PIBpc)))
-                       )
+)
 
 
 saveRDS(pib_final, file.path(PATH_TUFFY,"Dados/intermediate/final_pib.rds"))
@@ -2196,6 +2196,7 @@ saveRDS(data, file.path(PATH_TUFFY, "Dados/final/regdf_flags.rds"))
 
 rm(df_enroll, df_fib, df_ipca, df_pesosaeb, df_reg, df_sim, df_trn,
    mat_mun_2006, pib, temp)
+
 #  --------------------------------------------------------------------------- #
 # 8. School data ----
 # ---------------------------------------------------------------------------- #
@@ -2346,8 +2347,8 @@ df_school <- lvl_school %>%
     codigo_ibge = as.numeric(codmun) %/% 10
   ) %>% 
   left_join(data %>%
-          distinct(codigo_ibge, aluno_dosage), by = c("codigo_ibge")) %>% 
-
+              distinct(codigo_ibge, aluno_dosage), by = c("codigo_ibge")) %>% 
+  
   select(-c(codigo_ibge))
 
 
@@ -2368,9 +2369,9 @@ saveRDS(df_school, file.path(PATH_TUFFY,"Dados/final/school_lvl.rds"))
 df_school_mun <- df_school %>% 
   mutate(
     fund_total = rowSums(across(c(col1, col2, col3, col4)), na.rm = TRUE)
-
+    
   )
-  group_by(ano, codmun) %>% 
+group_by(ano, codmun) %>% 
   summarise(
     n_schools = n_distinct(school),
     n_creche  = n_distinct(school[day_tot > 0]),
@@ -2390,4 +2391,3 @@ df_school_mun <- df_school %>%
 #   share_child_ed_municipal = n_child_ed_municipal / n_child_ed_schools,
 #   .groups = "drop"
 # )
-
