@@ -2,7 +2,7 @@
 # Data Extraction
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 28/01/2025
+# Date: 14/07/2025
 # ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
@@ -3034,3 +3034,7 @@ df_lvl_mun <- df_enroll %>%
     
     saveRDS(df_prop_mun, "Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data_fil.rds")
 
+
+    
+    
+    

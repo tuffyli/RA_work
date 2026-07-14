@@ -666,7 +666,7 @@ df_prop <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data.rds")
 dftab <- df_prop %>%
   summarise(
     across(
-      c(prop_inf, prop_fund, prop_mun_inf, prop_mun_fund),
+      c(prop_inf, prop_fun, prop_pub_inf, prop_pub_fun),
       list(
         Mean   = ~mean(., na.rm = TRUE),
         SD     = ~sd(., na.rm = TRUE),
@@ -685,9 +685,9 @@ dftab <- df_prop %>%
     Variable = dplyr::recode(
       Variable,
       prop_inf      = "Early childhood (all schools)",
-      prop_fund     = "Elementary (all schools)",
-      prop_mun_inf  = "Early childhood (municipal schools)",
-      prop_mun_fund = "Elementary (municipal schools)"
+      prop_fun     = "Elementary (all schools)",
+      prop_pub_inf  = "Early childhood (municipal schools)",
+      prop_pub_fund = "Elementary (municipal schools)"
     )
   )
 
@@ -702,8 +702,8 @@ dftab_year <- df_prop %>%
   summarise(
     prop_inf_mean  = mean(prop_inf, na.rm = TRUE),
     prop_inf_sd    = sd(prop_inf, na.rm = TRUE),
-    prop_fund_mean = mean(prop_fund, na.rm = TRUE),
-    prop_fund_sd   = sd(prop_fund, na.rm = TRUE),
+    prop_fund_mean = mean(prop_fun, na.rm = TRUE),
+    prop_fund_sd   = sd(prop_fun, na.rm = TRUE),
     .groups = "drop"
   )
 
@@ -765,7 +765,7 @@ writeLines(
 
 # Reshape data
 df_plot <- df_prop %>%
-  select(prop_inf, prop_fund) %>%
+  select(prop_inf, prop_fun) %>%
   pivot_longer(
     cols = everything(),
     names_to = "Stage",
@@ -775,7 +775,7 @@ df_plot <- df_prop %>%
     Stage = dplyr::recode(
       Stage,
       prop_inf  = "Early Childhood",
-      prop_fund = "Elementary"
+      prop_fun = "Elementary"
     )
   )
 
@@ -832,7 +832,7 @@ ggsave(
 # ------ Municipal ------- #
 
 df_plot_mun <- df_prop %>%
-  select(prop_mun_inf, prop_mun_fund) %>%
+  select(prop_pub_inf, prop_pub_fun) %>%
   pivot_longer(
     everything(),
     names_to = "Stage",
