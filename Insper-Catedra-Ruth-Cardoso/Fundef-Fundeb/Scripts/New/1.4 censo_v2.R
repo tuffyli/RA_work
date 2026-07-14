@@ -184,16 +184,37 @@ for(i in c(1998:2018)){
               # aux_cre = as.numeric(AUX_CRECHE),
               # aux_pre = as.numeric(AUX_PRE),
               
-              t_fund  = as.numeric(VDG1C3), #N° at Middle
-              t_pree  = as.numeric(VDG1C1) + as.numeric(VDG1C2), #N° at Preschool
-              t_crec  = NA, #N³ at Daycare
+              t_fund = as.numeric(VDG1C3), #N° at Middle
+              
+              t_pree = rowSums(
+                data.frame(
+                  as.numeric(VDG1C1),
+                  as.numeric(VDG1C2)
+                ),
+                na.rm = TRUE
+              ), #N° at Preschool
+              
+              t_crec = NA, #N° at Daycare
               
               ## Education
               t_crec_educ = NA, #College in Daycare
-              t_pree_educ = sum(VDG125 + VDG126 + VDG127 + VDG135 + VDG136 + VDG137 +
-                                  VDG145 + VDG146 + VDG147, na.rm = T), #College in Preschool
-              t_fund_educ = sum(VDG155 + VDG156 + VDG157 + VDG165 + VDG166 + VDG167,  #Fund(8)
-                                na.rm = T),                         #Middle (8 and 9 years)
+              
+              t_pree_educ = rowSums(
+                across(c(
+                  VDG125, VDG126, VDG127,
+                  VDG135, VDG136, VDG137,
+                  VDG145, VDG146, VDG147
+                )),
+                na.rm = TRUE
+              ), #College in Preschool
+              
+              t_fund_educ = rowSums(
+                across(c(
+                  VDG155, VDG156, VDG157,  #Fund(8)
+                  VDG165, VDG166, VDG167   #Fund(8)
+                )),
+                na.rm = TRUE
+              ), #Middle (8 and 9 years)#Middle (8 and 9 years)
               
               
               # --- Infra --- #
@@ -297,15 +318,40 @@ for(i in c(1998:2018)){
               # aux_pre = as.numeric(AUX_PRE),
               
               t_fund  = as.numeric(VDG1C3), #N° at Middle
-              t_pree  = as.numeric(VDG1C1) + as.numeric(VDG1C2), #N° at Preschool
+              t_pree = rowSums(
+                data.frame(
+                  as.numeric(VDG1C1),
+                  as.numeric(VDG1C2)
+                ),
+                na.rm = TRUE
+              ), #N° at Preschool
               t_crec  = as.numeric(VDG1CA), #N³ at Daycare
               
               ## Education
-              t_crec_educ = sum(VDG1E5 + VDG1E6 + VDG1E7 + VDG1F5 + VDG1F6 + VDG1F7, na.rm = T), #College in Daycare
-              t_pree_educ = sum(VDG125 + VDG126 + VDG127 + VDG135 + VDG136 + VDG137 +
-                                  VDG145 + VDG146 + VDG147, na.rm = T), #College in Preschool
-              t_fund_educ = sum(VDG155 + VDG156 + VDG157 + VDG165 + VDG166 + VDG167,  #Fund(8)
-                                na.rm = T),                         #Middle (8 and 9 years)
+              t_crec_educ = rowSums(
+                across(c(
+                  VDG1E5, VDG1E6, VDG1E7,
+                  VDG1F5, VDG1F6, VDG1F7
+                )),
+                na.rm = TRUE
+              ), #College in Daycare
+              
+              t_pree_educ = rowSums(
+                across(c(
+                  VDG125, VDG126, VDG127,
+                  VDG135, VDG136, VDG137,
+                  VDG145, VDG146, VDG147
+                )),
+                na.rm = TRUE
+              ), #College in Preschool
+              
+              t_fund_educ = rowSums(
+                across(c(
+                  VDG155, VDG156, VDG157,  #Fund(8)
+                  VDG165, VDG166, VDG167   #Fund(8)
+                )),
+                na.rm = TRUE
+              ), #Middle (8 and 9 years)                        #Middle (8 and 9 years)
               
               
               # --- Infra --- #
@@ -410,15 +456,40 @@ for(i in c(1998:2018)){
           # aux_pre = as.numeric(AUX_PRE),
           
           t_fund  = as.numeric(VDG1C3), #N° at Middle
-          t_pree  = as.numeric(VDG1C1) + as.numeric(VDG1C2), #N° at Preschool
+          t_pree = rowSums(
+            data.frame(
+              as.numeric(VDG1C1),
+              as.numeric(VDG1C2)
+            ),
+            na.rm = TRUE
+          ), # N° at Preschool
           t_crec  = as.numeric(VDG1CA), #N³ at Daycare
           
           ## Education
-          t_crec_educ = sum(VDG1E5 + VDG1E6 + VDG1E7 + VDG1F5 + VDG1F6 + VDG1F7, na.rm = T), #College in Daycare
-          t_pree_educ = sum(VDG125 + VDG126 + VDG127 + VDG135 + VDG136 + VDG137 +
-                              VDG145 + VDG146 + VDG147, na.rm = T), #College in Preschool
-          t_fund_educ = sum(VDG155 + VDG156 + VDG157 + VDG165 + VDG166 + VDG167,  #Fund(8)
-                            na.rm = T),                         #Middle (8 and 9 years)
+          t_crec_educ = rowSums(
+            across(c(
+              VDG1E5, VDG1E6, VDG1E7,
+              VDG1F5, VDG1F6, VDG1F7
+            )),
+            na.rm = TRUE
+          ), #College in Daycare
+          
+          t_pree_educ = rowSums(
+            across(c(
+              VDG125, VDG126, VDG127,
+              VDG135, VDG136, VDG137,
+              VDG145, VDG146, VDG147
+            )),
+            na.rm = TRUE
+          ), #College in Preschool
+          
+          t_fund_educ = rowSums(
+            across(c(
+              VDG155, VDG156, VDG157,  #Fund(8)
+              VDG165, VDG166, VDG167   #Fund(8)
+            )),
+            na.rm = TRUE
+          ), #Middle (8 and 9 years)                        
           
           
           # --- Infra --- #
@@ -526,15 +597,37 @@ for(i in c(1998:2018)){
         # aux_pre = as.numeric(AUX_PRE),
         
         t_fund  = as.numeric(VDG1C3), #N° at Middle
-        t_pree  = as.numeric(VDG1C1) + as.numeric(VDG1C2), #N° at Preschool
+        t_pree = rowSums(
+          sapply(across(c(VDG1C1, VDG1C2)), as.numeric),
+          na.rm = TRUE
+        ), # N° at Preschool        
         t_crec  = as.numeric(VDG1CA), #N³ at Daycare
         
         ## Education
-        t_crec_educ = sum(VDG1E5 + VDG1E6 + VDG1E7 + VDG1F5 + VDG1F6 + VDG1F7, na.rm = T), #College in Daycare
-        t_pree_educ = sum(VDG125 + VDG126 + VDG127 + VDG135 + VDG136 + VDG137 +
-                          VDG145 + VDG146 + VDG147, na.rm = T), #College in Preschool
-        t_fund_educ = sum(VDG155 + VDG156 + VDG157 + VDG165 + VDG166 + VDG167,  #Fund(8)
-                          na.rm = T),                         #Middle (8 and 9 years)
+        t_crec_educ = rowSums(
+          across(c(
+            VDG1E5, VDG1E6, VDG1E7,
+            VDG1F5, VDG1F6, VDG1F7
+          )),
+          na.rm = TRUE
+        ), #College in Daycare
+        
+        t_pree_educ = rowSums(
+          across(c(
+            VDG125, VDG126, VDG127,
+            VDG135, VDG136, VDG137,
+            VDG145, VDG146, VDG147
+          )),
+          na.rm = TRUE
+        ), #College in Preschool
+        
+        t_fund_educ = rowSums(
+          across(c(
+            VDG155, VDG156, VDG157,
+            VDG165, VDG166, VDG167 #Fund(8)
+          )),
+          na.rm = TRUE
+        ), #Middle (8 and 9 years)#Middle (8 and 9 years)
         
         
         # --- Infra --- #
@@ -652,13 +745,33 @@ for(i in c(1998:2018)){
         t_pree  = as.numeric(VDG1C1), #N° at Preschool
         t_crec  = as.numeric(VDG1CA), #N³ at Daycare
         
-        ## Education
-        t_crec_educ = sum(VDG1E5 + VDG1E6 + VDG1E7 + VDG1F5 + VDG1F6 + VDG1F7, na.rm = T), #College in Daycare
-        t_pree_educ = sum(VDG125 + VDG126 + VDG127 + VDG135 + VDG136 + VDG137, na.rm = T), #College in Preschool
-        t_fund_educ = sum(VDG155 + VDG156 + VDG157 + VDG165 + VDG166 + VDG167 +  #Fund(8)
-                          VDG1L5 + VDG1L6 + VDG1L7 + VDG1M5 + VDG1M6 + VDG1M7,  #Fund(9)
-                          na.rm = T),                         #Middle (8 and 9 years)
-
+        # --- Teacher Education --- #
+        t_crec_educ = rowSums(
+          across(c(
+            VDG1E5, VDG1E6, VDG1E7,  # Daycare
+            VDG1F5, VDG1F6, VDG1F7   # Daycare
+          )),
+          na.rm = TRUE
+        ), #College in Daycare
+        
+        t_pree_educ = rowSums(
+          across(c(
+            VDG125, VDG126, VDG127,  # Preschool
+            VDG135, VDG136, VDG137   # Preschool
+          )),
+          na.rm = TRUE
+        ), #College in Preschool
+        
+        t_fund_educ = rowSums(
+          across(c(
+            VDG155, VDG156, VDG157,  # Fund(8)
+            VDG165, VDG166, VDG167,  # Fund(8)
+            
+            VDG1L5, VDG1L6, VDG1L7,  # Fund(9)
+            VDG1M5, VDG1M6, VDG1M7   # Fund(9)
+          )),
+          na.rm = TRUE
+        ), #College in Elementary School
         
         # --- Infra --- #
         
@@ -675,12 +788,12 @@ for(i in c(1998:2018)){
         affiliated = NA #No information on affiliation
         
       ) %>% 
-      select(c(1:9, codmun, classroom:affiliated)) %>% 
       rename(
         ano = ANO,
         dep_adm = DEP,
         school = MASCARA
-        ) %>% 
+        ) %>%
+      select(c(1:9, codmun, classroom:affiliated)) %>% 
       select(-c(UF, SIGLA, LOC, CODFUNC, MUNIC, CODMUNIC)) %>% 
       mutate( uf = as.numeric(codmun) %/% 100000)
     
