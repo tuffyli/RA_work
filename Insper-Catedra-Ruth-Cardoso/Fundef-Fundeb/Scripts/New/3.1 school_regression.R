@@ -71,7 +71,7 @@ path_additional <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Appendix/"
 path_tables <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Tables/"
 path_figures <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Figures/"
 path_descp <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Descp/"
-path_school <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School/"
+path_school <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School"
 path_school_fig <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School/Figures/"
 
 # ---- Functions ---- #
@@ -294,7 +294,7 @@ etable(est_1, est_2, est_3, est_4)
 etable(
   est_1, est_2, est_3, est_4,
   tex = TRUE,
-  file = paste(path_school,"enrollment_school_studosage.tex"),
+  file = file.path(path_school,"/enrollment_school_studosage.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on Education Enrollment",
@@ -519,7 +519,7 @@ etable(est_1, est_2)
 etable(
   est_1, est_2,
   tex = TRUE,
-  file = paste(path_school,"enrollment_studosage_school_proportion.tex"),
+  file = file.path(path_school,"/enrollment_studosage_school_proportion.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on Education Enrollment",
@@ -679,7 +679,7 @@ etable(est_1, est_2, est_3)
 etable(
   est_1, est_2, est_3,
   tex = TRUE,
-  file = paste(path_school,"number_school_studosage.tex"),
+  file = file.path(path_school,"/number_school_studosage.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on Number of Schools",
@@ -876,7 +876,7 @@ etable(est_1, est_2, est_3)
 etable(
   est_1, est_2, est_3,
   tex = TRUE,
-  file = paste(path_school,"number_teachers_studosage.tex"),
+  file = file.path(path_school,"/number_teachers_studosage.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on Number of Teachers",
@@ -1070,7 +1070,7 @@ etable(est_1, est_2, est_3)
 etable(
   est_1, est_2, est_3,
   tex = TRUE,
-  file = paste(path_school,"number_teachers_studosage.tex"),
+  file = file.path(path_school,"number_teachers_studosage.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on Number of Teachers",
@@ -1237,130 +1237,266 @@ rm(p1, p2, p3, p4, final_plot,
 
 
 # ---------------------------------------------------------------------------- #
-# 4. School Characteristics ----
+
+
 # ---------------------------------------------------------------------------- #
-## 4.1 Data ----
+# 5. Age exposition -----
 # ---------------------------------------------------------------------------- #
 
-#Starting with the scholl data
-df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/censo_escolar_base_v2.rds") %>% 
-  mutate(codmun = as.character(codmun %/% 10),
-         new_psc = ifelse(pre_tot > 0, 1, 0),
-         new_day = ifelse(day_tot > 0, 1, 0)
+#quick plot
+
+# 2007 only
+df_2007 <- df_school %>%
+  filter(ano == 2007)
+
+#---------------------------------------------------#
+# Infant education
+#---------------------------------------------------#
+
+p_inf <- ggplot(df_2007,
+                aes(x = prop_pub_inf,
+                    y = aluno_dosage)) +
+  geom_point(alpha = 0.4, size = 1.5) +
+  geom_smooth(method = "lm",
+              se = TRUE,
+              color = "blue") +
+  labs(
+    x = "Public Infant Enrollment Rate",
+    y = "Student Dosage",
+    title = "2007"
+  ) +
+  theme_minimal()
+
+ggsave(
+  filename = file.path(path_descp,"scatter_dosage_public_infant_2007.png"),
+  plot = p_inf,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+
+#--------------------------------------------------- #
+# Fundamental education
+#--------------------------------------------------- #
+
+p_fun <- ggplot(df_2007,
+                aes(x = prop_pub_fun,
+                    y = aluno_dosage)) +
+  geom_point(alpha = 0.4, size = 1.5) +
+  geom_smooth(method = "lm",
+              se = TRUE,
+              color = "blue") +
+  labs(
+    x = "Public Fundamental Enrollment Rate",
+    y = "Student Dosage",
+    title = "2007"
+  ) +
+  theme_minimal()
+
+ggsave(
+  filename = file.path(path_descp,"scatter_dosage_public_fundamental_2007.png"),
+  plot = p_fun,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+
+
+# ---------------------------------------------------------------------------- #
+## 5.1 Table ----
+# ---------------------------------------------------------------------------- #
+
+#Main
+est_1 <- feols(prop_pub_inf ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+               | codmun + ano + uf^ano,
+               data = df_school,
+               cluster = ~codmun)
+#Inf
+est_2 <- feols( prop_pub_fun ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
+                | codmun + ano + uf^ano,
+                data = df_school,
+                cluster = ~codmun)
+
+
+
+etable(est_1, est_2)
+
+# ---- Saving Table ---- #
+
+etable(
+  est_1, est_2,
+  tex = TRUE,
+  file = file.path(path_school,"/age_enroll_studosage.tex"),
+  digits = 3,
+  replace = T,
+  title = "Effects of Fundef Student Dosage on School Pariticipation",
+  label = "tab:stu_dosage_age_enroll"
+)
+
+# ---------------------------------------------------------------------------- #
+## 5.2 Figure ----
+# ---------------------------------------------------------------------------- #
+
+#Ploting for each specification
+p1 <- event_plot(
+  est_1,
+  ref_year = 2006,
+  x_label = "Time to Treatment",
+  y_label = "Coefficient",
+  title = "Child Education Prop."
+)
+
+p2 <- event_plot(
+  est_2,
+  ref_year = 2006,
+  x_label = "Time to Treatment",
+  y_label = "Coefficient",
+  title = "Middle School Prop."
+)
+
+
+
+# Joining the plots into a single one
+final_plot <- (p1 | p2)
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "age_prop.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+rm(p1, p2, p3, p4, final_plot,
+   est_1, est_2, est_3, est_4)
+
+# ---------------------------------------------------------------------------- #
+## 5.3 Most vs. Least ----
+# ---------------------------------------------------------------------------- #
+
+
+# ---- Total Child Education ---- #
+est_least1 <- feols(
+  prop_pub_inf ~ i(ano, treat, ref = 2006) + PIBpc |
+    codmun + ano + uf^ano,
+  data =  df_least,
+  cluster = ~codmun
+)
+
+est_most1 <- feols(
+  prop_pub_inf ~ i(ano, treat, ref = 2006) + PIBpc |
+    codmun + ano + uf^ano,
+  data = df_most,
+  cluster = ~codmun
+)
+
+etable(est_least1, est_most1)
+
+
+
+# ---- Pre-School ---- #
+est_least2 <- feols(
+  prop_pub_fun ~ i(ano, treat, ref = 2006) + PIBpc |
+    codmun + ano + uf^ano,
+  data = df_least,
+  cluster = ~codmun
+)
+
+est_most2 <- feols(
+  prop_pub_fun ~ i(ano, treat, ref = 2006) + PIBpc |
+    codmun + ano + uf^ano,
+  data = df_most,
+  cluster = ~codmun
+)
+
+etable(est_least2, est_most2)
+
+
+
+# ---------------------------------------------------------------------------- #
+### 5.3.1 Figure ----
+# ---------------------------------------------------------------------------- #
+
+
+# ---- Total Spending ---- #
+p1 <- event_plot_compare( est_most1, est_least1,
+                          name_1 = "Most Dosage", name_2 = "Least Dosage",
+                          ref_year = 2006, treat_year = 2007,
+                          x_label = "Time to Treatment",
+                          y_label = "Coefficient",
+                          title = "Child Education Prop.")
+
+p1
+
+# ---- Pre-School ---- #
+p2 <- event_plot_compare(est_most2, est_least2,
+                         name_1 = "Most Dosage", name_2 = "Least Dosage",
+                         ref_year = 2006, treat_year = 2007,
+                         x_label = "Time to Treatment",
+                         y_label = "Coefficient",
+                         title = "Middle School Prop.")
+
+p2
+
+
+
+# Joining the plots into a single one
+final_plot <- (p1 | p2)  +
+  plot_layout(guides = "collect") &
+  theme(
+    legend.position = "bottom"
   )
 
-#We will calculate the municipal exposure, weighted by the enrollment numbers
-df_school <- df_school %>% 
-  group_by(codmun, ano) %>% 
-  summarise(
-    total_enroll = sum(enroll, na.rm = T),
-    total_presch = sum(pre_tot, na.rm = T),
-    total_daycar = sum(day_tot, na.rm = T),
-    
-    #numeral variables
-    class     = total_enroll / sum(classroom, na.rm = T),
-    n_employee = sum(employee, na.rm = T),                 #New contracts
-    employee  = total_enroll / n_employee,
-    schools   = n(),
-    
-    
-    #School characteristics
-    exp_troom = sum(enroll*teach_room, na.rm = T)/total_enroll,
-    exp_lab   = sum(enroll*lab_dummy, na.rm = T) /total_enroll,
-    exp_lib   = sum(enroll*lib_dummy, na.rm = T) /total_enroll,
-    exp_play  = sum(enroll*play_area, na.rm = T) /total_enroll,
-    exp_lunch = sum(enroll*lunch, na.rm = T)     /total_enroll,
-    
-    #Courses Student Exposure
-    exp_psch  = sum((pre_tot + day_tot)*kinder, na.rm = T)    /total_enroll,
-    exp_elem  = sum(ef_tot*elementary, na.rm = T)/total_enroll,
-    exp_high  = sum(em_tot*high, na.rm = T)      /total_enroll,
-    exp_inc   = sum(esp_tot*inclusion, na.rm = T) /total_enroll,
-    
-    #Childhood exp
-    child_psch = sum(pre_tot*preschool, na.rm = T),
-    child_dayc = sum(day_tot*daycare, na.rm = T),
-    
-    new_child_psch = sum(pre_tot, na.rm = T),
-    new_child_dayc = sum(day_tot, na.rm = T),
-    
-    #Numb. Schools
-    n_daycare = sum(daycare, na.rm = T),
-    n_preschl = sum(preschool, na.rm = T),
-    
-    new_n_daycare = sum(new_day, na.rm = T),
-    new_n_preschl = sum(new_psc, na.rm = T),
-    
-    .groups = "drop"
-  )
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "least_vs_most_age_prop.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+rm(p1, p2, p3, p4, final_plot,
+   est_least1, est_least2, est_least3, est_least4,
+   est_most1, est_most2, est_most3, est_most4)
 
 
-df_school_reg <- df_main %>% 
-  select(codigo_ibge, ano, uf, nome, dosage, aluno_dosage, PIBpc,
-         des_edu_pc, des_fund_pc, des_med_pc, des_inf_pc, dosage_tercile) %>% 
-  mutate(across(c(codigo_ibge, uf), as.character)) %>% 
-  filter(ano %in% c (2005:2018)) %>% 
-  left_join(df_school, by = c("codigo_ibge" = "codmun", "ano"))
-
-rm(df_school)
-
-# ---------------------------------------------------------------------------- #
-### 5.1.1 Most vs. Least ----
-# ---------------------------------------------------------------------------- #
-
-df_school_reg <- df_school_reg %>%
-  mutate(cod_uf = as.numeric(codigo_ibge) %/% 10000) %>% 
-  group_by(cod_uf) %>%
-  mutate(
-    dosage_tercile = ntile(dosage, 3),
-    #1. Lowest,
-    #2. Middle,
-    #3. Highest
-    
-    post_treat = ifelse(ano > 2006, 1, 0)
-  ) %>%
-  ungroup()
-
-# ---- Least ---- #
-df_sch_least <- df_school_reg %>% 
-  filter(dosage_tercile < 3) %>% #Least dosage group
-  mutate(treat = ifelse(dosage_tercile != 2, 1, 0))
-
-# ---- Most ---- #
-df_sch_most <- df_school_reg %>% 
-  filter(dosage_tercile > 1) %>% #Most dosage group
-  mutate(treat = ifelse(dosage_tercile != 2, 1, 0))
 
 
 # ---------------------------------------------------------------------------- #
-## 5.2 Main Regression ----
+# 6. School Characteristics ----
+# ---------------------------------------------------------------------------- #
+## 6.1 Main Regression (L vs. M) ----
 # ---------------------------------------------------------------------------- #
 
 # dependent variables in the order you want
 y_vars <- c(
-  "class",
-  "exp_troom",
-  "exp_lab",
-  "exp_lib",
-  "exp_play",
+  "exp_classroom",
+  "exp_teachroom",
+  "exp_labs",
+  "exp_library",
+  "exp_playarea",
   "exp_lunch",
-  "employee",
-  "n_employee"
+  "exp_no_water",
+  "exp_water",
+  "exp_no_sewage",
+  "exp_sewage",
+  "exp_no_energy",
+  "exp_energy",
+  "exp_employee",
+  "exp_t_fun",
+  "exp_t_pre",
+  "exp_t_cre"
 )
 
 for (i in seq_along(y_vars)) {
   y <- y_vars[i]
   
   fml <- as.formula(
-    paste0(y, " ~ i(ano, treat, ref = 2006) + PIBpc | codigo_ibge + ano + uf^ano")
+    paste0(y, " ~ i(ano, treat, ref = 2006) + PIBpc | codmun + ano + uf^ano")
   )
   
   assign(
     paste0("est_least", i),
     feols(
       fml,
-      data = df_sch_least,
-      cluster = ~codigo_ibge
+      data = df_least,
+      cluster = ~codmun
     )
   )
   
@@ -1368,8 +1504,8 @@ for (i in seq_along(y_vars)) {
     paste0("est_most", i),
     feols(
       fml,
-      data = df_sch_most,
-      cluster = ~codigo_ibge
+      data = df_most,
+      cluster = ~codmun
     )
   )
 }
@@ -1379,14 +1515,22 @@ for (i in seq_along(y_vars)) {
 # ---------------------------------------------------------------------------- #
 
 titles <- c(
-  "Students per Classroom",
+  "Exp. Classroom",
   "Exp. Teacher's Room",
   "Exp. Lab",
   "Exp. Library",
   "Exp. Play Area",
   "Exp. Lunch",
-  "Students per Employee",
-  "Total Employees"
+  "Exp. No Water",
+  "Exp. Water",
+  "Exp. No Sewage",
+  "Exp. Sewage",
+  "Exp. No Energy",
+  "Exp. Energy",
+  "Exp. Employee",
+  "Exp. DC Teachers",
+  "Exp. PS Teachers",
+  "Exp. MS Teachers"
 )
 
 plots <- vector("list", length(titles))
@@ -1418,21 +1562,39 @@ names(plots) <- paste0("p", seq_along(plots))
 # Joining the plots into a single one
 final_plot <- 
   (plots[[2]] | plots[[3]] | plots[[4]]) /
-  (plots[[5]] | plots[[6]] | plot_spacer()) /
-  (plots[[1]] | plots[[7]] | plots[[8]]) +
+  (plots[[5]] | plots[[6]] | plots[[1]]) /
+  (plots[[14]] | plots[[15]] | plots[[16]]) +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom")
 
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_figures, "least_vs_most_school_characteristics.pdf"),
+       filename = file.path(path_school_fig, "least_vs_most_school_characteristics.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+
+# Joining the plots into a single one
+final_plot <- 
+  (plots[[7]] | plots[[8]]) /
+  (plots[[9]] | plots[[10]]) /
+  (plots[[11]] | plots[[12]] ) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "least_vs_most_school_characteristics2.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
-   est_least6, est_least7, est_least8,
+   est_least6, est_least7, est_least8, est_least9, est_least10, est_least11,
+   est_least12, est_least13, est_least14, est_least15, est_least16,
    est_most, est_most1, est_most2, est_most3, est_most4, est_most5, est_most6,
-   est_most7, est_most8,
+   est_most7, est_most8, est_most9, est_most10, est_most11, est_most12, est_most13,
+   est_most14, est_most15,
    plots, final_plot, i, fml, y, y_vars)
 
 

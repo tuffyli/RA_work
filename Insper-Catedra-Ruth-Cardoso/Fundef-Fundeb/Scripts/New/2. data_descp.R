@@ -841,8 +841,12 @@ df_plot_mun <- df_prop %>%
   mutate(
     Stage = dplyr::recode(
       Stage,
-      prop_mun_inf  = "Early childhood",
-      prop_mun_fund = "Elementary"
+      prop_pub_inf = "Early childhood",
+      prop_pub_fun = "Elementary"
+    ),
+    Stage = factor(
+      Stage,
+      levels = c("Early childhood", "Elementary")
     )
   )
 

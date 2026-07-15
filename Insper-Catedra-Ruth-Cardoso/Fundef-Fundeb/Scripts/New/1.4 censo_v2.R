@@ -20,7 +20,6 @@ library(stargazer)
 library(AER)
 library(sf)
 library(janitor)
-library(geobr)
 library(RColorBrewer)
 library(ggnewscale)
 library(cobalt)
@@ -788,12 +787,12 @@ for(i in c(1998:2018)){
         affiliated = NA #No information on affiliation
         
       ) %>% 
+      select(c(1:9, codmun, classroom:affiliated)) %>% 
       rename(
         ano = ANO,
         dep_adm = DEP,
         school = MASCARA
         ) %>%
-      select(c(1:9, codmun, classroom:affiliated)) %>% 
       select(-c(UF, SIGLA, LOC, CODFUNC, MUNIC, CODMUNIC)) %>% 
       mutate( uf = as.numeric(codmun) %/% 100000)
     
