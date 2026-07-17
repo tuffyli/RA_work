@@ -74,7 +74,7 @@ path_descp <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Descp/"
 path_school <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School"
 path_school_fig <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School/Figures/"
 
-path_shcool2 <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School/Mun_aff/"
+path_school2 <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School/Mun_aff/"
 path_school_fig2 <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School/Mun_aff/Figures/"
 
 # ---- Functions ---- #
@@ -245,7 +245,7 @@ event_plot_compare <- function(est_1, est_2,
 # ---------------------------------------------------------------------------- #
 
 
-df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/final/mun_school_data.rds")
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/final/mun_school_data_affiliations.rds")
 
 
 # ---------------------------------------------------------------------------- #
@@ -275,19 +275,19 @@ est_1 <- feols(cre_pub_enroll ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
                cluster = ~codmun)
 #Inf
 est_2 <- feols( pre_pub_enroll ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
-               | codmun + ano + uf^ano,
-               data = df_school,
-               cluster = ~codmun)
+                | codmun + ano + uf^ano,
+                data = df_school,
+                cluster = ~codmun)
 #Fund
 est_3 <- feols( inf_pub_enroll ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
-               | codmun + ano + uf^ano,
-               data = df_school,
-               cluster = ~codmun)
+                | codmun + ano + uf^ano,
+                data = df_school,
+                cluster = ~codmun)
 #Em
 est_4 <- feols( fun_pub_enroll ~ aluno_dosage : i(ano, ref = 2006) + PIBpc
-               | codmun + ano + uf^ano,
-               data = df_school,
-               cluster = ~codmun)
+                | codmun + ano + uf^ano,
+                data = df_school,
+                cluster = ~codmun)
 
 
 etable(est_1, est_2, est_3, est_4)
@@ -297,7 +297,7 @@ etable(est_1, est_2, est_3, est_4)
 etable(
   est_1, est_2, est_3, est_4,
   tex = TRUE,
-  file = file.path(path_school,"/enrollment_school_studosage.tex"),
+  file = file.path(path_school2,"/enrollment_school_studosage.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on Education Enrollment",
@@ -347,7 +347,7 @@ final_plot <- (p1 | p2) / (p3 | p4)
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "enrollment_specification.pdf"),
+       filename = file.path(path_school_fig2, "enrollment_specification.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -490,7 +490,7 @@ final_plot <- (p3 | p2) / (p1 | p4)  +
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "least_vs_most_enrollment_specification.pdf"),
+       filename = file.path(path_school_fig2, "least_vs_most_enrollment_specification.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -522,7 +522,7 @@ etable(est_1, est_2)
 etable(
   est_1, est_2,
   tex = TRUE,
-  file = file.path(path_school,"/enrollment_studosage_school_proportion.tex"),
+  file = file.path(path_school2,"/enrollment_studosage_school_proportion.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on Education Enrollment",
@@ -557,7 +557,7 @@ final_plot <- (p3 | p4)
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "enrollment_specification_proportion.pdf"),
+       filename = file.path(path_school_fig2, "enrollment_specification_proportion.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -645,7 +645,7 @@ final_plot <- (p1 | p4)  +
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "least_vs_most_enrollment_specification_proportion.pdf"),
+       filename = file.path(path_school_fig2, "least_vs_most_enrollment_specification_proportion.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -682,7 +682,7 @@ etable(est_1, est_2, est_3)
 etable(
   est_1, est_2, est_3,
   tex = TRUE,
-  file = file.path(path_school,"/number_school_studosage.tex"),
+  file = file.path(path_school2,"/number_school_studosage.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on Number of Schools",
@@ -725,7 +725,7 @@ final_plot <- (p1 | p2) / (p3 | plot_spacer())
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "number_schools.pdf"),
+       filename = file.path(path_school_fig2, "number_schools.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -839,7 +839,7 @@ final_plot <- (p1 | p2) / (p3 | plot_spacer())  +
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "least_vs_most_number_schools.pdf"),
+       filename = file.path(path_school_fig2, "least_vs_most_number_schools.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -879,7 +879,7 @@ etable(est_1, est_2, est_3)
 etable(
   est_1, est_2, est_3,
   tex = TRUE,
-  file = file.path(path_school,"/number_teachers_studosage.tex"),
+  file = file.path(path_school2,"/number_teachers_studosage.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on Number of Teachers",
@@ -922,7 +922,7 @@ final_plot <- (p1 | p2) / (p3 | plot_spacer())
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "number_teachers.pdf"),
+       filename = file.path(path_school_fig2, "number_teachers.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -1036,7 +1036,7 @@ final_plot <- (p1 | p2) / (p3 | plot_spacer())  +
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "least_vs_most_number_teachers.pdf"),
+       filename = file.path(path_school_fig2, "least_vs_most_number_teachers.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -1073,7 +1073,7 @@ etable(est_1, est_2, est_3)
 etable(
   est_1, est_2, est_3,
   tex = TRUE,
-  file = file.path(path_school,"number_teachers_edu_studosage.tex"),
+  file = file.path(path_school2,"number_teachers_edu_studosage.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on Number of Teachers",
@@ -1116,7 +1116,7 @@ final_plot <- (p1 | p2) / (p3 | plot_spacer())
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "number_teachers_edu.pdf"),
+       filename = file.path(path_school_fig2, "number_teachers_edu.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -1230,7 +1230,7 @@ final_plot <- (p1 | p2) / (p3 | plot_spacer())  +
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "least_vs_most_number_teachers_edu.pdf"),
+       filename = file.path(path_school_fig2, "least_vs_most_number_teachers_edu.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -1326,7 +1326,7 @@ etable(est_1, est_2)
 etable(
   est_1, est_2,
   tex = TRUE,
-  file = file.path(path_school,"/age_enroll_studosage.tex"),
+  file = file.path(path_school2,"/age_enroll_studosage.tex"),
   digits = 3,
   replace = T,
   title = "Effects of Fundef Student Dosage on School Pariticipation",
@@ -1362,7 +1362,7 @@ final_plot <- (p1 | p2)
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "age_prop.pdf"),
+       filename = file.path(path_school_fig2, "age_prop.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -1448,7 +1448,7 @@ final_plot <- (p1 | p2)  +
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "least_vs_most_age_prop.pdf"),
+       filename = file.path(path_school_fig2, "least_vs_most_age_prop.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(p1, p2, p3, p4, final_plot,
@@ -1570,7 +1570,7 @@ final_plot <-
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "least_vs_most_school_characteristics.pdf"),
+       filename = file.path(path_school_fig2, "least_vs_most_school_characteristics.pdf"),
        device = "pdf", height = 8, width = 15)
 
 
@@ -1586,7 +1586,7 @@ final_plot <-
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "least_vs_most_school_characteristics2.pdf"),
+       filename = file.path(path_school_fig2, "least_vs_most_school_characteristics2.pdf"),
        device = "pdf", height = 8, width = 15)
 
 rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
