@@ -1599,3 +1599,407 @@ rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
 
 
 #<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>#
+# ---------------------------------------------------------------------------- #
+# 7. School Type Infra ----
+# ---------------------------------------------------------------------------- #
+## 7.1 Data ----
+# ---------------------------------------------------------------------------- #
+
+df_type <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data_school_type_dosage.rds")
+
+
+# ---------------------------------------------------------------------------- #
+### 7.1.2 Least vs. Most ----
+# ---------------------------------------------------------------------------- #
+
+df_least <- df_type %>% 
+  filter(dosage_tercile < 3) %>% #Least dosage group
+  mutate(treat = ifelse(dosage_tercile != 2, 1, 0))
+
+df_most <- df_type %>% 
+  filter(dosage_tercile > 1) %>% #Most dosage group
+  mutate(treat = ifelse(dosage_tercile != 2, 1, 0))
+
+
+# ---------------------------------------------------------------------------- #
+## 7.2 CRE School Characteristics ----
+# ---------------------------------------------------------------------------- #
+### 7.2.1 Main Regression (L vs. M) ----
+# ---------------------------------------------------------------------------- #
+
+# dependent variables in the order you want
+y_vars <- c(
+  "cre_exp_classroom",
+  "cre_exp_teachroom",
+  "cre_exp_labs",
+  "cre_exp_library",
+  "cre_exp_playarea",
+  "cre_exp_lunch",
+  "cre_exp_no_water",
+  "cre_exp_water_dum",
+  "cre_exp_no_sewage",
+  "cre_exp_sewage_dum",
+  "cre_exp_no_energy",
+  "cre_exp_energy_dum",
+  "cre_exp_employee"
+)
+
+for (i in seq_along(y_vars)) {
+  y <- y_vars[i]
+  
+  fml <- as.formula(
+    paste0(y, " ~ i(ano, treat, ref = 2006) + PIBpc | codmun + ano + uf^ano")
+  )
+  
+  assign(
+    paste0("est_least", i),
+    feols(
+      fml,
+      data = df_least,
+      cluster = ~codmun
+    )
+  )
+  
+  assign(
+    paste0("est_most", i),
+    feols(
+      fml,
+      data = df_most,
+      cluster = ~codmun
+    )
+  )
+}
+
+# ---------------------------------------------------------------------------- #
+### 7.2.2 Plot ----
+# ---------------------------------------------------------------------------- #
+
+titles <- c(
+  "Exp. Classroom",
+  "Exp. Teacher's Room",
+  "Exp. Lab",
+  "Exp. Library",
+  "Exp. Play Area",
+  "Exp. Lunch",
+  "Exp. No Water",
+  "Exp. Water",
+  "Exp. No Sewage",
+  "Exp. Sewage",
+  "Exp. No Energy",
+  "Exp. Energy",
+  "Exp. Employee"
+)
+
+plots <- vector("list", length(titles))
+
+for(i in seq_along(titles)) {
+  
+  est_most  <- get(paste0("est_most", i))
+  est_least <- get(paste0("est_least", i))
+  
+  plots[[i]] <- event_plot_compare(
+    est_most,
+    est_least,
+    name_1 = "Most Dosage",
+    name_2 = "Least Dosage",
+    ref_year = 2006,
+    treat_year = 2007,
+    b_size = 16,
+    t_size = 13,
+    x_label = "Time to Treatment",
+    y_label = "Coefficient",
+    title = titles[i]
+  )
+}
+
+names(plots) <- paste0("p", seq_along(plots))
+
+# ---- Saving Plot ---- #
+
+# Joining the plots into a single one
+final_plot <- 
+  (plots[[2]] | plots[[3]] | plots[[4]]) /
+  (plots[[5]] | plots[[6]] | plots[[1]])  +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "cre_least_vs_most_school_characteristics.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+
+# Joining the plots into a single one
+final_plot <- 
+  (plots[[7]] | plots[[8]]) /
+  (plots[[9]] | plots[[10]]) /
+  (plots[[11]] | plots[[12]] ) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "cre_least_vs_most_school_characteristics2.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+# ---------------------------------------------------------------------------- #
+## 7.3 PRE School Characteristics ----
+# ---------------------------------------------------------------------------- #
+### 7.3.1 Main Regression (L vs. M) ----
+# ---------------------------------------------------------------------------- #
+
+# dependent variables in the order you want
+y_vars <- c(
+  "pre_exp_classroom",
+  "pre_exp_teachroom",
+  "pre_exp_labs",
+  "pre_exp_library",
+  "pre_exp_playarea",
+  "pre_exp_lunch",
+  "pre_exp_no_water",
+  "pre_exp_water_dum",
+  "pre_exp_no_sewage",
+  "pre_exp_sewage_dum",
+  "pre_exp_no_energy",
+  "pre_exp_energy_dum",
+  "pre_exp_employee"
+)
+
+for (i in seq_along(y_vars)) {
+  y <- y_vars[i]
+  
+  fml <- as.formula(
+    paste0(y, " ~ i(ano, treat, ref = 2006) + PIBpc | codmun + ano + uf^ano")
+  )
+  
+  assign(
+    paste0("est_least", i),
+    feols(
+      fml,
+      data = df_least,
+      cluster = ~codmun
+    )
+  )
+  
+  assign(
+    paste0("est_most", i),
+    feols(
+      fml,
+      data = df_most,
+      cluster = ~codmun
+    )
+  )
+}
+
+# ---------------------------------------------------------------------------- #
+### 7.3.2 Plot ----
+# ---------------------------------------------------------------------------- #
+
+titles <- c(
+  "Exp. Classroom",
+  "Exp. Teacher's Room",
+  "Exp. Lab",
+  "Exp. Library",
+  "Exp. Play Area",
+  "Exp. Lunch",
+  "Exp. No Water",
+  "Exp. Water",
+  "Exp. No Sewage",
+  "Exp. Sewage",
+  "Exp. No Energy",
+  "Exp. Energy",
+  "Exp. Employee"
+)
+
+plots <- vector("list", length(titles))
+
+for(i in seq_along(titles)) {
+  
+  est_most  <- get(paste0("est_most", i))
+  est_least <- get(paste0("est_least", i))
+  
+  plots[[i]] <- event_plot_compare(
+    est_most,
+    est_least,
+    name_1 = "Most Dosage",
+    name_2 = "Least Dosage",
+    ref_year = 2006,
+    treat_year = 2007,
+    b_size = 16,
+    t_size = 13,
+    x_label = "Time to Treatment",
+    y_label = "Coefficient",
+    title = titles[i]
+  )
+}
+
+names(plots) <- paste0("p", seq_along(plots))
+
+# ---- Saving Plot ---- #
+
+# Joining the plots into a single one
+final_plot <- 
+  (plots[[2]] | plots[[3]] | plots[[4]]) /
+  (plots[[5]] | plots[[6]] | plots[[1]])  +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "pre_least_vs_most_school_characteristics.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+
+# Joining the plots into a single one
+final_plot <- 
+  (plots[[7]] | plots[[8]]) /
+  (plots[[9]] | plots[[10]]) /
+  (plots[[11]] | plots[[12]] ) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "pre_least_vs_most_school_characteristics2.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+# ---------------------------------------------------------------------------- #
+## 7.4 FUN School Characteristics ----
+# ---------------------------------------------------------------------------- #
+### 7.4.1 Main Regression (L vs. M) ----
+# ---------------------------------------------------------------------------- #
+
+# dependent variables in the order you want
+y_vars <- c(
+  "fun_exp_classroom",
+  "fun_exp_teachroom",
+  "fun_exp_labs",
+  "fun_exp_library",
+  "fun_exp_playarea",
+  "fun_exp_lunch",
+  "fun_exp_no_water",
+  "fun_exp_water_dum",
+  "fun_exp_no_sewage",
+  "fun_exp_sewage_dum",
+  "fun_exp_no_energy",
+  "fun_exp_energy_dum",
+  "fun_exp_employee"
+)
+
+for (i in seq_along(y_vars)) {
+  y <- y_vars[i]
+  
+  fml <- as.formula(
+    paste0(y, " ~ i(ano, treat, ref = 2006) + PIBpc | codmun + ano + uf^ano")
+  )
+  
+  assign(
+    paste0("est_least", i),
+    feols(
+      fml,
+      data = df_least,
+      cluster = ~codmun
+    )
+  )
+  
+  assign(
+    paste0("est_most", i),
+    feols(
+      fml,
+      data = df_most,
+      cluster = ~codmun
+    )
+  )
+}
+
+# ---------------------------------------------------------------------------- #
+### 7.4.2 Plot ----
+# ---------------------------------------------------------------------------- #
+
+titles <- c(
+  "Exp. Classroom",
+  "Exp. Teacher's Room",
+  "Exp. Lab",
+  "Exp. Library",
+  "Exp. Play Area",
+  "Exp. Lunch",
+  "Exp. No Water",
+  "Exp. Water",
+  "Exp. No Sewage",
+  "Exp. Sewage",
+  "Exp. No Energy",
+  "Exp. Energy",
+  "Exp. Employee"
+)
+
+plots <- vector("list", length(titles))
+
+for(i in seq_along(titles)) {
+  
+  est_most  <- get(paste0("est_most", i))
+  est_least <- get(paste0("est_least", i))
+  
+  plots[[i]] <- event_plot_compare(
+    est_most,
+    est_least,
+    name_1 = "Most Dosage",
+    name_2 = "Least Dosage",
+    ref_year = 2006,
+    treat_year = 2007,
+    b_size = 16,
+    t_size = 13,
+    x_label = "Time to Treatment",
+    y_label = "Coefficient",
+    title = titles[i]
+  )
+}
+
+names(plots) <- paste0("p", seq_along(plots))
+
+# ---- Saving Plot ---- #
+
+# Joining the plots into a single one
+final_plot <- 
+  (plots[[2]] | plots[[3]] | plots[[4]]) /
+  (plots[[5]] | plots[[6]] | plots[[1]])  +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "fun_least_vs_most_school_characteristics.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+
+# Joining the plots into a single one
+final_plot <- 
+  (plots[[7]] | plots[[8]]) /
+  (plots[[9]] | plots[[10]]) /
+  (plots[[11]] | plots[[12]] ) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "fun_least_vs_most_school_characteristics2.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
+   est_least6, est_least7, est_least8, est_least9, est_least10, est_least11,
+   est_least12, est_least13, est_least14, est_least15, est_least16,
+   est_most, est_most1, est_most2, est_most3, est_most4, est_most5, est_most6,
+   est_most7, est_most8, est_most9, est_most10, est_most11, est_most12, est_most13,
+   est_most14, est_most15,
+   plots, final_plot, i, fml, y, y_vars)
+

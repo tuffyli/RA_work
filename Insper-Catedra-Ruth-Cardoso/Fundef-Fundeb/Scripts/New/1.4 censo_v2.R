@@ -3765,6 +3765,635 @@ saveRDS(df_prop_mun, "Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data_sch
 
 
 
+# ---------------------------------------------------------------------------- #
+## 5.4 School type Infra with Affil ----
+# ---------------------------------------------------------------------------- #
+
+pop_mun <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/pop_age.rds")
+
+df_enroll <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/censo_escolar_base_v2.rds")
+
+# ---------------------------------------------------------------------------- #
+### 5.4.1. Variables ----
+# ---------------------------------------------------------------------------- #
+
+# Municipal enrollment
+df_lvl_mun <- df_enroll %>% 
+  ungroup() %>% 
+  mutate(is_mun = dep_adm == "Municipal",
+         is_afl = (affiliated == 1 & affil_mun == 1)) %>%
+  group_by(codmun, ano) %>% 
+  summarise(
+    
+    # -------- Enrollment totals -------- #
+    inf_enroll = sum(
+      rowSums(across(c(pre_tot, day_tot)), na.rm = TRUE),
+      na.rm = TRUE
+    ),
+    
+    fun_enroll = sum(
+      rowSums(across(c(reg_in_9, reg_in_8, reg_fin_9, reg_fin_8)), na.rm = TRUE),
+      na.rm = TRUE
+    ),
+    
+    total_enroll = sum(coalesce(enroll, 0), na.rm = TRUE),
+    
+    total_pub_enroll = sum(
+      if_else(is_mun | is_afl, coalesce(enroll, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    inf_pub_enroll = sum(
+      if_else(
+        is_mun | is_afl,
+        rowSums(across(c(pre_tot, day_tot)), na.rm = TRUE),
+        0,
+        missing = 0
+      ),
+      na.rm = TRUE
+    ),
+    
+    cre_enroll = sum(coalesce(day_tot, 0), na.rm = TRUE),
+    pre_enroll = sum(coalesce(pre_tot, 0), na.rm = TRUE),
+    
+    cre_pub_enroll = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0), 0, missing = 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_enroll = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0), 0, missing = 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_enroll = sum(
+      if_else(
+        is_mun | is_afl,
+        rowSums(across(c(reg_in_9, reg_in_8, reg_fin_9, reg_fin_8)), na.rm = TRUE),
+        0,
+        missing = 0
+      ),
+      na.rm = TRUE
+    ),
+    
+    # -------- Creche exposure -------- #
+    
+    cre_tot_classroom = sum(
+      coalesce(day_tot, 0) * coalesce(classroom, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_teachroom = sum(
+      coalesce(day_tot, 0) * coalesce(teach_room, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_labs = sum(
+      coalesce(day_tot, 0) * coalesce(lab_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_library = sum(
+      coalesce(day_tot, 0) * coalesce(lib_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_playarea = sum(
+      coalesce(day_tot, 0) * coalesce(play_area, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_lunch = sum(
+      coalesce(day_tot, 0) * coalesce(lunch, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_no_water = sum(
+      coalesce(day_tot, 0) * coalesce(water_non, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_water_dum = sum(
+      coalesce(day_tot, 0) * coalesce(water_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_no_sewage = sum(
+      coalesce(day_tot, 0) * coalesce(sewage_non, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_sewage_dum = sum(
+      coalesce(day_tot, 0) * coalesce(sewage_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_no_energy = sum(
+      coalesce(day_tot, 0) * coalesce(energy_non, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_energy_dum = sum(
+      coalesce(day_tot, 0) * coalesce(energy_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_tot_employee = sum(
+      coalesce(day_tot, 0) * coalesce(employee, 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_classroom = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(classroom, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_teachroom = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(teach_room, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_labs = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(lab_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_library = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(lib_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_playarea = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(play_area, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_lunch = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(lunch, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_no_water = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(water_non, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_water_dum = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(water_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_no_sewage = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(sewage_non, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_sewage_dum = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(sewage_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_no_energy = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(energy_non, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_energy_dum = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(energy_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    cre_pub_employee = sum(
+      if_else(is_mun | is_afl, coalesce(day_tot, 0) * coalesce(employee, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    
+    # -------- Preschool exposure -------- #
+    
+    pre_tot_classroom = sum(
+      coalesce(pre_tot, 0) * coalesce(classroom, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_teachroom = sum(
+      coalesce(pre_tot, 0) * coalesce(teach_room, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_labs = sum(
+      coalesce(pre_tot, 0) * coalesce(lab_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_library = sum(
+      coalesce(pre_tot, 0) * coalesce(lib_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_playarea = sum(
+      coalesce(pre_tot, 0) * coalesce(play_area, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_lunch = sum(
+      coalesce(pre_tot, 0) * coalesce(lunch, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_no_water = sum(
+      coalesce(pre_tot, 0) * coalesce(water_non, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_water_dum = sum(
+      coalesce(pre_tot, 0) * coalesce(water_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_no_sewage = sum(
+      coalesce(pre_tot, 0) * coalesce(sewage_non, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_sewage_dum = sum(
+      coalesce(pre_tot, 0) * coalesce(sewage_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_no_energy = sum(
+      coalesce(pre_tot, 0) * coalesce(energy_non, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_energy_dum = sum(
+      coalesce(pre_tot, 0) * coalesce(energy_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_tot_employee = sum(
+      coalesce(pre_tot, 0) * coalesce(employee, 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_classroom = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(classroom, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_teachroom = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(teach_room, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_labs = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(lab_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_library = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(lib_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_playarea = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(play_area, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_lunch = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(lunch, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_no_water = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(water_non, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_water_dum = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(water_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_no_sewage = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(sewage_non, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_sewage_dum = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(sewage_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_no_energy = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(energy_non, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_energy_dum = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(energy_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    pre_pub_employee = sum(
+      if_else(is_mun | is_afl, coalesce(pre_tot, 0) * coalesce(employee, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    # -------- Fundamental exposure -------- #
+    
+    fun_tot_classroom = sum(
+      coalesce(fun_enroll, 0) * coalesce(classroom, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_teachroom = sum(
+      coalesce(fun_enroll, 0) * coalesce(teach_room, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_labs = sum(
+      coalesce(fun_enroll, 0) * coalesce(lab_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_library = sum(
+      coalesce(fun_enroll, 0) * coalesce(lib_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_playarea = sum(
+      coalesce(fun_enroll, 0) * coalesce(play_area, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_lunch = sum(
+      coalesce(fun_enroll, 0) * coalesce(lunch, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_no_water = sum(
+      coalesce(fun_enroll, 0) * coalesce(water_non, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_water_dum = sum(
+      coalesce(fun_enroll, 0) * coalesce(water_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_no_sewage = sum(
+      coalesce(fun_enroll, 0) * coalesce(sewage_non, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_sewage_dum = sum(
+      coalesce(fun_enroll, 0) * coalesce(sewage_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_no_energy = sum(
+      coalesce(fun_enroll, 0) * coalesce(energy_non, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_energy_dum = sum(
+      coalesce(fun_enroll, 0) * coalesce(energy_dummy, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_tot_employee = sum(
+      coalesce(fun_enroll, 0) * coalesce(employee, 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_classroom = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(classroom, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_teachroom = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(teach_room, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_labs = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(lab_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_library = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(lib_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_playarea = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(play_area, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_lunch = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(lunch, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_no_water = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(water_non, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_water_dum = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(water_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_no_sewage = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(sewage_non, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_sewage_dum = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(sewage_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_no_energy = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(energy_non, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_energy_dum = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(energy_dummy, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    fun_pub_employee = sum(
+      if_else(is_mun | is_afl, coalesce(fun_enroll, 0) * coalesce(employee, 0), 0),
+      na.rm = TRUE
+    ),
+    
+    
+    .groups = "drop"
+  )
+
+
+# Combining both databases
+# ---------------------------------------------------------------------------- #
+### 5.4.2 Age data ----
+# ---------------------------------------------------------------------------- #
+
+df_lvl_mun <- df_lvl_mun %>% 
+  left_join(pop_mun %>% mutate(ano = as.numeric(ano)), by = c("codmun" = "cod_mun", "ano"))
+
+
+# ---------------------------------------------------------------------------- #
+### 5.4.3 Prop. data ----
+# ---------------------------------------------------------------------------- #
+
+df_prop_mun <- df_lvl_mun %>% 
+  mutate(
+    # -------- CREC -------- #
+    cre_exp_classroom = if_else(!is.na(cre_tot_classroom) & cre_tot_classroom > 0,
+                                cre_pub_classroom / cre_tot_classroom, NA_real_),
+    
+    cre_exp_teachroom = if_else(!is.na(cre_tot_teachroom) & cre_tot_teachroom > 0,
+                                cre_pub_teachroom / cre_tot_teachroom, NA_real_),
+    
+    cre_exp_labs = if_else(!is.na(cre_tot_labs) & cre_tot_labs > 0,
+                           cre_pub_labs / cre_tot_labs, NA_real_),
+    
+    cre_exp_library = if_else(!is.na(cre_tot_library) & cre_tot_library > 0,
+                              cre_pub_library / cre_tot_library, NA_real_),
+    
+    cre_exp_playarea = if_else(!is.na(cre_tot_playarea) & cre_tot_playarea > 0,
+                               cre_pub_playarea / cre_tot_playarea, NA_real_),
+    
+    cre_exp_lunch = if_else(!is.na(cre_tot_lunch) & cre_tot_lunch > 0,
+                            cre_pub_lunch / cre_tot_lunch, NA_real_),
+    
+    cre_exp_no_water = if_else(!is.na(cre_tot_no_water) & cre_tot_no_water > 0,
+                               cre_pub_no_water / cre_tot_no_water, NA_real_),
+    
+    cre_exp_water_dum = if_else(!is.na(cre_tot_water_dum) & cre_tot_water_dum > 0,
+                                cre_pub_water_dum / cre_tot_water_dum, NA_real_),
+    
+    cre_exp_no_sewage = if_else(!is.na(cre_tot_no_sewage) & cre_tot_no_sewage > 0,
+                                cre_pub_no_sewage / cre_tot_no_sewage, NA_real_),
+    
+    cre_exp_sewage_dum = if_else(!is.na(cre_tot_sewage_dum) & cre_tot_sewage_dum > 0,
+                                 cre_pub_sewage_dum / cre_tot_sewage_dum, NA_real_),
+    
+    cre_exp_no_energy = if_else(!is.na(cre_tot_no_energy) & cre_tot_no_energy > 0,
+                                cre_pub_no_energy / cre_tot_no_energy, NA_real_),
+    
+    cre_exp_energy_dum = if_else(!is.na(cre_tot_energy_dum) & cre_tot_energy_dum > 0,
+                                 cre_pub_energy_dum / cre_tot_energy_dum, NA_real_),
+    
+    cre_exp_employee = if_else(!is.na(cre_tot_employee) & cre_tot_employee > 0,
+                               cre_pub_employee / cre_tot_employee, NA_real_),
+    # -------- PREE -------- #
+    
+    pre_exp_classroom = if_else(!is.na(pre_tot_classroom) & pre_tot_classroom > 0,
+                                pre_pub_classroom / pre_tot_classroom, NA_real_),
+    
+    pre_exp_teachroom = if_else(!is.na(pre_tot_teachroom) & pre_tot_teachroom > 0,
+                                pre_pub_teachroom / pre_tot_teachroom, NA_real_),
+    
+    pre_exp_labs = if_else(!is.na(pre_tot_labs) & pre_tot_labs > 0,
+                           pre_pub_labs / pre_tot_labs, NA_real_),
+    
+    pre_exp_library = if_else(!is.na(pre_tot_library) & pre_tot_library > 0,
+                              pre_pub_library / pre_tot_library, NA_real_),
+    
+    pre_exp_playarea = if_else(!is.na(pre_tot_playarea) & pre_tot_playarea > 0,
+                               pre_pub_playarea / pre_tot_playarea, NA_real_),
+    
+    pre_exp_lunch = if_else(!is.na(pre_tot_lunch) & pre_tot_lunch > 0,
+                            pre_pub_lunch / pre_tot_lunch, NA_real_),
+    
+    pre_exp_no_water = if_else(!is.na(pre_tot_no_water) & pre_tot_no_water > 0,
+                               pre_pub_no_water / pre_tot_no_water, NA_real_),
+    
+    pre_exp_water_dum = if_else(!is.na(pre_tot_water_dum) & pre_tot_water_dum > 0,
+                                pre_pub_water_dum / pre_tot_water_dum, NA_real_),
+    
+    pre_exp_no_sewage = if_else(!is.na(pre_tot_no_sewage) & pre_tot_no_sewage > 0,
+                                pre_pub_no_sewage / pre_tot_no_sewage, NA_real_),
+    
+    pre_exp_sewage_dum = if_else(!is.na(pre_tot_sewage_dum) & pre_tot_sewage_dum > 0,
+                                 pre_pub_sewage_dum / pre_tot_sewage_dum, NA_real_),
+    
+    pre_exp_no_energy = if_else(!is.na(pre_tot_no_energy) & pre_tot_no_energy > 0,
+                                pre_pub_no_energy / pre_tot_no_energy, NA_real_),
+    
+    pre_exp_energy_dum = if_else(!is.na(pre_tot_energy_dum) & pre_tot_energy_dum > 0,
+                                 pre_pub_energy_dum / pre_tot_energy_dum, NA_real_),
+    
+    pre_exp_employee = if_else(!is.na(pre_tot_employee) & pre_tot_employee > 0,
+                               pre_pub_employee / pre_tot_employee, NA_real_),
+    
+    # -------- FUND -------- #
+    fun_exp_classroom = if_else(!is.na(fun_tot_classroom) & fun_tot_classroom > 0,
+                                fun_pub_classroom / fun_tot_classroom, NA_real_),
+    
+    fun_exp_teachroom = if_else(!is.na(fun_tot_teachroom) & fun_tot_teachroom > 0,
+                                fun_pub_teachroom / fun_tot_teachroom, NA_real_),
+    
+    fun_exp_labs = if_else(!is.na(fun_tot_labs) & fun_tot_labs > 0,
+                           fun_pub_labs / fun_tot_labs, NA_real_),
+    
+    fun_exp_library = if_else(!is.na(fun_tot_library) & fun_tot_library > 0,
+                              fun_pub_library / fun_tot_library, NA_real_),
+    
+    fun_exp_playarea = if_else(!is.na(fun_tot_playarea) & fun_tot_playarea > 0,
+                               fun_pub_playarea / fun_tot_playarea, NA_real_),
+    
+    fun_exp_lunch = if_else(!is.na(fun_tot_lunch) & fun_tot_lunch > 0,
+                            fun_pub_lunch / fun_tot_lunch, NA_real_),
+    
+    fun_exp_no_water = if_else(!is.na(fun_tot_no_water) & fun_tot_no_water > 0,
+                               fun_pub_no_water / fun_tot_no_water, NA_real_),
+    
+    fun_exp_water_dum = if_else(!is.na(fun_tot_water_dum) & fun_tot_water_dum > 0,
+                                fun_pub_water_dum / fun_tot_water_dum, NA_real_),
+    
+    fun_exp_no_sewage = if_else(!is.na(fun_tot_no_sewage) & fun_tot_no_sewage > 0,
+                                fun_pub_no_sewage / fun_tot_no_sewage, NA_real_),
+    
+    fun_exp_sewage_dum = if_else(!is.na(fun_tot_sewage_dum) & fun_tot_sewage_dum > 0,
+                                 fun_pub_sewage_dum / fun_tot_sewage_dum, NA_real_),
+    
+    fun_exp_no_energy = if_else(!is.na(fun_tot_no_energy) & fun_tot_no_energy > 0,
+                                fun_pub_no_energy / fun_tot_no_energy, NA_real_),
+    
+    fun_exp_energy_dum = if_else(!is.na(fun_tot_energy_dum) & fun_tot_energy_dum > 0,
+                                 fun_pub_energy_dum / fun_tot_energy_dum, NA_real_),
+    
+    fun_exp_employee = if_else(!is.na(fun_tot_employee) & fun_tot_employee > 0,
+                               fun_pub_employee / fun_tot_employee, NA_real_)
+  ) %>% 
+  select(
+    -c(cre_tot_classroom:fun_pub_employee #Removing the non-more needed variables
+    )
+  )
+
+
+# ---- Saving ---- #
+
+saveRDS(df_prop_mun, "Z:/Tuffy/Paper - Educ/Dados/intermediate/afl_mun_prop_data_school_type.rds")
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     

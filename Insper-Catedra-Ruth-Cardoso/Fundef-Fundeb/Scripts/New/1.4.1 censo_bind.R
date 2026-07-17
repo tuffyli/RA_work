@@ -140,3 +140,63 @@ wi_fil <- wi_fil %>%
 
 saveRDS(wi_fil, "Z:/Tuffy/Paper - Educ/Dados/final/mun_school_data_affiliations.rds" )
 
+# ---------------------------------------------------------------------------- #
+# 4. School Type main ----
+# ---------------------------------------------------------------------------- #
+
+df_type <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data_school_type.rds")
+
+# ---------------------------------------------------------------------------- #
+## 4.1 Combination -----
+# ---------------------------------------------------------------------------- #
+
+df_type <- df_type %>% 
+  mutate(
+    codigo_ibge = as.numeric(codmun) %/% 10,
+    codmun = as.numeric(codmun)
+  ) %>% 
+  left_join(
+    df_dosage,
+    by = c("codigo_ibge")
+  ) %>% 
+  select(-codigo_ibge) %>% 
+  left_join(
+    df_pib %>% select(-nom),
+    by = c("codmun" = "codigo_ibge", "ano" = "ano")
+  )
+
+
+# ---- Saving ---- #
+
+saveRDS(df_type, "Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data_school_type_dosage.rds" )
+
+
+# ---------------------------------------------------------------------------- #
+# 5. School Type afl ----
+# ---------------------------------------------------------------------------- #
+
+df_type <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data_school_type.rds")
+
+# ---------------------------------------------------------------------------- #
+## 5.1 Combination -----
+# ---------------------------------------------------------------------------- #
+
+df_type <- df_type %>% 
+  mutate(
+    codigo_ibge = as.numeric(codmun) %/% 10,
+    codmun = as.numeric(codmun)
+  ) %>% 
+  left_join(
+    df_dosage,
+    by = c("codigo_ibge")
+  ) %>% 
+  select(-codigo_ibge) %>% 
+  left_join(
+    df_pib %>% select(-nom),
+    by = c("codmun" = "codigo_ibge", "ano" = "ano")
+  )
+
+
+# ---- Saving ---- #
+
+saveRDS(df_type, "Z:/Tuffy/Paper - Educ/Dados/intermediate/afl_mun_prop_data_school_type_dosage.rds" )
