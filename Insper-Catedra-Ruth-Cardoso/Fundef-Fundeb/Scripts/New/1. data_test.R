@@ -148,8 +148,8 @@ for (year in 2005:2012) {
   if (year == 2005) { finbra_2005_2012 <- data.frame() }
   
   filename <- file.path(
-    PATH_GIOVANNI,
-    "Dados/Gastos municipais/FINBRA/Despesas",
+    PATH_TUFFY,
+    "Dados/FINBRA/Despesas",
     paste0("finbra_", year, ".xlsx")
   )
   
@@ -307,8 +307,8 @@ finbra_completo <- bind_rows(finbra_para_unir, finbra_novo)
 write.csv2(
   finbra_completo,
   file.path(
-    PATH_GIOVANNI,
-    "Dados/Gastos municipais/FINBRA/Despesas/FINBRA_EDU_05_21.csv"
+    PATH_TUFFY,
+    "Dados/FINBRA/Despesas/FINBRA_EDU_05_21.csv"
   ),
   row.names = FALSE
 )
@@ -339,11 +339,11 @@ rm(finbra_para_unir, finbra_completo)
 # ---------------------------------------------------------------------------- #
 
 caminho1 <- file.path(
-  PATH_GIOVANNI,
+  PATH_TUFFY, #Extracted from GIOVANNI ZAN. folders
   "Dados/Transferências Fundeb mun e ufs/transferências_para_municípios_2000_2006.csv"
 )
 caminho2 <- file.path(
-  PATH_GIOVANNI,
+  PATH_TUFFY,
   "Dados/Transferências Fundeb mun e ufs/transferências_para_municípios_2007_2021.csv"
 )
 
@@ -391,7 +391,7 @@ summary(df_anual)
 
 df_ufs <- read.csv2(
   file.path(
-    PATH_GIOVANNI,
+    PATH_TUFFY,
     "Dados/Transferências Fundeb mun e ufs/transferências_para_estados_2007_2021.csv"
   ),
   fileEncoding = "latin1"
@@ -433,7 +433,7 @@ saveRDS(df, file.path(PATH_TUFFY, "Dados/fundef_fundeb_2000_2001.rds"))
 # We normalise the cumulative index so that 2021 = 1, then divide nominal
 # values by the index to express everything in constant 2021 BRL.
 df_ipca <- read_excel(
-  file.path(PATH_GIOVANNI, "Dados/IPCA_acumulado_ano.xlsx"),
+  file.path(PATH_TUFFY, "Dados/IPCA_acumulado_ano.xlsx"),
   skip = 3
 )
 colnames(df_ipca) <- c("ano", "ipca")
