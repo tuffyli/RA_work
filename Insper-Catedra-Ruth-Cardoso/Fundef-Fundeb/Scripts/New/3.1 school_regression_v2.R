@@ -73,6 +73,7 @@ path_figures <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Figures/"
 path_descp <- "Z:/Tuffy/Paper - Educ/Resultados/v4/Descp/"
 path_school <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School"
 path_school_fig <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School/Figures/"
+path_school_fig_nvar <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School/Figures/Newvar/"
 
 path_shcool2 <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School/Mun_aff/"
 path_school_fig2 <- "Z:/Tuffy/Paper - Educ/Resultados/v4/School/Mun_aff/Figures/"
@@ -139,6 +140,131 @@ event_plot <- function(est_obj, treat_year = 2007,
     scale_x_continuous(
       breaks = sort(unique(plot_df$event_time)),
       labels = sort(unique(plot_df$event_time))
+    )
+  
+  if (!is.null(ylim)) {
+    p <- p + coord_cartesian(ylim = ylim)
+  }
+  
+  p
+}
+
+event_plot_dosage <- function(est_obj,
+                              ref_year = 2006,
+                              treat_year = 2007,
+                              title = NULL,
+                              y_label = "Coefficient",
+                              x_label = "Time to Treatment",
+                              ylim = NULL,
+                              b_size = 20,
+                              t_size = 18) {
+  
+  # Extract only the dosage interaction terms from the regression output
+  event_df <- broom::tidy(est_obj, conf.int = TRUE) %>%
+    mutate(
+      term = as.character(term),
+      
+      # Match the two dosage groups
+      group = case_when(
+        str_detect(term, "least_dosage") ~ "Least dosage",
+        str_detect(term, "high_dosage")  ~ "High dosage",
+        TRUE ~ NA_character_
+      ),
+      
+      # Extract the year from the coefficient name
+      year = as.numeric(str_extract(term, "\\d{4}")),
+      event_time = year - treat_year,
+      coef_plot = estimate,
+      ymin_plot = conf.low,
+      ymax_plot = conf.high
+    ) %>%
+    filter(!is.na(group), !is.na(year)) %>%
+    select(group, year, event_time, coef_plot, ymin_plot, ymax_plot)
+  
+  # Add the omitted reference year for both groups
+  base_row <- tidyr::expand_grid(
+    group = c("Least dosage", "High dosage"),
+    year = ref_year
+  ) %>%
+    mutate(
+      event_time = year - treat_year,
+      coef_plot = 0,
+      ymin_plot = NA_real_,
+      ymax_plot = NA_real_
+    )
+  
+  plot_df <- bind_rows(event_df, base_row) %>%
+    mutate(
+      group = factor(group, levels = c("Least dosage", "High dosage"))
+    ) %>%
+    arrange(group, year)
+  
+  p <- ggplot(
+    plot_df,
+    aes(
+      x = event_time,
+      y = coef_plot,
+      color = group,
+      linetype = group,
+      shape = group,
+      group = group
+    )
+  ) +
+    geom_hline(yintercept = 0, color = "#D62728", linewidth = 1) +
+    geom_vline(xintercept = -1, color = "grey40", linetype = "dashed") +
+    
+    geom_errorbar(
+      aes(ymin = ymin_plot, ymax = ymax_plot),
+      position = position_dodge(width = 0.25),
+      width = 0.30,
+      linewidth = 0.8,
+      na.rm = TRUE
+    ) +
+    geom_point(
+      position = position_dodge(width = 0.25),
+      size = 3,
+      na.rm = TRUE
+    ) +
+    geom_line(linewidth = 0.8, position = position_dodge(width = 0.25)) +
+    
+    scale_color_manual(
+      values = c(
+        "Least dosage" = "#D55E00",  # orange
+        "High dosage"  = "#009E73"   # green
+      )
+    ) +
+    scale_linetype_manual(
+      values = c(
+        "Least dosage" = "solid",
+        "High dosage"  = "dashed"
+      )
+    ) +
+    scale_shape_manual(
+      values = c(
+        "Least dosage" = 16,
+        "High dosage"  = 17
+      )
+    ) +
+    scale_x_continuous(
+      breaks = sort(unique(plot_df$event_time)),
+      labels = sort(unique(plot_df$event_time))
+    ) +
+    labs(
+      title = title,
+      x = x_label,
+      y = y_label,
+      color = NULL,
+      linetype = NULL,
+      shape = NULL
+    ) +
+    theme_minimal(base_size = b_size) +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(),
+      axis.text.y = element_text(size = t_size),
+      axis.text.x = element_text(size = t_size, angle = 0, hjust = 0.5),
+      legend.position = "bottom"
     )
   
   if (!is.null(ylim)) {
@@ -568,8 +694,23 @@ etable(est_ag,
 )
 
 
+# --------------------------------------------------------------------------- #
+#### 2.1.3.4 Plot ------
+# --------------------------------------------------------------------------- #
 
-rm(p1, p2, p3, p4, final_plot,
+plot <- event_plot_dosage(
+  est_ag,
+  title = "Enrollment",
+  x_label = "Time to Treatment",
+  y_label = "Coefficient"
+)
+
+ggsave(plot = plot,
+       filename = file.path(path_school_fig_nvar, "enrollment_newvar.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+rm(p1, p2, p3, p4, final_plot, plot,
    est_least1, est_least2, est_least3, est_least4, est_ag,
    est_most1, est_most2, est_most3, est_most4)
 
@@ -816,10 +957,26 @@ etable(est_ag,
   label = "tab:lvm_stu_dosage_preschool_join"
 )
 
+# ---------------------------------------------------------------------------- #
+### 3.3.4 Plot ----
+# ---------------------------------------------------------------------------- #
 
-rm(p1, p2, p3, p4, final_plot,
-   est_least1, est_least2, est_least3, est_least4,
-   est_most1, est_most2, est_most3, est_most4, est_ag)
+
+plot <- event_plot_dosage(
+  est_ag,
+  title = "Schools",
+  x_label = "Time to Treatment",
+  y_label = "Coefficient"
+)
+
+ggsave(plot = plot,
+       filename = file.path(path_school_fig_nvar, "preschools_newvar.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+rm(p1, p2, p3, p4, final_plot, plot,
+   est_least1, est_least2, est_least3, est_least4, est_ag,
+   est_most1, est_most2, est_most3, est_most4)
 
 
 # ---------------------------------------------------------------------------- #
@@ -1064,9 +1221,26 @@ etable(est_ag,
   label = "tab:lvm_stu_dosage_preschool_teachers_join"
 )
 
-rm(p1, p2, p3, p4, final_plot,
-   est_least1, est_least2, est_least3, est_least4,
-   est_most1, est_most2, est_most3, est_most4, est_ag)
+# --------------------------------------------------------------------------- #
+#### 4.1.3.3 Plot -----
+# --------------------------------------------------------------------------- #
+
+plot <- event_plot_dosage(
+  est_ag,
+  title = "Teachers",
+  x_label = "Time to Treatment",
+  y_label = "Coefficient"
+)
+
+ggsave(plot = plot,
+       filename = file.path(path_school_fig_nvar, "teachers_newvar.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+rm(p1, p2, p3, p4, final_plot, plot,
+   est_least1, est_least2, est_least3, est_least4, est_ag,
+   est_most1, est_most2, est_most3, est_most4)
+
 
 # ---------------------------------------------------------------------------- #
 ## 4.2 [LVL] High education teachers ----
@@ -1308,8 +1482,23 @@ etable(est_ag,
   label = "tab:lvm_stu_dosage_preschool_teachers_edu_join"
 )
 
+# --------------------------------------------------------------------------- #
+#### 4.1.3.4 Plot -----
+# --------------------------------------------------------------------------- #
 
-rm(p1, p2, p3, p4, final_plot,
+plot <- event_plot_dosage(
+  est_ag,
+  title = "HE Teachers",
+  x_label = "Time to Treatment",
+  y_label = "Coefficient"
+)
+
+ggsave(plot = plot,
+       filename = file.path(path_school_fig_nvar, "teachers_edu_newvar.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+rm(p1, p2, p3, p4, final_plot, plot,
    est_least1, est_least2, est_least3, est_least4, est_ag,
    est_most1, est_most2, est_most3, est_most4)
 
@@ -1588,7 +1777,53 @@ etable(
   label = "tab:join_lvm_stu_dosage_school_charac3"
 )
 
+# ------------------------------------------------------------------------------ #
+#### 5.2.1.1 Plot ----
+# ------------------------------------------------------------------------------ #
 
+# Build one plot per aggregated regression
+plots_ag <- vector("list", length(titles))
+
+for (i in seq_along(titles)) {
+  est_i <- get(paste0("est_ag", i))
+  
+  plots_ag[[i]] <- event_plot_dosage(
+    est_i,
+    ref_year = 2006,
+    treat_year = 2007,
+    b_size = 16,
+    t_size = 13,
+    x_label = "Time to Treatment",
+    y_label = "Coefficient",
+    title = titles[i]
+  )
+}
+
+names(plots_ag) <- paste0("pag", seq_along(plots_ag))
+
+final_plot_1 <- wrap_plots(plots_ag[c(1:6, 13:16)], ncol = 3) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot_2 <- wrap_plots(plots_ag[7:12], ncol = 2) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+ggsave(
+  plot = final_plot_1,
+  filename = file.path(path_school_fig_nvar, "school_characteristics_1.pdf"),
+  device = "pdf",
+  height = 8,
+  width = 15
+)
+
+ggsave(
+  plot = final_plot_2,
+  filename = file.path(path_school_fig_nvar, "chool_characteristics_2.pdf"),
+  device = "pdf",
+  height = 8,
+  width = 15
+)
 
 
 rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
@@ -1599,6 +1834,7 @@ rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
    est_most14, est_most15, est_most16,
    est_ag1, est_ag2, est_ag3, est_ag4, est_ag5, est_ag6, est_ag7, est_ag8, est_ag9,
    est_ag10, est_ag11, est_ag12, est_ag13, est_ag14, est_ag15, est_ag16,
+   plots_ag, final_plot_1, final_plot_2,
    plots, final_plot, i, fml, y, y_vars)
 
 
@@ -1609,8 +1845,13 @@ rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
 ## 6.1 Data ----
 # ---------------------------------------------------------------------------- #
 
-df_type <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data_school_type_dosage.rds")
+df_type <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/afl_mun_prop_data_school_type_dosage.rds")
 
+df_type <- df_type %>% 
+  mutate(
+      least_dosage = as.integer(dosage_tercile == 1),
+      high_dosage  = as.integer(dosage_tercile == 3)
+    )
 
 # ---------------------------------------------------------------------------- #
 ### 6.1.2 Least vs. Most ----
@@ -1756,22 +1997,22 @@ ggsave(plot = final_plot,
 
 
 dictio <- c(
-  "pre_exp_classroom" = "Exp. Classroom",
-  "pre_exp_teachroom" = "Exp. Teacher's Room",
-  "pre_exp_labs"      = "Exp. Lab",
-  "pre_exp_library"   = "Exp. Library",
-  "pre_exp_playarea"  = "Exp. Play Area",
-  "pre_exp_lunch"     = "Exp. Lunch",
-  "pre_exp_no_water"  = "Exp. No Water",
-  "pre_exp_water"     = "Exp. Water",
-  "pre_exp_no_sewage" = "Exp. No Sewage",
-  "pre_exp_sewage"    = "Exp. Sewage",
-  "pre_exp_no_energy" = "Exp. No Energy",
-  "pre_exp_energy"    = "Exp. Energy",
-  "pre_exp_employee"  = "Exp. Employee",
-  "pre_exp_t_fun"     = "Exp. DC Teachers",
-  "pre_exp_t_pre"     = "Exp. PS Teachers",
-  "pre_exp_t_cre"     = "Exp. MS Teachers"
+  "pre_exp_classroom"  = "Exp. Classroom",
+  "pre_exp_teachroom"  = "Exp. Teacher's Room",
+  "pre_exp_labs"       = "Exp. Lab",
+  "pre_exp_library"    = "Exp. Library",
+  "pre_exp_playarea"   = "Exp. Play Area",
+  "pre_exp_lunch"      = "Exp. Lunch",
+  "pre_exp_no_water"   = "Exp. No Water",
+  "pre_exp_water_dum"  = "Exp. Water",
+  "pre_exp_no_sewage"  = "Exp. No Sewage",
+  "pre_exp_sewage_dum" = "Exp. Sewage",
+  "pre_exp_no_energy"  = "Exp. No Energy",
+  "pre_exp_energy_dum" = "Exp. Energy",
+  "pre_exp_employee"   = "Exp. Employee",
+  "pre_exp_t_fun"      = "Exp. DC Teachers",
+  "pre_exp_t_pre"      = "Exp. PS Teachers",
+  "pre_exp_t_cre"      = "Exp. MS Teachers"
 )
 
 
@@ -1816,6 +2057,103 @@ etable(
   label = "tab:lvm_stu_dosage_preschool_charac3"
 )
 
+# ---------------------------------------------------------------------------- #
+### 6.2.4 Table Aggregated -----
+# ---------------------------------------------------------------------------- #
+
+# -- Regression -- #
+
+for (i in seq_along(y_vars)) {
+  y <- y_vars[i]
+  
+  fml <- as.formula(
+    paste0(y, " ~ least_dosage:i(ano, ref = 2006) +
+              high_dosage:i(ano, ref = 2006) + PIBpc | codmun + ano + uf^ano")
+  )
+  
+  assign(
+    paste0("est_ag", i),
+    feols(
+      fml,
+      data = df_type,
+      cluster = ~codmun
+    )
+  )
+}
+
+# -- Saving Table -- #
+
+etable(
+  est_ag1, est_ag2, est_ag3, est_ag4, est_ag5, est_ag6,
+  tex = TRUE,
+  file = file.path(path_school,"/join_lvm_least_vs_most_preschool_characteristics1.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on Pre-School Characteristics",
+  label = "tab:join_lvm_stu_dosage_school_charac1"
+)
+
+etable(
+  est_ag7, est_ag8, est_ag9, est_ag10, est_ag11, est_ag12, est_ag13,
+  tex = TRUE,
+  file = file.path(path_school,"/join_lvm_least_vs_most_preschool_characteristics2.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on Pre-School Characteristics",
+  label = "tab:join_lvm_stu_dosage_school_charac2"
+)
+
+# ------------------------------------------------------------------------------ #
+#### 6.2.4.1 Plot ----
+# ------------------------------------------------------------------------------ #
+
+# Build one plot per aggregated regression
+plots_ag <- vector("list", length(titles))
+
+for (i in seq_along(titles)) {
+  est_i <- get(paste0("est_ag", i))
+  
+  plots_ag[[i]] <- event_plot_dosage(
+    est_i,
+    ref_year = 2006,
+    treat_year = 2007,
+    b_size = 16,
+    t_size = 13,
+    x_label = "Time to Treatment",
+    y_label = "Coefficient",
+    title = titles[i]
+  )
+}
+
+names(plots_ag) <- paste0("pag", seq_along(plots_ag))
+
+final_plot_1 <- wrap_plots(plots_ag[1:6], ncol = 3) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot_2 <- wrap_plots(plots_ag[7:12], ncol = 2) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+ggsave(
+  plot = final_plot_1,
+  filename = file.path(path_school_fig_nvar, "pre_school_characteristics_1.pdf"),
+  device = "pdf",
+  height = 8,
+  width = 15
+)
+
+ggsave(
+  plot = final_plot_2,
+  filename = file.path(path_school_fig_nvar, "pre_school_characteristics_2.pdf"),
+  device = "pdf",
+  height = 8,
+  width = 15
+)
 
 
 rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
@@ -1823,6 +2161,19 @@ rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
    est_least12, est_least13, est_least14, est_least15, est_least16,
    est_most, est_most1, est_most2, est_most3, est_most4, est_most5, est_most6,
    est_most7, est_most8, est_most9, est_most10, est_most11, est_most12, est_most13,
-   est_most14, est_most15,
+   est_most14, est_most15, 
+   est_ag1, est_ag2, est_ag3, est_ag4, est_ag5, est_ag6, est_ag7, est_ag8, est_ag9,
+   est_ag10, est_ag11, est_ag12, est_ag13,
+   dictio, df_least, df_most, df_school, df_type, 
+   plots_ag, final_plot_2, final_plot_1,
    plots, final_plot, i, fml, y, y_vars)
+
+
+
+
+
+
+
+
+
 
