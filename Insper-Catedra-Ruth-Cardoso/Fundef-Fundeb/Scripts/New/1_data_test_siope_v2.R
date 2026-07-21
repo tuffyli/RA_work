@@ -139,7 +139,7 @@ add_label <- function(data, variable, label) {
 # which is the file consumed by the regression assembly in Section 6.
 
 # ---------------------------------------------------------------------------- #
-## 1.1 FINBRA 2005–2012 (Excel format) ----
+## 1.1 FINBRA 2000–2012 (Excel format) ----
 # ---------------------------------------------------------------------------- #
 
 # Load the minimum-comparable-areas crosswalk used in spatial robustness checks.
@@ -147,11 +147,15 @@ add_label <- function(data, variable, label) {
 # it is available throughout the session.
 amcs <- read_dta(file.path(PATH_BRASIL, "amcs.dta"))
 
+# Sub-functions now present. The select removes all non-education functional
+# areas. Note: ncol() is evaluated on the ORIGINAL frame before mutation,
+# so we capture it first to avoid the off-by-one error after column additions.
+
 # Stack one xlsx file per year into a single data frame.
-for (year in 2005:2012) {
+for (year in 2004:2012) {
   
   # Initialise an empty accumulator on the first iteration
-  if (year == 2005) { finbra_2005_2012 <- data.frame() }
+  if (year == 2004) { finbra_2005_2012 <- data.frame() }
   
   filename <- file.path(
     PATH_TUFFY,
@@ -195,8 +199,9 @@ finbra_2005_2012 <- finbra_2005_2012 %>%
   )) %>%
   arrange(ano, codmun)
 
+
 # Save the cleaned 2005–2012 panel. Used as input to Section 1.3 below.
-saveRDS(finbra_2005_2012, file.path(PATH_INTERMEDIATE, "finbra_2005_2012.rds"))
+saveRDS(finbra_2005_2012, file.path(PATH_INTERMEDIATE, "finbra_2000_2012.rds"))
 
 # ---------------------------------------------------------------------------- #
 ## 1.2 FINBRA 2013–2021 (CSV format)----
@@ -281,12 +286,12 @@ finbra_novo <- finbra_novo %>%
   # Remove the last digit to produce the 6-digit code used throughout the analysis.
   mutate(codigo_ibge = as.numeric(str_sub(as.character(codigo_ibge), 1, -2)))
 
-saveRDS(finbra_novo, file.path(PATH_INTERMEDIATE, "finbra_2007_2021.rds"))
+saveRDS(finbra_novo, file.path(PATH_INTERMEDIATE, "finbra_2013_2021.rds"))
 
 # ---------------------------------------------------------------------------- #
 ## 1.3 Combine Both Periods → FINBRA_EDU_05_21.csv----
 # This step (originally in gastos_municipais.R by Giovanni Zanetti) harmonises
-# the 2005–2012 column schema to match the 2013–2021 format, stacks both, and
+# the 2000–2012 column schema to match the 2013–2021 format, stacks both, and
 # exports the combined CSV that Section 6 reads as df_fib.
 #
 # Key difference between periods:
@@ -454,11 +459,13 @@ df_ipca <- df_ipca %>%
     ipca   = as.numeric(gsub(",", ".", ipca)),
     indice = cumprod(1 + as.numeric(ipca) / 100)
   ) %>%
-  mutate(indice = indice / indice[ano == 2021])   # base year = 2021
+  mutate(indice = indice / indice[ano == 2007])   # base year = 2007
 
 # Apply the deflation index to both transfer aggregates
 df <- df %>%
-  left_join(df_ipca, by = "ano") %>%
+  left_join(df_ipca, by = "ano") 
+
+df <- df %>%
   mutate(
     total_politica_d = total_politica / indice,   # total fund transfer, real BRL
     total_coun_d     = total_coun     / indice    # federal top-up, real BRL
@@ -1465,7 +1472,14 @@ test <- df_fnde %>%
 rm(test)
 
 # ---------------------------------------------------------------------------- #
-## 5.5 De Facto FUNDEF Simulation-----
+## 5.5 Run expected 2007 value ----
+# ---------------------------------------------------------------------------- #
+
+source("Z:/Tuffy/Paper - Educ/Codes/1.5_siope_fundef_rebuild_v3.R")
+
+
+# ---------------------------------------------------------------------------- #
+## 5.6 De Facto FUNDEF Simulation-----
 # Apply the FUNDEF distribution formula to 2006 enrolment data to obtain
 # a simulated coefficient for each municipality (coef_simulado).
 #
@@ -1600,7 +1614,7 @@ simulacao <- simulacao %>%
   add_label("receita_real", "Receita recebida pelo FUNDEB (2007)")
 
 # ---------------------------------------------------------------------------- #
-## 5.6 VAA Simulation (FUNDEB 2007 Weights)-----
+## 5.7 VAA Simulation (FUNDEB 2007 Weights)-----
 # Using the official FUNDEB 2007 weight factors (Art. 36, Law 11.494/2007),
 # compute the Valor Aluno-Ano (VAA) — the per-weighted-student fund value —
 # for both the actual FUNDEB allocation and the FUNDEF counterfactual.
@@ -1662,7 +1676,7 @@ simulacao <- simulacao %>%
   add_label("d_vaa", "Dif. (%) do VAA simulado pro real")
 
 # ---------------------------------------------------------------------------- #
-### 5.6.1 Add Total 2006 Enrolment and Per-Student Spending Measures----
+### 5.7.1 Add Total 2006 Enrolment and Per-Student Spending Measures----
 # ---------------------------------------------------------------------------- #
 
 simulacao <- simulacao %>%
@@ -1688,7 +1702,6 @@ rm(df_fundo, estaduais, lista_ufs, mat_2006_munic, mat_2006, mat_cd, mat_ind,
    FD1_u, FD2, FD2_r, FD2_u, FD3_p, FD3_r, FD3_u, FDC, FDI, file, pasta,
    df, df_fnde, df_fundeb_munic)
 
-rm(list = ls())
 gc()
 
 
