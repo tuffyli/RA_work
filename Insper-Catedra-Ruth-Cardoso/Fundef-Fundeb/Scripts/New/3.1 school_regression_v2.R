@@ -376,7 +376,10 @@ df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/final/mun_school_data_affiliat
 df_school <- df_school  %>%  #Variables for the least vs. most dosage analysis
   mutate(
       least_dosage = as.integer(dosage_tercile == 1),
-      high_dosage  = as.integer(dosage_tercile == 3)
+      high_dosage  = as.integer(dosage_tercile == 3),
+
+      #Post-treatment
+      post_treat = ifelse(ano >= 2007, 1, 0)
     )
 
 # ---------------------------------------------------------------------------- #
@@ -1502,13 +1505,61 @@ rm(p1, p2, p3, p4, final_plot, plot,
    est_least1, est_least2, est_least3, est_least4, est_ag,
    est_most1, est_most2, est_most3, est_most4)
 
+# ---------------------------------------------------------------------------- #
+# 5. ATT estimation ----
+# ---------------------------------------------------------------------------- #
+## 5.1 New var ----
+# ---------------------------------------------------------------------------- #
 
+# -- Enrollment -- #
+est_enr <- feols(pre_pub_enroll ~ high_dosage:post_treat + least_dosage:post_treat + PIBpc 
+                  | codmun + ano + uf^ano,
+                data = df_school,
+                cluster = ~codmun)
 
+# -- N° Schools -- #
+est_nsc <- feols(n_pub_presco ~ high_dosage:post_treat + least_dosage:post_treat + PIBpc 
+                  | codmun + ano + uf^ano,
+                data = df_school,
+                cluster = ~codmun)
+
+# -- N° Teachers -- #
+
+est_nte <- feols(n_t_pre ~ high_dosage:post_treat + least_dosage:post_treat + PIBpc 
+                  | codmun + ano + uf^ano,
+                data = df_school,
+                cluster = ~codmun)
+
+# -- N° Teachers Edu -- #
+
+est_ted <- feols(n_t_pre_edu ~ high_dosage:post_treat + least_dosage:post_treat + PIBpc 
+                  | codmun + ano + uf^ano,
+                data = df_school,
+                cluster = ~codmun)
 
 # ---------------------------------------------------------------------------- #
-# 5. School Characteristics ----
+### 5.1.1 Table ----
 # ---------------------------------------------------------------------------- #
-## 5.1 Main Regression (L vs. M) ----
+
+etable(est_enr, est_nsc, est_nte, est_ted,
+  drop = "PIBpc",
+  dict = c(
+      "pre_pub_enroll" = "Enrollment",
+      "n_pub_presco"   = "Schools",
+      "n_t_pre"        = "Teachers",
+      "n_t_pre_edu"    = "Highly Educated Teachers"
+  ),
+  file = file.path(path_school,"/join_preschool_att.tex"),
+  digits = 3,
+  replace = T,
+  title = "Pre-School ATT")
+
+rm(est_enr, est_nsc, est_nte, est_ted)
+
+# ---------------------------------------------------------------------------- #
+# 6. School Characteristics ----
+# ---------------------------------------------------------------------------- #
+## 6.1 Main Regression (L vs. M) ----
 # ---------------------------------------------------------------------------- #
 
 # dependent variables in the order you want
@@ -1558,7 +1609,7 @@ for (i in seq_along(y_vars)) {
 }
 
 # ---------------------------------------------------------------------------- #
-### 5.2.1 Plot ----
+### 6.2.1 Plot ----
 # ---------------------------------------------------------------------------- #
 
 titles <- c(
@@ -1637,7 +1688,7 @@ ggsave(plot = final_plot,
        device = "pdf", height = 8, width = 15)
 
 # ---------------------------------------------------------------------------- #
-## 5.2 Tables ----
+## 6.2 Tables ----
 # ---------------------------------------------------------------------------- #
 
 dictio <- c(
@@ -1715,7 +1766,7 @@ etable(
 )
 
 # ---------------------------------------------------------------------------- #
-### 5.2.1 Table Aggregated -----
+### 6.2.1 Table Aggregated -----
 # ---------------------------------------------------------------------------- #
 
 # -- Regression -- #
@@ -1778,7 +1829,7 @@ etable(
 )
 
 # ------------------------------------------------------------------------------ #
-#### 5.2.1.1 Plot ----
+#### 6.2.1.1 Plot ----
 # ------------------------------------------------------------------------------ #
 
 # Build one plot per aggregated regression
@@ -1840,9 +1891,9 @@ rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
 
 #<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>#
 # ---------------------------------------------------------------------------- #
-# 6. School Type Infra ----
+# 7. School Type Infra ----
 # ---------------------------------------------------------------------------- #
-## 6.1 Data ----
+## 7.1 Data ----
 # ---------------------------------------------------------------------------- #
 
 df_type <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/afl_mun_prop_data_school_type_dosage.rds")
@@ -1854,7 +1905,7 @@ df_type <- df_type %>%
     )
 
 # ---------------------------------------------------------------------------- #
-### 6.1.2 Least vs. Most ----
+### 7.1.2 Least vs. Most ----
 # ---------------------------------------------------------------------------- #
 
 df_least <- df_type %>% 
@@ -1868,9 +1919,9 @@ df_most <- df_type %>%
 
 
 # ---------------------------------------------------------------------------- #
-## 6.2 PRE School Characteristics ----
+## 7.2 PRE School Characteristics ----
 # ---------------------------------------------------------------------------- #
-### 6.2.1 Main Regression (L vs. M) ----
+### 7.2.1 Main Regression (L vs. M) ----
 # ---------------------------------------------------------------------------- #
 
 # dependent variables in the order you want
@@ -1917,7 +1968,7 @@ for (i in seq_along(y_vars)) {
 }
 
 # ---------------------------------------------------------------------------- #
-### 6.2.2 Plot ----
+### 7.2.2 Plot ----
 # ---------------------------------------------------------------------------- #
 
 titles <- c(
@@ -1992,7 +2043,7 @@ ggsave(plot = final_plot,
        device = "pdf", height = 8, width = 15)
 
 # ---------------------------------------------------------------------------- #
-### 6.2.3 Table ----
+### 7.2.3 Table ----
 # ---------------------------------------------------------------------------- #
 
 
@@ -2058,7 +2109,7 @@ etable(
 )
 
 # ---------------------------------------------------------------------------- #
-### 6.2.4 Table Aggregated -----
+### 7.2.4 Table Aggregated -----
 # ---------------------------------------------------------------------------- #
 
 # -- Regression -- #
@@ -2108,7 +2159,7 @@ etable(
 )
 
 # ------------------------------------------------------------------------------ #
-#### 6.2.4.1 Plot ----
+#### 7.2.4.1 Plot ----
 # ------------------------------------------------------------------------------ #
 
 # Build one plot per aggregated regression
