@@ -2,7 +2,7 @@
 # Data Combination
 # DataBase adjustment
 # Last edited by: Tuffy Licciardi Issa
-# Date: 14/07/2025
+# Date: 21/07/2025
 # ---------------------------------------------------------------------------- #
 #' Here I will combine the created school census municipal data with the dosage
 #' variable. This will enable running the regression directly with this new data.
@@ -175,7 +175,7 @@ saveRDS(df_type, "Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data_school_
 # 5. School Type afl ----
 # ---------------------------------------------------------------------------- #
 
-df_type <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/mun_prop_data_school_type.rds")
+df_type <- readRDS("Z:/Tuffy/Paper - Educ/Dados/intermediate/afl_mun_prop_data_school_type.rds")
 
 # ---------------------------------------------------------------------------- #
 ## 5.1 Combination -----
@@ -200,3 +200,5 @@ df_type <- df_type %>%
 # ---- Saving ---- #
 
 saveRDS(df_type, "Z:/Tuffy/Paper - Educ/Dados/intermediate/afl_mun_prop_data_school_type_dosage.rds" )
+
+rm(df_dosage, df_pib, main_df, no_fil, wi_fil, df_type)

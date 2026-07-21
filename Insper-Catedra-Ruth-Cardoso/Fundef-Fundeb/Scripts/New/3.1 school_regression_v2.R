@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
 # Regressions - Version 4
 # Last edited by: Tuffy Licciardi Issa
-# Date: 14/07/2025
+# Date: 21/07/2025
 # ---------------------------------------------------------------------------- #
 
 #' ** ----------------------------------------------------------------------- **
@@ -245,8 +245,13 @@ event_plot_compare <- function(est_1, est_2,
 # ---------------------------------------------------------------------------- #
 
 
-df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/final/mun_school_data.rds")
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/final/mun_school_data_affiliations.rds")
 
+df_school <- df_school  %>%  #Variables for the least vs. most dosage analysis
+  mutate(
+      least_dosage = as.integer(dosage_tercile == 1),
+      high_dosage  = as.integer(dosage_tercile == 3)
+    )
 
 # ---------------------------------------------------------------------------- #
 ## 1.2 Least vs. Most ----
@@ -534,8 +539,38 @@ etable(
 )
 
 
+# -------------------------------------------------------------------------- #
+#### 2.1.3.3 Table Aggregated -----
+# -------------------------------------------------------------------------- #
+
+est_ag <- feols(
+  pre_pub_enroll ~
+    least_dosage:i(ano, ref = 2006) +
+    high_dosage:i(ano, ref = 2006) +
+    PIBpc |
+    codmun + ano + uf^ano,
+  data = df_school,
+  cluster = ~codmun
+)
+
+etable(est_ag,
+  tex = TRUE,
+  file = file.path(path_school,"/lvm_che_enroll_studosage_join.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = c(
+    "inf_pub_enroll" = "Child Education Enrollment",
+    "pre_pub_enroll" = "Pre-School Enrollment"
+  ),
+  title = "Least vs. Most: Effects of Fundef Student Dosage on Child Education Enrollment",
+  label = "tab:lvm_stu_dosage_cheschool_enroll_join"
+)
+
+
+
 rm(p1, p2, p3, p4, final_plot,
-   est_least1, est_least2, est_least3, est_least4,
+   est_least1, est_least2, est_least3, est_least4, est_ag,
    est_most1, est_most2, est_most3, est_most4)
 
 
@@ -753,10 +788,38 @@ etable(
   label = "tab:lvm_stu_dosage_preschool"
 )
 
+# -------------------------------------------------------------------------- #
+### 3.3.3 Table Aggregated -----
+# -------------------------------------------------------------------------- #
+
+est_ag <- feols(
+  n_pub_presco ~
+    least_dosage:i(ano, ref = 2006) +
+    high_dosage:i(ano, ref = 2006) +
+    PIBpc |
+    codmun + ano + uf^ano,
+  data = df_school,
+  cluster = ~codmun
+)
+
+etable(est_ag,
+  tex = TRUE,
+  file = file.path(path_school,"/lvm_pre_school_studosage_join.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = c(
+    "n_pub_child" = "Child Education Schools",
+    "n_pub_presco" = "Pre-Schools"
+  ),
+  title = "Least vs. Most: Effects of Fundef Student Dosage on Pre-Schools",
+  label = "tab:lvm_stu_dosage_preschool_join"
+)
+
 
 rm(p1, p2, p3, p4, final_plot,
    est_least1, est_least2, est_least3, est_least4,
-   est_most1, est_most2, est_most3, est_most4)
+   est_most1, est_most2, est_most3, est_most4, est_ag)
 
 
 # ---------------------------------------------------------------------------- #
@@ -973,10 +1036,37 @@ etable(
   label = "tab:lvm_stu_dosage_preschool_teachers"
 )
 
+# -------------------------------------------------------------------------- #
+#### 4.1.3.2 Table Aggregated -----
+# -------------------------------------------------------------------------- #
+
+est_ag <- feols(
+  n_t_pre ~
+    least_dosage:i(ano, ref = 2006) +
+    high_dosage:i(ano, ref = 2006) +
+    PIBpc |
+    codmun + ano + uf^ano,
+  data = df_school,
+  cluster = ~codmun
+)
+
+etable(est_ag,
+  tex = TRUE,
+  file = file.path(path_school,"/lvm_pre_teachers_studosage_join.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = c(
+    "n_t_chi" = "Child Education Teachers",
+    "n_t_pre" = "Pre-School Teachers"
+  ),
+  title = "Least vs. Most: Effects of Fundef Student Dosage on Pre-School Teachers",
+  label = "tab:lvm_stu_dosage_preschool_teachers_join"
+)
 
 rm(p1, p2, p3, p4, final_plot,
    est_least1, est_least2, est_least3, est_least4,
-   est_most1, est_most2, est_most3, est_most4)
+   est_most1, est_most2, est_most3, est_most4, est_ag)
 
 # ---------------------------------------------------------------------------- #
 ## 4.2 [LVL] High education teachers ----
@@ -1190,11 +1280,37 @@ etable(
   label = "tab:lvm_stu_dosage_preschool_teachers_edu"
 )
 
+# -------------------------------------------------------------------------- #
+#### 4.1.3.3 Table Aggregated -----
+# -------------------------------------------------------------------------- #
 
+est_ag <- feols(
+  n_t_pre_edu ~
+    least_dosage:i(ano, ref = 2006) +
+    high_dosage:i(ano, ref = 2006) +
+    PIBpc |
+    codmun + ano + uf^ano,
+  data = df_school,
+  cluster = ~codmun
+)
+
+etable(est_ag,
+  tex = TRUE,
+  file = file.path(path_school,"/lvm_pre_teachers_edu_studosage_join.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = c(
+    "n_t_chi_edu" = "HE Child Education Teachers",
+    "n_t_pre_edu" = "HE Pre-School Teachers"
+  ),
+  title = "Least vs. Most: Effects of Fundef Student Dosage on Pre-School Teachers Education",
+  label = "tab:lvm_stu_dosage_preschool_teachers_edu_join"
+)
 
 
 rm(p1, p2, p3, p4, final_plot,
-   est_least1, est_least2, est_least3, est_least4,
+   est_least1, est_least2, est_least3, est_least4, est_ag,
    est_most1, est_most2, est_most3, est_most4)
 
 
@@ -1409,13 +1525,80 @@ etable(
   label = "tab:lvm_stu_dosage_school_charac4"
 )
 
+# ---------------------------------------------------------------------------- #
+### 5.2.1 Table Aggregated -----
+# ---------------------------------------------------------------------------- #
+
+# -- Regression -- #
+
+for (i in seq_along(y_vars)) {
+  y <- y_vars[i]
+  
+  fml <- as.formula(
+    paste0(y, " ~ least_dosage:i(ano, ref = 2006) +
+              high_dosage:i(ano, ref = 2006) + PIBpc | codmun + ano + uf^ano")
+  )
+  
+  assign(
+    paste0("est_ag", i),
+    feols(
+      fml,
+      data = df_school,
+      cluster = ~codmun
+    )
+  )
+}
+
+# -- Saving Table -- #
+
+etable(
+  est_ag1, est_ag2, est_ag3, est_ag4, est_ag5, est_ag6,
+  tex = TRUE,
+  file = file.path(path_school,"/join_lvm_least_vs_most_school_characteristics1.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on School Characteristics",
+  label = "tab:join_lvm_stu_dosage_school_charac1"
+)
+
+etable(
+  est_ag7, est_ag8, est_ag9, est_ag10, est_ag11, est_ag12, 
+  tex = TRUE,
+  file = file.path(path_school,"/join_lvm_least_vs_most_school_characteristics2.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on School Characteristics",
+  label = "tab:join_lvm_stu_dosage_school_charac2"
+)
+
+
+etable(
+  est_ag14, est_ag15, est_ag16, 
+  tex = TRUE,
+  file = file.path(path_school,"/join_lvm_least_vs_most_school_characteristics3.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on School Characteristics",
+  label = "tab:join_lvm_stu_dosage_school_charac3"
+)
+
+
+
 
 rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
    est_least6, est_least7, est_least8, est_least9, est_least10, est_least11,
    est_least12, est_least13, est_least14, est_least15, est_least16,
    est_most, est_most1, est_most2, est_most3, est_most4, est_most5, est_most6,
    est_most7, est_most8, est_most9, est_most10, est_most11, est_most12, est_most13,
-   est_most14, est_most15,
+   est_most14, est_most15, est_most16,
+   est_ag1, est_ag2, est_ag3, est_ag4, est_ag5, est_ag6, est_ag7, est_ag8, est_ag9,
+   est_ag10, est_ag11, est_ag12, est_ag13, est_ag14, est_ag15, est_ag16,
    plots, final_plot, i, fml, y, y_vars)
 
 
