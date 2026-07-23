@@ -1659,25 +1659,19 @@ names(plots) <- paste0("p", seq_along(plots))
 
 # Joining the plots into a single one
 final_plot <- 
-  (plots[[2]] | plots[[3]] | plots[[4]]) /
-  (plots[[5]] | plots[[6]] | plots[[1]]) /
-  (plots[[14]] | plots[[15]] | plots[[16]]) +
+  (plots[[2]] | plots[[3]]) +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom")
 
 final_plot
 
 ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "least_vs_most_school_characteristics.pdf"),
+       filename = file.path(path_school_fig, "least_vs_most_school_characteristics1.pdf"),
        device = "pdf", height = 8, width = 15)
 
 
-
-# Joining the plots into a single one
 final_plot <- 
-  (plots[[7]] | plots[[8]]) /
-  (plots[[9]] | plots[[10]]) /
-  (plots[[11]] | plots[[12]] ) +
+  (plots[[4]] | plots[[5]]) +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom")
 
@@ -1685,6 +1679,68 @@ final_plot
 
 ggsave(plot = final_plot,
        filename = file.path(path_school_fig, "least_vs_most_school_characteristics2.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+final_plot <- 
+  (plots[[6]] | plots[[1]]) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "least_vs_most_school_characteristics3.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+final_plot <- 
+  (plots[[14]] | plots[[15]]) /
+  (plots[[16]] | plot_spacer()) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "least_vs_most_school_characteristics4.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+
+
+# Water
+final_plot <- 
+  (plots[[7]] | plots[[8]]) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "least_vs_most_school_characteristics_wat.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+# Sewage
+final_plot <- 
+  (plots[[9]] | plots[[10]]) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "least_vs_most_school_characteristics_sew.pdf"),
+       device = "pdf", height = 8, width = 15)
+
+# Energy
+final_plot <- 
+  (plots[[11]] | plots[[12]] ) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot
+
+ggsave(plot = final_plot,
+       filename = file.path(path_school_fig, "least_vs_most_school_characteristics_ene.pdf"),
        device = "pdf", height = 8, width = 15)
 
 # ---------------------------------------------------------------------------- #
@@ -1716,7 +1772,7 @@ dictio <- c(
 # - All Schools Infra - #
 
 etable(
-  est_most1, est_least1, est_most2, est_least2, est_most3, est_least3, est_most4, est_least4, 
+  est_most1, est_least1, est_most2, est_least2, 
   tex = TRUE,
   file = file.path(path_school,"/lvm_least_vs_most_school_characteristics1.tex"),
   digits = 3,
@@ -1728,9 +1784,33 @@ etable(
 )
 
 etable(
-  est_most5, est_least5, est_most6, est_least6, est_most7, est_least7, est_most8, est_least8, 
+  est_most3, est_least3, est_most4, est_least4, 
   tex = TRUE,
   file = file.path(path_school,"/lvm_least_vs_most_school_characteristics2.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on School Characteristics",
+  label = "tab:lvm_stu_dosage_school_charac1"
+)
+
+etable(
+  est_most5, est_least5, est_most6, est_least6, 
+  tex = TRUE,
+  file = file.path(path_school,"/lvm_least_vs_most_school_characteristics3.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on School Characteristics",
+  label = "tab:lvm_stu_dosage_school_charac2"
+)
+
+etable(
+  est_most7, est_least7, est_most8, est_least8, 
+  tex = TRUE,
+  file = file.path(path_school,"/lvm_least_vs_most_school_characteristics4.tex"),
   digits = 3,
   replace = T,
   drop = "PIBpc",
@@ -1741,9 +1821,21 @@ etable(
 
 
 etable(
-  est_most9, est_least9, est_most10, est_least10, est_most11, est_least11, est_most12, est_least12, 
+  est_most9, est_least9, est_most10, est_least10,
   tex = TRUE,
-  file = file.path(path_school,"/lvm_least_vs_most_school_characteristics3.tex"),
+  file = file.path(path_school,"/lvm_least_vs_most_school_characteristics5.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on School Characteristics",
+  label = "tab:lvm_stu_dosage_school_charac3"
+)
+
+etable(
+  est_most11, est_least11, est_most12, est_least12, 
+  tex = TRUE,
+  file = file.path(path_school,"/lvm_least_vs_most_school_characteristics6.tex"),
   digits = 3,
   replace = T,
   drop = "PIBpc",
@@ -1756,7 +1848,7 @@ etable(
 etable(
   est_most14, est_least14, est_most15, est_least15, est_most16, est_least16, 
   tex = TRUE,
-  file = file.path(path_school,"/lvm_least_vs_most_school_characteristics4.tex"),
+  file = file.path(path_school,"/lvm_least_vs_most_school_characteristics7.tex"),
   digits = 3,
   replace = T,
   drop = "PIBpc",
@@ -1792,7 +1884,7 @@ for (i in seq_along(y_vars)) {
 # -- Saving Table -- #
 
 etable(
-  est_ag1, est_ag2, est_ag3, est_ag4, est_ag5, est_ag6,
+  est_ag1, est_ag2, est_ag3,
   tex = TRUE,
   file = file.path(path_school,"/join_lvm_least_vs_most_school_characteristics1.tex"),
   digits = 3,
@@ -1804,9 +1896,21 @@ etable(
 )
 
 etable(
-  est_ag7, est_ag8, est_ag9, est_ag10, est_ag11, est_ag12, 
+  est_ag4, est_ag5, est_ag6,
   tex = TRUE,
   file = file.path(path_school,"/join_lvm_least_vs_most_school_characteristics2.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on School Characteristics",
+  label = "tab:join_lvm_stu_dosage_school_charac1"
+)
+
+etable(
+  est_ag7, est_ag8, est_ag9, 
+  tex = TRUE,
+  file = file.path(path_school,"/join_lvm_least_vs_most_school_characteristics3.tex"),
   digits = 3,
   replace = T,
   drop = "PIBpc",
@@ -1815,11 +1919,22 @@ etable(
   label = "tab:join_lvm_stu_dosage_school_charac2"
 )
 
+etable(
+  est_ag10, est_ag11, est_ag12, 
+  tex = TRUE,
+  file = file.path(path_school,"/join_lvm_least_vs_most_school_characteristics4.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on School Characteristics",
+  label = "tab:join_lvm_stu_dosage_school_charac2"
+)
 
 etable(
   est_ag14, est_ag15, est_ag16, 
   tex = TRUE,
-  file = file.path(path_school,"/join_lvm_least_vs_most_school_characteristics3.tex"),
+  file = file.path(path_school,"/join_lvm_least_vs_most_school_characteristics5.tex"),
   digits = 3,
   replace = T,
   drop = "PIBpc",
@@ -1852,11 +1967,34 @@ for (i in seq_along(titles)) {
 
 names(plots_ag) <- paste0("pag", seq_along(plots_ag))
 
-final_plot_1 <- wrap_plots(plots_ag[c(1:6, 13:16)], ncol = 3) +
+final_plot_1 <- wrap_plots(plots_ag[c(1:2)], ncol = 2) +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom")
 
-final_plot_2 <- wrap_plots(plots_ag[7:12], ncol = 2) +
+final_plot_2 <- wrap_plots(plots_ag[c(3:4)], ncol = 2) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot_3 <- wrap_plots(plots_ag[c(5:6)], ncol = 2) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+final_plot_4 <- wrap_plots(plots_ag[c(13:16)], ncol = 2) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+#Water
+final_plot_5 <- wrap_plots(plots_ag[7:8], ncol = 2) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+#Sewage
+final_plot_6 <- wrap_plots(plots_ag[9:10], ncol = 2) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+#Energy
+final_plot_7 <- wrap_plots(plots_ag[11:12], ncol = 2) +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom")
 
@@ -1870,12 +2008,51 @@ ggsave(
 
 ggsave(
   plot = final_plot_2,
-  filename = file.path(path_school_fig_nvar, "chool_characteristics_2.pdf"),
+  filename = file.path(path_school_fig_nvar, "school_characteristics_2.pdf"),
   device = "pdf",
   height = 8,
   width = 15
 )
 
+ggsave(
+  plot = final_plot_3,
+  filename = file.path(path_school_fig_nvar, "school_characteristics_3.pdf"),
+  device = "pdf",
+  height = 8,
+  width = 15
+)
+
+ggsave(
+  plot = final_plot_4,
+  filename = file.path(path_school_fig_nvar, "school_characteristics_4.pdf"),
+  device = "pdf",
+  height = 8,
+  width = 15
+)
+
+ggsave(
+  plot = final_plot_5,
+  filename = file.path(path_school_fig_nvar, "school_characteristics_5.pdf"),
+  device = "pdf",
+  height = 8,
+  width = 15
+)
+
+ggsave(
+  plot = final_plot_6,
+  filename = file.path(path_school_fig_nvar, "school_characteristics_6.pdf"),
+  device = "pdf",
+  height = 8,
+  width = 15
+)
+
+ggsave(
+  plot = final_plot_7,
+  filename = file.path(path_school_fig_nvar, "school_characteristics_7.pdf"),
+  device = "pdf",
+  height = 8,
+  width = 15
+)
 
 rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
    est_least6, est_least7, est_least8, est_least9, est_least10, est_least11,
@@ -1885,7 +2062,8 @@ rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
    est_most14, est_most15, est_most16,
    est_ag1, est_ag2, est_ag3, est_ag4, est_ag5, est_ag6, est_ag7, est_ag8, est_ag9,
    est_ag10, est_ag11, est_ag12, est_ag13, est_ag14, est_ag15, est_ag16,
-   plots_ag, final_plot_1, final_plot_2,
+   plots_ag, final_plot_1, final_plot_2, final_plot_3, final_plot_4, final_plot_5,
+   final_plot_6, final_plot_7,
    plots, final_plot, i, fml, y, y_vars)
 
 
@@ -1937,8 +2115,7 @@ y_vars <- c(
   "pre_exp_no_sewage",
   "pre_exp_sewage_dum",
   "pre_exp_no_energy",
-  "pre_exp_energy_dum",
-  "pre_exp_employee"
+  "pre_exp_energy_dum"
 )
 
 for (i in seq_along(y_vars)) {
@@ -1983,8 +2160,7 @@ titles <- c(
   "Exp. No Sewage",
   "Exp. Sewage",
   "Exp. No Energy",
-  "Exp. Energy",
-  "Exp. Employee"
+  "Exp. Energy"
 )
 
 plots <- vector("list", length(titles))
@@ -2013,34 +2189,30 @@ names(plots) <- paste0("p", seq_along(plots))
 
 # ---- Saving Plot ---- #
 
-# Joining the plots into a single one
-final_plot <- 
-  (plots[[2]] | plots[[3]] | plots[[4]]) /
-  (plots[[5]] | plots[[6]] | plots[[1]])  +
-  plot_layout(guides = "collect") &
-  theme(legend.position = "bottom")
+# Pair plots two by two: (1,2), (3,4), ..., (15,16)
+pair_idx <- split(seq_along(plots), ceiling(seq_along(plots) / 2))
 
-final_plot
+for (i in seq_along(pair_idx)) {
+  idx <- pair_idx[[i]]
 
-ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "pre_least_vs_most_school_characteristics.pdf"),
-       device = "pdf", height = 8, width = 15)
+  final_plot <-
+    plots[[idx[1]]] | plots[[idx[2]]] +
+    plot_layout(guides = "collect") &
+    theme(legend.position = "bottom")
 
+  print(final_plot)
 
-
-# Joining the plots into a single one
-final_plot <- 
-  (plots[[7]] | plots[[8]]) /
-  (plots[[9]] | plots[[10]]) /
-  (plots[[11]] | plots[[12]] ) +
-  plot_layout(guides = "collect") &
-  theme(legend.position = "bottom")
-
-final_plot
-
-ggsave(plot = final_plot,
-       filename = file.path(path_school_fig, "pre_least_vs_most_school_characteristics2.pdf"),
-       device = "pdf", height = 8, width = 15)
+  ggsave(
+    plot = final_plot,
+    filename = file.path(
+      path_school_fig,
+      paste0("pre_least_vs_most_school_characteristics", i, ".pdf")
+    ),
+    device = "pdf",
+    height = 8,
+    width = 15
+  )
+}
 
 # ---------------------------------------------------------------------------- #
 ### 7.2.3 Table ----
@@ -2072,7 +2244,7 @@ dictio <- c(
 # - All Schools Infra - #
 
 etable(
-  est_most1, est_least1, est_most2, est_least2, est_most3, est_least3, est_most4, est_least4, 
+  est_most1, est_least1, est_most2, est_least2,
   tex = TRUE,
   file = file.path(path_school,"/lvm_least_vs_most_preschool_characteristics1.tex"),
   digits = 3,
@@ -2084,9 +2256,21 @@ etable(
 )
 
 etable(
-  est_most5, est_least5, est_most6, est_least6, est_most7, est_least7, est_most8, est_least8, 
+  est_most3, est_least3, est_most4, est_least4, 
   tex = TRUE,
   file = file.path(path_school,"/lvm_least_vs_most_preschool_characteristics2.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on Pre-School Characteristics",
+  label = "tab:lvm_stu_dosage_preschool_charac1"
+)
+
+etable(
+  est_most5, est_least5, est_most6, est_least6, 
+  tex = TRUE,
+  file = file.path(path_school,"/lvm_least_vs_most_preschool_characteristics3.tex"),
   digits = 3,
   replace = T,
   drop = "PIBpc",
@@ -2095,11 +2279,22 @@ etable(
   label = "tab:lvm_stu_dosage_preschool_charac2"
 )
 
+etable(
+  est_most7, est_least7, est_most8, est_least8, 
+  tex = TRUE,
+  file = file.path(path_school,"/lvm_least_vs_most_preschool_characteristics4.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on Pre-School Characteristics",
+  label = "tab:lvm_stu_dosage_preschool_charac2"
+)
 
 etable(
   est_most9, est_least9, est_most10, est_least10, est_most11, est_least11, est_most12, est_least12, 
   tex = TRUE,
-  file = file.path(path_school,"/lvm_least_vs_most_preschool_characteristics3.tex"),
+  file = file.path(path_school,"/lvm_least_vs_most_preschool_characteristics5.tex"),
   digits = 3,
   replace = T,
   drop = "PIBpc",
@@ -2135,7 +2330,7 @@ for (i in seq_along(y_vars)) {
 # -- Saving Table -- #
 
 etable(
-  est_ag1, est_ag2, est_ag3, est_ag4, est_ag5, est_ag6,
+  est_ag1, est_ag2, est_ag3,
   tex = TRUE,
   file = file.path(path_school,"/join_lvm_least_vs_most_preschool_characteristics1.tex"),
   digits = 3,
@@ -2147,9 +2342,33 @@ etable(
 )
 
 etable(
-  est_ag7, est_ag8, est_ag9, est_ag10, est_ag11, est_ag12, est_ag13,
+  est_ag4, est_ag5, est_ag6,
   tex = TRUE,
   file = file.path(path_school,"/join_lvm_least_vs_most_preschool_characteristics2.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on Pre-School Characteristics",
+  label = "tab:join_lvm_stu_dosage_school_charac1"
+)
+
+etable(
+  est_ag7, est_ag8, est_ag9, 
+  tex = TRUE,
+  file = file.path(path_school,"/join_lvm_least_vs_most_preschool_characteristics3.tex"),
+  digits = 3,
+  replace = T,
+  drop = "PIBpc",
+  dict = dictio,
+  title = "Least vs. Most: Effects of Fundef Student Dosage on Pre-School Characteristics",
+  label = "tab:join_lvm_stu_dosage_school_charac2"
+)
+
+etable(
+  est_ag10, est_ag11, est_ag12,
+  tex = TRUE,
+  file = file.path(path_school,"/join_lvm_least_vs_most_preschool_characteristics4.tex"),
   digits = 3,
   replace = T,
   drop = "PIBpc",
@@ -2182,41 +2401,36 @@ for (i in seq_along(titles)) {
 
 names(plots_ag) <- paste0("pag", seq_along(plots_ag))
 
-final_plot_1 <- wrap_plots(plots_ag[1:6], ncol = 3) +
-  plot_layout(guides = "collect") &
-  theme(legend.position = "bottom")
+for (i in seq(1, length(plots_ag), by = 2)) {
 
-final_plot_2 <- wrap_plots(plots_ag[7:12], ncol = 2) +
-  plot_layout(guides = "collect") &
-  theme(legend.position = "bottom")
+  final_plot <- wrap_plots(
+    plots_ag[i:min(i + 1, length(plots_ag))],
+    ncol = 2
+  ) +
+    plot_layout(guides = "collect") &
+    theme(legend.position = "bottom")
 
-ggsave(
-  plot = final_plot_1,
-  filename = file.path(path_school_fig_nvar, "pre_school_characteristics_1.pdf"),
-  device = "pdf",
-  height = 8,
-  width = 15
-)
-
-ggsave(
-  plot = final_plot_2,
-  filename = file.path(path_school_fig_nvar, "pre_school_characteristics_2.pdf"),
-  device = "pdf",
-  height = 8,
-  width = 15
-)
-
+  ggsave(
+    plot = final_plot,
+    filename = file.path(
+      path_school_fig_nvar,
+      paste0("pre_school_characteristics_", (i + 1) %/% 2, ".pdf")
+    ),
+    device = "pdf",
+    height = 8,
+    width = 15
+  )
+}
 
 rm(est_least, est_least1, est_least2, est_least3, est_least4, est_least5,
    est_least6, est_least7, est_least8, est_least9, est_least10, est_least11,
-   est_least12, est_least13, est_least14, est_least15, est_least16,
+   est_least12,
    est_most, est_most1, est_most2, est_most3, est_most4, est_most5, est_most6,
-   est_most7, est_most8, est_most9, est_most10, est_most11, est_most12, est_most13,
-   est_most14, est_most15, 
+   est_most7, est_most8, est_most9, est_most10, est_most11, est_most12, 
    est_ag1, est_ag2, est_ag3, est_ag4, est_ag5, est_ag6, est_ag7, est_ag8, est_ag9,
    est_ag10, est_ag11, est_ag12, est_ag13,
    dictio, df_least, df_most, df_school, df_type, 
-   plots_ag, final_plot_2, final_plot_1,
+   plots_ag, est_i, idx, pair_idx,
    plots, final_plot, i, fml, y, y_vars)
 
 

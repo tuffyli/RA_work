@@ -758,7 +758,7 @@ if (RUN_ONCE_SIOPE_ANNUAL) {
   pasta_anos <- PATH_SIOPE_AN
   if (!dir.exists(pasta_anos)) dir.create(pasta_anos, recursive = TRUE)
   
-  for (ano in 2000:2024) {
+  for (ano in 2000:2020) {
     
     lista_ufs <- list()
     
@@ -1003,7 +1003,7 @@ for (ano in 2005:2024) {
 # write.csv2(df,
 #   file.path(PATH_INTERMEDIATE, "painel_notas_transferencias_2000_2024.csv"))
 
-
+gc()
 # ---------------------------------------------------------------------------- #
 # 5. SIMULATION — FUNDEF Counterfactual ----
 # ---------------------------------------------------------------------------- #
@@ -1074,6 +1074,7 @@ censo <- read_delim(
   )
 )
 
+gc()
 # ---------------------------------------------------------------------------- #
 ### 5.1.1 Aggregate Enrolments by School----
 # Select and sum enrolment variables for each schooling modality.
@@ -1475,8 +1476,7 @@ rm(test)
 ## 5.5 Run expected 2007 value ----
 # ---------------------------------------------------------------------------- #
 
-source("Z:/Tuffy/Paper - Educ/Codes/1.5_siope_fundef_rebuild_v3.R")
-
+source("Z:/Tuffy/Paper - Educ/Scripts/New/1.5_siope_fundef_rebuild_v3.R")
 
 # ---------------------------------------------------------------------------- #
 ## 5.6 De Facto FUNDEF Simulation-----
