@@ -42,6 +42,7 @@ library(haven)
 library(ggplot2)
 library(grid)
 library(patchwork)
+library(geobr)
 
 
 #Deactivating scientific notation
@@ -159,6 +160,164 @@ make_tercile_plot <- function(data, outcome_var, plot_title,
   p
 }
 
+desc_tex_table <- function(data, vars, labels = vars,
+                           caption = "Descriptive Statistics",
+                           label = "tab:desc_stats",
+                           file = file.path(path_descp,"desc_stats.tex"),
+                           digits = 3) {
+  
+  stopifnot(length(vars) == length(labels))
+  
+  tab <- map2_dfr(vars, labels, function(v, lab) {
+    x <- data[[v]]
+    tibble(
+      Variable = lab,
+      Mean = round(mean(x, na.rm = TRUE), digits),
+      SD   = round(sd(x, na.rm = TRUE), digits),
+      N    = sum(!is.na(x))
+    )
+  })
+  
+  tex <- kable(
+    tab,
+    format = "latex",
+    booktabs = TRUE,
+    escape = FALSE,
+    caption = caption,
+    label = label,
+    align = c("l", "r", "r", "r"),
+    digits = digits
+  )
+  
+  writeLines(tex, file)
+  return(tab)
+}
+
+# ------------------------------------------------------------
+# Function: low-vs-high dosage balance table
+# ------------------------------------------------------------
+dosage_balance_table <- function(data, var_map,
+                                 caption,
+                                 tex_file = NULL,
+                                 tex_label = "tab:dosage_balance") {
+  
+  dat <- data %>%
+    mutate(group = case_when(
+      dosage_tercile == 1 ~ "Low",
+      dosage_tercile == 3 ~ "High",
+      TRUE ~ NA_character_
+    )) %>%
+    filter(!is.na(group)) %>%
+    select(group, all_of(var_map$variable)) %>%
+    pivot_longer(
+      cols = -group,
+      names_to = "variable",
+      values_to = "value"
+    ) %>%
+    mutate(value = as.numeric(value)) %>%
+    filter(is.finite(value)) %>%
+    left_join(var_map, by = "variable")
+  
+  group_stats <- dat %>%
+    group_by(section, outcome_label, group) %>%
+    summarise(
+      n = sum(!is.na(value)),
+      mean = mean(value, na.rm = TRUE),
+      sd = sd(value, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(mean_sd = sprintf("%.3f (%.3f)", mean, sd)) %>%
+    select(section, outcome_label, group, mean_sd) %>%
+    pivot_wider(names_from = group, values_from = mean_sd)
+  
+  tests <- dat %>%
+    group_by(section, outcome_label) %>%
+    summarise(
+      low_mean  = mean(value[group == "Low"],  na.rm = TRUE),
+      high_mean = mean(value[group == "High"], na.rm = TRUE),
+      low_sd    = sd(value[group == "Low"],    na.rm = TRUE),
+      high_sd   = sd(value[group == "High"],   na.rm = TRUE),
+      diff      = high_mean - low_mean,
+      std_diff  = diff / sqrt((low_sd^2 + high_sd^2) / 2),
+      p_value   = tryCatch(t.test(value ~ group)$p.value, error = function(e) NA_real_),
+      .groups = "drop"
+    )
+  
+  out <- group_stats %>%
+    left_join(tests, by = c("section", "outcome_label")) %>%
+    mutate(
+      diff = round(diff, 3),
+      std_diff = round(std_diff, 3),
+      p_value = round(p_value, 3)
+    ) %>%
+    select(
+      Outcome = outcome_label,
+      `Low dosage` = Low,
+      `High dosage` = High,
+      Difference = diff,
+      `Std. diff.` = std_diff,
+      `p-value` = p_value
+    )
+  
+  tex_tbl <- out %>%
+    kable(
+      format = "latex",
+      booktabs = TRUE,
+      caption = caption,
+      label = tex_label,
+      align = c("l", "l", "r", "r", "r", "r", "r")
+    ) %>%
+    kable_styling(
+      latex_options = c("hold_position", "striped"),
+      font_size = 9
+    )
+  
+  if (!is.null(tex_file)) {
+    writeLines(as.character(tex_tbl), tex_file)
+  }
+  
+  invisible(out)
+}
+
+# ------------------------------------------------------------
+# Expanded variable map: enrollment, schools, teachers,
+# teachers' education, and school characteristics
+# ------------------------------------------------------------
+balance_var_map <- tribble(
+  ~section, ~variable, ~outcome_label,
+  
+  # Enrollment
+  "Enrollment", "pre_pub_enroll", "Pre-School Enrollment",
+  "Enrollment", "inf_pub_enroll", "Child Education Enrollment",
+  
+  # Number of schools
+  "Number of Schools", "n_pub_presco", "Pre-Schools",
+  
+  # Number of teachers
+  "Number of Teachers", "n_t_pre", "Pre-School Teachers",
+  
+  # Teachers' education
+  "Teachers' Education", "n_t_pre_edu", "Pre-School Teachers (HE)",
+  
+  # School characteristics
+  "School Characteristics", "exp_classroom", "Exp. Classroom",
+  "School Characteristics", "exp_teachroom", "Exp. Teacher's Room",
+  "School Characteristics", "exp_labs", "Exp. Lab",
+  "School Characteristics", "exp_library", "Exp. Library",
+  "School Characteristics", "exp_playarea", "Exp. Play Area",
+  "School Characteristics", "exp_lunch", "Exp. Lunch",
+  "School Characteristics", "exp_no_water", "Exp. No Water",
+  "School Characteristics", "exp_water", "Exp. Water",
+  "School Characteristics", "exp_no_sewage", "Exp. No Sewage",
+  "School Characteristics", "exp_sewage", "Exp. Sewage",
+  "School Characteristics", "exp_no_energy", "Exp. No Energy",
+  "School Characteristics", "exp_energy", "Exp. Energy",
+  "School Characteristics", "exp_employee", "Exp. Employee",
+  "School Characteristics", "exp_t_fun", "Exp. DC Teachers",
+  "School Characteristics", "exp_t_pre", "Exp. PS Teachers",
+  "School Characteristics", "exp_t_cre", "Exp. MS Teachers"
+)
+
 
 # ---------------------------------------------------------------------------- #
 # 1. Data ----
@@ -166,6 +325,8 @@ make_tercile_plot <- function(data, outcome_var, plot_title,
 # ---------------------------------------------------------------------------- #
 
 df_main <- readRDS("Z:/Tuffy/Paper - Educ/Dados/regdf_flags.rds")
+
+df_school <- readRDS("Z:/Tuffy/Paper - Educ/Dados/final/mun_school_data_affiliations.rds")
 
 # ---------------------------------------------------------------------------- #
 ## 1.1. Group Variable ----
@@ -184,13 +345,6 @@ df_main <- df_main %>%
   ) %>%
   ungroup()
 
-df_main <- df_main %>% 
-  mutate(
-    log_mat_total = if_else(mat_total > 0, log(mat_total), NA_real_),
-    log_mat_fun   = if_else(mat_fun > 0, log(mat_fun), NA_real_),
-    log_mat_med   = if_else(mat_med > 0, log(mat_med), NA_real_),
-    log_mat_inf   = if_else(mat_inf > 0, log(mat_inf), NA_real_)
-  )
 
 # Now lets check if the quantity are similar within each uf
 check <- df_main %>% 
@@ -228,6 +382,162 @@ tex_table <- check %>%
 writeLines(tex_table, paste(path_additional,"appendix_dosage_terciles.tex"))
 
 rm(tex_table, check)
+
+# ---------------------------------------------------------------------------- #
+## 1.2 Dosage Map ----- 
+# ---------------------------------------------------------------------------- #
+### 1.2.1 Terciles -----
+# ---------------------------------------------------------------------------- #
+
+muni <- read_municipality(year = 2010)  # choose the year matching your data
+states <- read_state(year = 2010)
+
+# Join your status data
+muni_map <- muni %>%
+  left_join(df_status, by = c("code_muni" = "cod_mun"))
+
+# Optional: set order of categories
+muni_map$status <- factor(muni_map$dosage_tercile,
+                          levels = c("Least", "Middle", "Most"))
+
+ggplot() +
+  geom_sf(
+    data = muni_map,
+    aes(fill = dosage_tercile),
+    color = "white",
+    linewidth = 0.03
+  ) +
+  geom_sf(
+    data = states,
+    fill = NA,
+    color = "black",
+    linewidth = 1
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Least"  = "#D95F5F",
+      "Middle" = "#BDBDBD",
+      "Most"   = "#4C78A8"
+    ),
+    name = "Student dosage"
+  ) +
+  coord_sf(datum = NA) +
+  theme_void()
+
+# ---------------------------------------------------------------------------- #
+### 1.2.2 Dosage -----
+# ---------------------------------------------------------------------------- #
+
+muni_map <- muni %>%
+  left_join(df_main, by = c("code_muni" = "codigo_ibge"))
+
+ggplot() +
+  geom_sf(
+    data = muni_map,
+    aes(fill = aluno_dosage),
+    color = NA
+  ) +
+  geom_sf(
+    data = states,
+    fill = NA,
+    color = "black",
+    linewidth = 0.8
+  ) +
+  scale_fill_gradient(
+    low = "#EAF2FB",
+    high = "#08519C",
+    name = "Student\ndosage"
+  ) +
+  coord_sf(datum = NA) +
+  theme_void(base_size = 16) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold"),
+    legend.key.width = unit(2.5, "cm")
+  )
+
+# ---------------------------------------------------------------------------- #
+## 1.3 Scatter Dosage -----
+# ---------------------------------------------------------------------------- #
+
+library(ggplot2)
+
+ggplot(df_school %>% filter(ano == 2007) %>% group_by(codmun) %>%
+  mutate(pub_pre_rate = pre_pub_enroll/total_enroll),
+ aes(x = pub_pre_rate, y = aluno_dosage)) +
+  geom_point(alpha = 0.35, size = 2, color = "#2C7FB8") +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linewidth = 1) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", linewidth = 1) +
+  labs(
+    x = "Pre-School Enrollment Share",
+    y = "Student Dosage"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold")
+  )
+
+ggsave(file.path(path_descp,"preschool_share_2007.pdf"), width = 8, height = 6)
+
+
+# ---------------------------------------------------------------------------- #
+# 2. Descriptive table ------
+# ---------------------------------------------------------------------------- #
+
+vars <- c(
+  "aluno_dosage",
+  "pre_enroll",
+  "pre_pub_enroll",
+  "n_pub_creche",
+  "total_population",
+  "exp_classroom",
+  "exp_teachroom",
+  "exp_labs",
+  "exp_library",
+  "exp_playarea",
+  "exp_lunch",
+  "exp_no_water",
+  "exp_water",
+  "exp_no_sewage",
+  "exp_sewage",
+  "exp_no_energy",
+  "exp_energy",
+  "exp_t_pre",
+  "exp_t_pre_edu"
+)
+
+labels <- c(
+  "Student dosage",
+  "Pre-school enrollment",
+  "Public Pre-school enrollment",
+  "Pre-schools",
+  "Total population",
+  "Exp. Classrooms",
+  "Exp. Teacher room",
+  "Exp. Laboratory",
+  "Exp. Library",
+  "Exp. Play area",
+  "Exp. Lunch",
+  "Exp. No Water",
+  "Exp. Water",
+  "Exp. No Sewage",
+  "Exp. Sewage",
+  "Exp. No Energy",
+  "Exp. Energy",
+  "Exp. Pre-school teachers",
+  "Exp. HE pre-school teachers"
+)
+
+tab_desc <- desc_tex_table(
+  data   = df_school,
+  vars   = vars,
+  labels = labels,
+  file = "desc_stats.tex"
+)
+
+tab_desc
 
 # ---------------------------------------------------------------------------- #
 # 2. Enrollment data ----
@@ -895,6 +1205,24 @@ ggsave(
   height = 8,
   dpi = 300
 )
+
+
+# ---------------------------------------------------------------------------- #
+# 7. Comparision Least vs. Most Dosage ----
+# ---------------------------------------------------------------------------- #
+
+balance_school_all <- dosage_balance_table(
+  data      = df_school,
+  var_map    = balance_var_map,
+  caption    = "Low vs. High Dosage Municipalities: Baseline Comparison Across Outcomes",
+  tex_file   = file.path(path_school, "balance_low_high_all_outcomes.tex"),
+  tex_label  = "tab:balance_low_high_all_outcomes"
+)
+
+balance_school_all
+
+
+
 
 rm(list = ls())
 gc()
